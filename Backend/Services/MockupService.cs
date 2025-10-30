@@ -108,35 +108,35 @@ namespace PicStoneFotoAPI.Services
             float propCrop = (float)chapaCropada.Width / chapaCropada.Height;
             int alturaCropRedim = (int)(larguraJanela / propCrop);
 
-            // Calcula fator de escala da moldura baseado na altura do crop vs janela
-            float escalaAlturaMoldura = (float)alturaCropRedim / alturaJanela;
+            // Calcula PropEntreProps como no VB.NET
+            float propEntreProps = propCrop / propJanela;
 
-            // Moldura redimensionada: largura fixa, altura escalada
-            int larguraMolduraFinal = molduraOriginal.Width;
-            int alturaMolduraFinal = (int)(molduraOriginal.Height * escalaAlturaMoldura);
+            // Dimensões do canvas (como no VB.NET)
+            int larguraCanvas = 1599;
+            int alturaCanvas = (int)(1247 / propEntreProps);
 
             _logger.LogInformation("=== DEBUG MOCKUP SIMPLES ===");
             _logger.LogInformation("Crop original: {W}x{H}", chapaCropada.Width, chapaCropada.Height);
-            _logger.LogInformation("Proporção crop: {Prop}", propCrop);
+            _logger.LogInformation("PropCrop: {Prop}", propCrop);
+            _logger.LogInformation("PropEntreProps: {PropEntreProps}", propEntreProps);
             _logger.LogInformation("Crop redimensionado: {W}x{H}", larguraJanela, alturaCropRedim);
-            _logger.LogInformation("Escala altura moldura: {Escala}", escalaAlturaMoldura);
-            _logger.LogInformation("Moldura final: {W}x{H}", larguraMolduraFinal, alturaMolduraFinal);
+            _logger.LogInformation("Canvas final: {W}x{H}", larguraCanvas, alturaCanvas);
             _logger.LogInformation("============================");
 
             // Redimensiona a chapa para largura da janela com altura proporcional
             var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(larguraJanela, alturaCropRedim), SKFilterQuality.High);
 
-            // Redimensiona a moldura mantendo largura mas escalando altura
-            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraMolduraFinal, alturaMolduraFinal), SKFilterQuality.High);
+            // Redimensiona a moldura para as dimensões do canvas (VB.NET usa Size)
+            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraCanvas, alturaCanvas), SKFilterQuality.High);
 
             // Cria canvas final
-            using var surface = SKSurface.Create(new SKImageInfo(larguraMolduraFinal, alturaMolduraFinal));
+            using var surface = SKSurface.Create(new SKImageInfo(larguraCanvas, alturaCanvas));
             var canvas = surface.Canvas;
             canvas.Clear(SKColors.Transparent);
 
-            // Posição da chapa (X fixo, Y escalado proporcionalmente)
+            // Posição da chapa (como no VB.NET: Y = 262 / PropEntreProps)
             int posX = 55;
-            int posY = (int)(130 * escalaAlturaMoldura);
+            int posY = (int)(262 / propEntreProps);
             canvas.DrawBitmap(chapaRedimensionada, posX, posY);
 
             // Sobrepõe a moldura redimensionada
@@ -185,19 +185,19 @@ namespace PicStoneFotoAPI.Services
             float propCrop = (float)chapaCropada.Width / chapaCropada.Height;
             int alturaCropRedim = (int)(larguraJanela / propCrop);
 
-            // Calcula fator de escala da moldura baseado na altura do crop vs janela
-            float escalaAlturaMoldura = (float)alturaCropRedim / alturaJanela;
+            // Calcula PropEntreProps como no VB.NET
+            float propEntreProps = propCrop / propJanela;
 
-            // Moldura redimensionada: largura fixa, altura escalada
-            int larguraMolduraFinal = molduraOriginal.Width;
-            int alturaMolduraFinal = (int)(molduraOriginal.Height * escalaAlturaMoldura);
+            // Dimensões do canvas (como no VB.NET)
+            int larguraCanvas = 3102;
+            int alturaCanvas = (int)(1247 / propEntreProps);
 
             _logger.LogInformation("=== DEBUG MOCKUP DUPLO ===");
             _logger.LogInformation("Crop original: {W}x{H}", chapaCropada.Width, chapaCropada.Height);
-            _logger.LogInformation("Proporção crop: {Prop}", propCrop);
+            _logger.LogInformation("PropCrop: {Prop}", propCrop);
+            _logger.LogInformation("PropEntreProps: {PropEntreProps}", propEntreProps);
             _logger.LogInformation("Crop redimensionado: {W}x{H}", larguraJanela, alturaCropRedim);
-            _logger.LogInformation("Escala altura moldura: {Escala}", escalaAlturaMoldura);
-            _logger.LogInformation("Moldura final: {W}x{H}", larguraMolduraFinal, alturaMolduraFinal);
+            _logger.LogInformation("Canvas final: {W}x{H}", larguraCanvas, alturaCanvas);
             _logger.LogInformation("===========================");
 
             // Redimensiona a chapa para largura da janela com altura proporcional
@@ -211,16 +211,16 @@ namespace PicStoneFotoAPI.Services
                 canvas2.DrawBitmap(chapaRedimensionada, 0, 0);
             }
 
-            // Redimensiona a moldura mantendo largura mas escalando altura
-            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraMolduraFinal, alturaMolduraFinal), SKFilterQuality.High);
+            // Redimensiona a moldura para as dimensões do canvas (VB.NET usa Size)
+            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraCanvas, alturaCanvas), SKFilterQuality.High);
 
             // Cria canvas final
-            using var surface = SKSurface.Create(new SKImageInfo(larguraMolduraFinal, alturaMolduraFinal));
+            using var surface = SKSurface.Create(new SKImageInfo(larguraCanvas, alturaCanvas));
             var canvas = surface.Canvas;
             canvas.Clear(SKColors.Transparent);
 
-            // Posição das chapas (X fixo, Y escalado proporcionalmente)
-            int posY = (int)(262 * escalaAlturaMoldura);
+            // Posição das chapas (como no VB.NET: Y = 262 / PropEntreProps)
+            int posY = (int)(262 / propEntreProps);
             canvas.DrawBitmap(chapaRedimensionada, 58, posY);      // Chapa 1
             canvas.DrawBitmap(chapaEspelhada, 1557, posY);         // Chapa 2 (espelhada)
 
