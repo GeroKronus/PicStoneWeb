@@ -115,7 +115,7 @@ namespace PicStoneFotoAPI.Services
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
                     NomeCompleto = "Administrador",
                     Ativo = true,
-                    DataCriacao = DateTime.Now
+                    DataCriacao = DateTime.UtcNow
                 };
 
                 _context.Usuarios.Add(adminUser);
@@ -126,6 +126,54 @@ namespace PicStoneFotoAPI.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao criar usuário inicial");
+            }
+        }
+
+        /// <summary>
+        /// Testa conexão com o banco de dados
+        /// </summary>
+        public async Task<bool> TestDatabaseConnectionAsync()
+        {
+            try
+            {
+                return await _context.Database.CanConnectAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao testar conexão com banco");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Retorna contagem de usuários
+        /// </summary>
+        public async Task<int> GetUserCountAsync()
+        {
+            try
+            {
+                return await _context.Usuarios.CountAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao contar usuários");
+                return -1;
+            }
+        }
+
+        /// <summary>
+        /// Verifica se o usuário admin existe
+        /// </summary>
+        public async Task<bool> CheckAdminExistsAsync()
+        {
+            try
+            {
+                return await _context.Usuarios.AnyAsync(u => u.Username == "admin");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao verificar se admin existe");
+                return false;
             }
         }
     }
