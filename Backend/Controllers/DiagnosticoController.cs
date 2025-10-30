@@ -16,42 +16,47 @@ namespace PicStoneFotoAPI.Controllers
         [HttpGet("ambiente")]
         public IActionResult VerificarAmbiente()
         {
+            var caminhoDiretorio = Directory.GetCurrentDirectory();
+            var caminhoMolduras = Path.Combine(caminhoDiretorio, "Molduras");
+            var existeMolduras = Directory.Exists(caminhoMolduras);
+
+            var arquivosMolduras = existeMolduras
+                ? Directory.GetFiles(caminhoMolduras).Select(f => new {
+                    Nome = Path.GetFileName(f),
+                    Tamanho = new FileInfo(f).Length,
+                    CaminhoCompleto = f
+                }).ToArray()
+                : Array.Empty<object>();
+
             var diagnostico = new
             {
-                DiretorioAtual = Directory.GetCurrentDirectory(),
+                DiretorioAtual = caminhoDiretorio,
                 DiretorioBase = AppContext.BaseDirectory,
                 Ambiente = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
 
                 PastaMolduras = new
                 {
-                    CaminhoCompleto = Path.Combine(Directory.GetCurrentDirectory(), "Molduras"),
-                    Existe = Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Molduras")),
-                    Arquivos = Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Molduras"))
-                        ? Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "Molduras"))
-                            .Select(f => new {
-                                Nome = Path.GetFileName(f),
-                                Tamanho = new FileInfo(f).Length,
-                                CaminhoCompleto = f
-                            }).ToList()
-                        : new List<object>()
+                    CaminhoCompleto = caminhoMolduras,
+                    Existe = existeMolduras,
+                    Arquivos = arquivosMolduras
                 },
 
                 PastaUploads = new
                 {
-                    CaminhoCompleto = Path.Combine(Directory.GetCurrentDirectory(), "uploads"),
-                    Existe = Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "uploads"))
+                    CaminhoCompleto = Path.Combine(caminhoDiretorio, "uploads"),
+                    Existe = Directory.Exists(Path.Combine(caminhoDiretorio, "uploads"))
                 },
 
-                TodasPastas = Directory.GetDirectories(Directory.GetCurrentDirectory())
+                TodasPastas = Directory.GetDirectories(caminhoDiretorio)
                     .Select(d => Path.GetFileName(d))
                     .ToList(),
 
                 VerificacaoMolduras = new
                 {
-                    CavaleteSimples = System.IO.File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Molduras", "CAVALETE SIMPLES.png")),
-                    CavaleteSimplesCinza = System.IO.File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Molduras", "CAVALETE SIMPLES Cinza.png")),
-                    CavaleteBase = System.IO.File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Molduras", "CAVALETE BASE.png")),
-                    CavaleteBaseCinza = System.IO.File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Molduras", "CAVALETE BASE Cinza.png"))
+                    CavaleteSimples = System.IO.File.Exists(Path.Combine(caminhoMolduras, "CAVALETE SIMPLES.png")),
+                    CavaleteSimplesCinza = System.IO.File.Exists(Path.Combine(caminhoMolduras, "CAVALETE SIMPLES Cinza.png")),
+                    CavaleteBase = System.IO.File.Exists(Path.Combine(caminhoMolduras, "CAVALETE BASE.png")),
+                    CavaleteBaseCinza = System.IO.File.Exists(Path.Combine(caminhoMolduras, "CAVALETE BASE Cinza.png"))
                 }
             };
 
