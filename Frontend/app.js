@@ -505,54 +505,71 @@ function drawCropOverlay() {
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
 
-    // Limpa e pinta fundo preto
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    // Desenha imagem completa
-    ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
-
     // Calcula retângulo de seleção
     const x = Math.min(state.cropData.startX, state.cropData.endX);
     const y = Math.min(state.cropData.startY, state.cropData.endY);
     const width = Math.abs(state.cropData.endX - state.cropData.startX);
     const height = Math.abs(state.cropData.endY - state.cropData.startY);
 
-    // Desenha overlay escurecido sobre toda a imagem
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    // Limpa canvas
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // Desenha imagem completa
+    ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+
+    // Salva estado do contexto
+    ctx.save();
+
+    // Desenha retângulo de máscara em toda a área
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // Limpa área selecionada e redesenha sem escurecimento
-    ctx.clearRect(x, y, width, height);
-    ctx.drawImage(img, x * state.cropData.scale, y * state.cropData.scale,
-        width * state.cropData.scale, height * state.cropData.scale,
-        x, y, width, height);
+    // Usa destination-out para "recortar" a área selecionada da máscara
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+    ctx.fillRect(x, y, width, height);
+
+    // Restaura composição normal
+    ctx.restore();
 
     // Desenha borda da seleção
-    ctx.strokeStyle = '#007AFF';
+    ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 3;
+    ctx.setLineDash([8, 4]);
     ctx.strokeRect(x, y, width, height);
+    ctx.setLineDash([]);
 
-    // Desenha cantos mais visíveis
+    // Desenha borda sólida interna
+    ctx.strokeStyle = '#007AFF';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 1.5, y + 1.5, width - 3, height - 3);
+
+    // Desenha cantos
     const cornerSize = 30;
-    const cornerThickness = 4;
-    ctx.fillStyle = '#007AFF';
+    const cornerThickness = 5;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 4;
 
     // Canto superior esquerdo
-    ctx.fillRect(x - 2, y - 2, cornerSize, cornerThickness);
-    ctx.fillRect(x - 2, y - 2, cornerThickness, cornerSize);
+    ctx.fillRect(x, y, cornerSize, cornerThickness);
+    ctx.fillRect(x, y, cornerThickness, cornerSize);
 
     // Canto superior direito
-    ctx.fillRect(x + width - cornerSize + 2, y - 2, cornerSize, cornerThickness);
-    ctx.fillRect(x + width - 2, y - 2, cornerThickness, cornerSize);
+    ctx.fillRect(x + width - cornerSize, y, cornerSize, cornerThickness);
+    ctx.fillRect(x + width - cornerThickness, y, cornerThickness, cornerSize);
 
     // Canto inferior esquerdo
-    ctx.fillRect(x - 2, y + height - 2, cornerSize, cornerThickness);
-    ctx.fillRect(x - 2, y + height - cornerSize + 2, cornerThickness, cornerSize);
+    ctx.fillRect(x, y + height - cornerThickness, cornerSize, cornerThickness);
+    ctx.fillRect(x, y + height - cornerSize, cornerThickness, cornerSize);
 
     // Canto inferior direito
-    ctx.fillRect(x + width - cornerSize + 2, y + height - 2, cornerSize, cornerThickness);
-    ctx.fillRect(x + width - 2, y + height - cornerSize + 2, cornerThickness, cornerSize);
+    ctx.fillRect(x + width - cornerSize, y + height - cornerThickness, cornerSize, cornerThickness);
+    ctx.fillRect(x + width - cornerThickness, y + height - cornerSize, cornerThickness, cornerSize);
+
+    // Remove sombra
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
 }
 
 function resetCrop() {
