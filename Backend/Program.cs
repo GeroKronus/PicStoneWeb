@@ -26,10 +26,13 @@ var sqlConnectionString = builder.Configuration["SQL_CONNECTION_STRING"];
 if (!string.IsNullOrEmpty(databaseUrl))
 {
     // PostgreSQL no Railway (formato: postgres://user:pass@host:port/db)
+    // Converter URI para formato ADO.NET que o Npgsql entende
+    var connectionString = ConvertPostgresUrlToConnectionString(databaseUrl);
     Log.Information("Usando PostgreSQL (Railway): {Host}", new Uri(databaseUrl).Host);
+    Log.Information("Connection String convertida: {ConnectionString}", MaskConnectionString(connectionString));
 
     builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseNpgsql(databaseUrl));
+        options.UseNpgsql(connectionString));
 }
 else if (useSqlite || builder.Environment.IsDevelopment())
 {
@@ -216,3 +219,52 @@ app.Urls.Add($"http://0.0.0.0:{port}");
 
 Log.Information("Iniciando PicStone Foto API na porta {Port}", port);
 app.Run();
+
+// ========== HELPER METHODS ==========
+static string ConvertPostgresUrlToConnectionString(string databaseUrl)
+{
+    try
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':');
+
+        var connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]}";
+
+        // Adicionar SSL Mode se necessário
+        if (!connectionString.Contains("SSL Mode"))
+        {
+            connectionString += ";SSL Mode=Prefer";
+        }
+
+        return connectionString;
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Erro ao converter DATABASE_URL para connection string");
+        throw;
+    }
+}
+
+static string MaskConnectionString(string connectionString)
+{
+    if (string.IsNullOrEmpty(connectionString))
+        return "null";
+
+    // Mascarar senha no formato ADO.NET
+    var parts = connectionString.Split(';');
+    var masked = new List<string>();
+
+    foreach (var part in parts)
+    {
+        if (part.StartsWith("Password=", StringComparison.OrdinalIgnoreCase))
+        {
+            masked.Add("Password=******");
+        }
+        else
+        {
+            masked.Add(part);
+        }
+    }
+
+    return string.Join(";", masked);
+}
