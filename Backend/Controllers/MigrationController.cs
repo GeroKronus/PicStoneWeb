@@ -114,7 +114,7 @@ namespace PicStoneFotoAPI.Controllers
                     PasswordHash = passwordHash,
                     NomeCompleto = "Administrador",
                     Ativo = true,
-                    DataCriacao = DateTime.Now
+                    DataCriacao = DateTime.UtcNow
                 };
 
                 // Verificar se já existe
