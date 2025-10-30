@@ -8,12 +8,54 @@ namespace PicStoneFotoAPI.Services
         private readonly ILogger<MockupService> _logger;
         private readonly string _moldurasPath;
         private readonly string _uploadPath;
+        private readonly string _logoPath;
 
         public MockupService(ILogger<MockupService> logger, IConfiguration configuration)
         {
             _logger = logger;
             _moldurasPath = Path.Combine(Directory.GetCurrentDirectory(), "Molduras");
             _uploadPath = configuration["UPLOAD_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "Cavaletes", "logoamarelo.png");
+        }
+
+        // Adiciona logo no canto inferior direito
+        private void AdicionarMarcaDagua(SKCanvas canvas, int canvasWidth, int canvasHeight)
+        {
+            if (!File.Exists(_logoPath))
+            {
+                _logger.LogWarning("Logo não encontrada em: {LogoPath}", _logoPath);
+                return;
+            }
+
+            try
+            {
+                using var streamLogo = File.OpenRead(_logoPath);
+                using var logo = SKBitmap.Decode(streamLogo);
+
+                if (logo == null)
+                {
+                    _logger.LogWarning("Não foi possível decodificar a logo");
+                    return;
+                }
+
+                // Tamanho da logo (ajuste conforme necessário - 10% da largura do canvas)
+                int logoWidth = (int)(canvasWidth * 0.1);
+                int logoHeight = (int)(logoWidth * ((float)logo.Height / logo.Width));
+
+                // Posição: canto inferior direito com margem de 20px
+                int posX = canvasWidth - logoWidth - 20;
+                int posY = canvasHeight - logoHeight - 20;
+
+                // Redimensiona e desenha a logo
+                var logoRedimensionado = logo.Resize(new SKImageInfo(logoWidth, logoHeight), SKFilterQuality.High);
+                canvas.DrawBitmap(logoRedimensionado, posX, posY);
+
+                _logger.LogInformation("Marca d'água adicionada: {W}x{H} em ({X},{Y})", logoWidth, logoHeight, posX, posY);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao adicionar marca d'água");
+            }
         }
 
         public async Task<MockupResponse> GerarMockupAsync(MockupRequest request)
@@ -144,6 +186,9 @@ namespace PicStoneFotoAPI.Services
             // Sobrepõe a moldura redimensionada
             canvas.DrawBitmap(molduraRedimensionada, 0, 0);
 
+            // Adiciona marca d'água
+            AdicionarMarcaDagua(canvas, larguraCanvas, alturaCanvas);
+
             // Salva resultado
             var nomeArquivo = $"mockup_simples_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
             var caminhoFinal = Path.Combine(_uploadPath, nomeArquivo);
@@ -229,6 +274,9 @@ namespace PicStoneFotoAPI.Services
 
             // Sobrepõe a moldura redimensionada
             canvas.DrawBitmap(molduraRedimensionada, 0, 0);
+
+            // Adiciona marca d'água
+            AdicionarMarcaDagua(canvas, larguraCanvas, alturaCanvas);
 
             // Salva resultado
             var sufixo = inverterLados ? "invertido" : "normal";

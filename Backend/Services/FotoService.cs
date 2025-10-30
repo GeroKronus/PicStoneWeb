@@ -17,6 +17,7 @@ namespace PicStoneFotoAPI.Services
         private readonly IConfiguration _configuration;
         private readonly ILogger<FotoService> _logger;
         private readonly string _uploadPath;
+        private readonly string _logoPath;
         private static readonly string[] PermittedExtensions = { ".jpg", ".jpeg", ".png" };
         private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
 
@@ -26,12 +27,53 @@ namespace PicStoneFotoAPI.Services
             _configuration = configuration;
             _logger = logger;
             _uploadPath = _configuration["UPLOAD_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "Cavaletes", "logoamarelo.png");
 
             // Cria diretório de upload se não existir
             if (!Directory.Exists(_uploadPath))
             {
                 Directory.CreateDirectory(_uploadPath);
                 _logger.LogInformation("Diretório de upload criado: {Path}", _uploadPath);
+            }
+        }
+
+        // Adiciona logo no canto inferior direito
+        private void AdicionarMarcaDagua(SKCanvas canvas, int canvasWidth, int canvasHeight)
+        {
+            if (!File.Exists(_logoPath))
+            {
+                _logger.LogWarning("Logo não encontrada em: {LogoPath}", _logoPath);
+                return;
+            }
+
+            try
+            {
+                using var streamLogo = File.OpenRead(_logoPath);
+                using var logo = SKBitmap.Decode(streamLogo);
+
+                if (logo == null)
+                {
+                    _logger.LogWarning("Não foi possível decodificar a logo");
+                    return;
+                }
+
+                // Tamanho da logo (10% da largura do canvas)
+                int logoWidth = (int)(canvasWidth * 0.1);
+                int logoHeight = (int)(logoWidth * ((float)logo.Height / logo.Width));
+
+                // Posição: canto inferior direito com margem de 20px
+                int posX = canvasWidth - logoWidth - 20;
+                int posY = canvasHeight - logoHeight - 20;
+
+                // Redimensiona e desenha a logo
+                var logoRedimensionado = logo.Resize(new SKImageInfo(logoWidth, logoHeight), SKFilterQuality.High);
+                canvas.DrawBitmap(logoRedimensionado, posX, posY);
+
+                _logger.LogInformation("Marca d'água adicionada em foto com legenda");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao adicionar marca d'água");
             }
         }
 
@@ -309,6 +351,9 @@ namespace PicStoneFotoAPI.Services
 
                 // Desenha o texto preto por cima
                 canvas.DrawText(legenda, x, y, paint);
+
+                // Adiciona marca d'água
+                AdicionarMarcaDagua(canvas, original.Width, original.Height);
 
                 _logger.LogInformation("Texto desenhado no canvas");
 
