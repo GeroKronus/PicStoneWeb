@@ -97,30 +97,39 @@ namespace PicStoneFotoAPI.Services
             }
 
             using var streamMoldura = File.OpenRead(caminhoMoldura);
-            using var moldura = SKBitmap.Decode(streamMoldura);
+            using var molduraOriginal = SKBitmap.Decode(streamMoldura);
 
-            // Dimensões da moldura original: 1599 x 628 (aproximado)
-            // Área útil para a chapa: largura ~1487px, posição X ~55px, Y ~130px
+            // Calcula proporção do crop e ajusta a moldura para se adequar
+            float propImagBook = (float)chapaCropada.Width / chapaCropada.Height;
+            int alturaImagMold = (int)(1487 / propImagBook);
+            float propEntreProps = propImagBook / 1.9853f;
 
-            // Calcula redimensionamento proporcional
-            int larguraUtil = 1487;
-            int alturaUtil = (int)(larguraUtil * ((float)chapaCropada.Height / chapaCropada.Width));
+            // Dimensões do canvas final (largura fixa 1599, altura proporcional)
+            int larguraCanvas = 1599;
+            int alturaCanvas = (int)(628 / propEntreProps);
 
-            // Redimensiona a chapa cropada
-            var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(larguraUtil, alturaUtil), SKFilterQuality.High);
+            _logger.LogInformation("PropImagBook: {Prop}, AlturaImagMold: {Altura}, PropEntreProps: {PropEntreProps}",
+                propImagBook, alturaImagMold, propEntreProps);
+            _logger.LogInformation("Canvas: {Largura}x{Altura}", larguraCanvas, alturaCanvas);
 
-            // Cria canvas final
-            using var surface = SKSurface.Create(new SKImageInfo(moldura.Width, moldura.Height));
+            // Redimensiona a chapa para largura 1487 com altura proporcional
+            var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(1487, alturaImagMold), SKFilterQuality.High);
+
+            // Redimensiona a moldura para se adequar ao canvas
+            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraCanvas, alturaCanvas), SKFilterQuality.High);
+
+            // Cria canvas final com dimensões calculadas
+            using var surface = SKSurface.Create(new SKImageInfo(larguraCanvas, alturaCanvas));
             var canvas = surface.Canvas;
             canvas.Clear(SKColors.Transparent);
 
-            // Desenha a chapa no fundo
+            // Desenha a chapa no fundo (posição Y proporcional)
             int posX = 55;
-            int posY = 130;
+            int posY = (int)(130 / propEntreProps);
             canvas.DrawBitmap(chapaRedimensionada, posX, posY);
 
-            // Sobrepõe a moldura
-            canvas.DrawBitmap(moldura, 0, 0);
+            // Sobrepõe a moldura redimensionada
+            canvas.DrawBitmap(molduraRedimensionada, 0, 0);
 
             // Salva resultado
             var nomeArquivo = $"mockup_simples_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
@@ -154,18 +163,23 @@ namespace PicStoneFotoAPI.Services
             }
 
             using var streamMoldura = File.OpenRead(caminhoMoldura);
-            using var moldura = SKBitmap.Decode(streamMoldura);
+            using var molduraOriginal = SKBitmap.Decode(streamMoldura);
 
-            // Dimensões da moldura: 3102 x 628 (aproximado)
-            // Área útil por chapa: largura ~1487px
-            // Posição chapa 1: X ~58px
-            // Posição chapa 2: X ~1557px
+            // Calcula proporção do crop e ajusta a moldura para se adequar
+            float propImagBook = (float)chapaCropada.Width / chapaCropada.Height;
+            int alturaImagMold = (int)(1487 / propImagBook);
+            float propEntreProps = propImagBook / 1.9853f;
 
-            int larguraUtil = 1487;
-            int alturaUtil = (int)(larguraUtil * ((float)chapaCropada.Height / chapaCropada.Width));
+            // Dimensões do canvas final (largura fixa 3102, altura proporcional)
+            int larguraCanvas = 3102;
+            int alturaCanvas = (int)(1247 / propEntreProps);
 
-            // Redimensiona a chapa
-            var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(larguraUtil, alturaUtil), SKFilterQuality.High);
+            _logger.LogInformation("PropImagBook: {Prop}, AlturaImagMold: {Altura}, PropEntreProps: {PropEntreProps}",
+                propImagBook, alturaImagMold, propEntreProps);
+            _logger.LogInformation("Canvas: {Largura}x{Altura}", larguraCanvas, alturaCanvas);
+
+            // Redimensiona a chapa para largura 1487 com altura proporcional
+            var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(1487, alturaImagMold), SKFilterQuality.High);
 
             // Cria espelho (bookmatch)
             var chapaEspelhada = new SKBitmap(chapaRedimensionada.Width, chapaRedimensionada.Height);
@@ -175,18 +189,21 @@ namespace PicStoneFotoAPI.Services
                 canvas2.DrawBitmap(chapaRedimensionada, 0, 0);
             }
 
-            // Cria canvas final
-            using var surface = SKSurface.Create(new SKImageInfo(moldura.Width, moldura.Height));
+            // Redimensiona a moldura para se adequar ao canvas
+            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraCanvas, alturaCanvas), SKFilterQuality.High);
+
+            // Cria canvas final com dimensões calculadas
+            using var surface = SKSurface.Create(new SKImageInfo(larguraCanvas, alturaCanvas));
             var canvas = surface.Canvas;
             canvas.Clear(SKColors.Transparent);
 
-            // Desenha as duas chapas
-            int posY = 130;
-            canvas.DrawBitmap(chapaRedimensionada, 58, posY);  // Chapa 1
-            canvas.DrawBitmap(chapaEspelhada, 1557, posY);     // Chapa 2 (espelhada)
+            // Desenha as duas chapas (posição Y proporcional)
+            int posY = (int)(262 / propEntreProps);
+            canvas.DrawBitmap(chapaRedimensionada, 58, posY);      // Chapa 1
+            canvas.DrawBitmap(chapaEspelhada, 1557, posY);         // Chapa 2 (espelhada)
 
-            // Sobrepõe a moldura
-            canvas.DrawBitmap(moldura, 0, 0);
+            // Sobrepõe a moldura redimensionada
+            canvas.DrawBitmap(molduraRedimensionada, 0, 0);
 
             // Salva resultado
             var nomeArquivo = $"mockup_duplo_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
