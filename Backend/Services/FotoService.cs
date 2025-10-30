@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text.RegularExpressions;
 using FluentFTP;
 using SkiaSharp;
+using Microsoft.EntityFrameworkCore;
 
 namespace PicStoneFotoAPI.Services
 {
@@ -133,8 +134,8 @@ namespace PicStoneFotoAPI.Services
                     .Take(limite)
                     .ToListAsync();
 
-                _logger.LogInformation("Histórico obtido: {Count} fotos", fotos.Count);
-                return fotos;
+                _logger.LogInformation("Histórico obtido: {Count} fotos", fotos?.Count ?? 0);
+                return fotos ?? new List<FotoMobile>();
             }
             catch (Exception ex)
             {
