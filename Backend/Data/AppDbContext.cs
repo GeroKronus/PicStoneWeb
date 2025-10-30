@@ -25,9 +25,11 @@ namespace PicStoneFotoAPI.Data
                 entity.ToTable("FotosMobile");
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.NomeArquivo).HasMaxLength(255).IsRequired();
-                entity.Property(e => e.Lote).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Material).HasMaxLength(100).IsRequired(false); // Opcional
+                entity.Property(e => e.Bloco).HasMaxLength(50).IsRequired(false); // Opcional
+                entity.Property(e => e.Lote).HasMaxLength(50).IsRequired(false); // Opcional (compatibilidade)
                 entity.Property(e => e.Chapa).HasMaxLength(50).IsRequired();
-                entity.Property(e => e.Processo).HasMaxLength(50).IsRequired();
+                entity.Property(e => e.Processo).HasMaxLength(50).IsRequired(false); // Opcional (compatibilidade)
                 entity.Property(e => e.Usuario).HasMaxLength(100);
                 entity.Property(e => e.CaminhoArquivo).HasMaxLength(500);
             });
