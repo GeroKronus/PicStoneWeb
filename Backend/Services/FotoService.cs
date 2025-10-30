@@ -3,6 +3,7 @@ using PicStoneFotoAPI.Models;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using FluentFTP;
+using SkiaSharp;
 
 namespace PicStoneFotoAPI.Services
 {
@@ -52,18 +53,23 @@ namespace PicStoneFotoAPI.Services
                 }
 
                 // Gera nome do arquivo padronizado
-                var nomeArquivo = GerarNomeArquivo(request.Lote, request.Chapa);
+                var nomeArquivo = GerarNomeArquivo(request.Bloco, request.Chapa);
                 var caminhoCompleto = Path.Combine(_uploadPath, nomeArquivo);
 
                 // Salva arquivo no disco
                 await SalvarArquivoAsync(request.Arquivo, caminhoCompleto);
+
+                // Adicionar legenda na imagem
+                await AdicionarLegendaNaImagemAsync(caminhoCompleto, request);
 
                 // Registra no banco de dados
                 var username = user.Identity?.Name ?? "Desconhecido";
                 var fotoMobile = new FotoMobile
                 {
                     NomeArquivo = nomeArquivo,
-                    Lote = SanitizarString(request.Lote),
+                    Material = SanitizarString(request.Material),
+                    Bloco = SanitizarString(request.Bloco),
+                    Lote = request.Lote,
                     Chapa = SanitizarString(request.Chapa),
                     Processo = request.Processo,
                     Espessura = request.Espessura,
@@ -144,14 +150,14 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
-        /// Gera nome do arquivo no formato LOTE_CHAPA_YYYYMMDD_HHMMSS.jpg
+        /// Gera nome do arquivo no formato BLOCO_CHAPA_YYYYMMDD_HHMMSS.jpg
         /// </summary>
-        private string GerarNomeArquivo(string lote, string chapa)
+        private string GerarNomeArquivo(string bloco, string chapa)
         {
             var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-            var loteSanitizado = SanitizarNomeArquivo(lote);
+            var blocoSanitizado = SanitizarNomeArquivo(bloco);
             var chapaSanitizada = SanitizarNomeArquivo(chapa);
-            return $"{loteSanitizado}_{chapaSanitizada}_{timestamp}.jpg";
+            return $"{blocoSanitizado}_{chapaSanitizada}_{timestamp}.jpg";
         }
 
         /// <summary>
@@ -178,6 +184,93 @@ namespace PicStoneFotoAPI.Services
         {
             using var stream = new FileStream(caminho, FileMode.Create);
             await arquivo.CopyToAsync(stream);
+        }
+
+        /// <summary>
+        /// Adiciona legenda com dados na imagem (canto superior esquerdo, texto branco)
+        /// </summary>
+        private Task AdicionarLegendaNaImagemAsync(string caminhoImagem, FotoUploadRequest request)
+        {
+            try
+            {
+                // Carrega a imagem
+                using var inputStream = File.OpenRead(caminhoImagem);
+                using var original = SKBitmap.Decode(inputStream);
+                inputStream.Close();
+
+                // Cria uma superfície para desenhar
+                using var surface = SKSurface.Create(new SKImageInfo(original.Width, original.Height));
+                var canvas = surface.Canvas;
+
+                // Desenha a imagem original
+                canvas.DrawBitmap(original, 0, 0);
+
+                // Configuração do texto
+                using var paint = new SKPaint
+                {
+                    Color = SKColors.White,
+                    TextSize = 40,
+                    IsAntialias = true,
+                    Style = SKPaintStyle.Fill,
+                    Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
+                };
+
+                // Configuração da sombra/outline para melhor legibilidade
+                using var shadowPaint = new SKPaint
+                {
+                    Color = SKColors.Black,
+                    TextSize = 40,
+                    IsAntialias = true,
+                    Style = SKPaintStyle.Stroke,
+                    StrokeWidth = 3,
+                    Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
+                };
+
+                // Monta o texto da legenda
+                var linha1 = $"Material: {request.Material}";
+                var linha2 = $"Bloco: {request.Bloco}";
+                var linha3 = $"Chapa: {request.Chapa}";
+                var linha4 = request.Espessura.HasValue ? $"Espessura: {request.Espessura}mm" : "";
+
+                // Posição inicial (canto superior esquerdo com margem)
+                float x = 20;
+                float y = 60;
+                float lineHeight = 50;
+
+                // Desenha cada linha (primeiro a sombra, depois o texto)
+                canvas.DrawText(linha1, x, y, shadowPaint);
+                canvas.DrawText(linha1, x, y, paint);
+
+                y += lineHeight;
+                canvas.DrawText(linha2, x, y, shadowPaint);
+                canvas.DrawText(linha2, x, y, paint);
+
+                y += lineHeight;
+                canvas.DrawText(linha3, x, y, shadowPaint);
+                canvas.DrawText(linha3, x, y, paint);
+
+                if (!string.IsNullOrEmpty(linha4))
+                {
+                    y += lineHeight;
+                    canvas.DrawText(linha4, x, y, shadowPaint);
+                    canvas.DrawText(linha4, x, y, paint);
+                }
+
+                // Salva a imagem com a legenda
+                using var image = surface.Snapshot();
+                using var data = image.Encode(SKEncodedImageFormat.Jpeg, 90);
+                using var outputStream = File.OpenWrite(caminhoImagem);
+                data.SaveTo(outputStream);
+
+                _logger.LogInformation("Legenda adicionada à imagem: {CaminhoImagem}", caminhoImagem);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao adicionar legenda na imagem: {CaminhoImagem}", caminhoImagem);
+                // Não lança exceção para não bloquear o upload
+            }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>

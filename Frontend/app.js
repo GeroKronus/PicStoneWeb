@@ -204,9 +204,9 @@ async function handleUpload(e) {
 
     const formData = new FormData();
     formData.append('Arquivo', state.currentPhotoFile);
-    formData.append('Lote', document.getElementById('lote').value);
+    formData.append('Material', document.getElementById('material').value);
+    formData.append('Bloco', document.getElementById('bloco').value);
     formData.append('Chapa', document.getElementById('chapa').value);
-    formData.append('Processo', document.getElementById('processo').value);
 
     const espessura = document.getElementById('espessura').value;
     if (espessura) {
@@ -276,8 +276,9 @@ async function loadHistory() {
                      style="width: 100%; max-width: 400px; border-radius: 8px; margin-bottom: 10px;"
                      onerror="this.style.display='none'">
                 <h3>${foto.nomeArquivo}</h3>
-                <p><strong>Lote:</strong> ${foto.lote} | <strong>Chapa:</strong> ${foto.chapa}</p>
-                <p><strong>Processo:</strong> ${foto.processo} ${foto.espessura ? `| <strong>Espessura:</strong> ${foto.espessura}mm` : ''}</p>
+                <p><strong>Material:</strong> ${foto.material || 'N/A'}</p>
+                <p><strong>Bloco:</strong> ${foto.bloco || foto.lote || 'N/A'} | <strong>Chapa:</strong> ${foto.chapa}</p>
+                <p>${foto.espessura ? `<strong>Espessura:</strong> ${foto.espessura}mm` : ''}</p>
                 <small>Enviado por ${foto.usuario} em ${formatDate(foto.dataUpload)}</small>
                 <br>
                 <a href="${API_URL}/api/fotos/imagem/${foto.nomeArquivo}?token=${state.token}"

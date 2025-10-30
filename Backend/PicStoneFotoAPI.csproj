@@ -32,6 +32,9 @@
     <!-- FluentFTP para transferência de arquivos -->
     <PackageReference Include="FluentFTP" Version="49.0.2" />
 
+    <!-- SkiaSharp para manipulação de imagens -->
+    <PackageReference Include="SkiaSharp" Version="2.88.7" />
+
     <!-- Swagger para documentação -->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
