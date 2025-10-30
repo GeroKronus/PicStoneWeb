@@ -785,11 +785,8 @@ function startMockupFlow() {
 }
 
 function abrirCropParaMockup() {
-    // Captura configuração selecionada
-    const tipoSelecionado = document.querySelector('input[name="tipoCavalete"]:checked');
+    // Captura apenas a configuração de fundo (tipo não é mais necessário)
     const fundoSelecionado = document.querySelector('input[name="fundoCavalete"]:checked');
-
-    state.mockupConfig.tipo = tipoSelecionado ? tipoSelecionado.value : 'simples';
     state.mockupConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
 
     // Ativa modo mockup

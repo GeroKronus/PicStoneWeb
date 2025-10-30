@@ -523,6 +523,30 @@ body {
     box-shadow: var(--shadow);
 }
 
+.info-box {
+    background: #f0f9ff;
+    border-left: 4px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.info-box p {
+    margin: 0 0 12px 0;
+    color: #1e40af;
+    font-size: 16px;
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 24px;
+    color: #334155;
+}
+
+.info-box li {
+    margin: 6px 0;
+}
+
 .radio-group {
     display: flex;
     flex-direction: column;
