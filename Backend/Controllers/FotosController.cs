@@ -86,7 +86,13 @@ namespace PicStoneFotoAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao buscar histórico de fotos");
-                return StatusCode(500, new { mensagem = "Erro ao buscar histórico" });
+                return StatusCode(500, new
+                {
+                    mensagem = "Erro ao buscar histórico",
+                    erro = ex.Message,
+                    innerError = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace?.Split('\n').Take(10).ToArray()
+                });
             }
         }
 
