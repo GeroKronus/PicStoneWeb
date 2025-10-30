@@ -67,7 +67,7 @@ namespace PicStoneFotoAPI.Services
                     Chapa = SanitizarString(request.Chapa),
                     Processo = request.Processo,
                     Espessura = request.Espessura,
-                    DataUpload = DateTime.Now,
+                    DataUpload = DateTime.UtcNow,
                     Usuario = username,
                     CaminhoArquivo = caminhoCompleto
                 };
@@ -148,7 +148,7 @@ namespace PicStoneFotoAPI.Services
         /// </summary>
         private string GerarNomeArquivo(string lote, string chapa)
         {
-            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
             var loteSanitizado = SanitizarNomeArquivo(lote);
             var chapaSanitizada = SanitizarNomeArquivo(chapa);
             return $"{loteSanitizado}_{chapaSanitizada}_{timestamp}.jpg";
