@@ -117,6 +117,7 @@ namespace PicStoneFotoAPI.Controllers
         /// Endpoint de debug completo para histórico (produção)
         /// </summary>
         [HttpGet("debug-historico")]
+        [AllowAnonymous]
         public async Task<IActionResult> DebugHistorico()
         {
             var debug = new Dictionary<string, object>();
