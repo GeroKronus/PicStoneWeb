@@ -490,6 +490,13 @@ function initializeCropCanvas() {
     state.cropData.scaleX = img.width / width;
     state.cropData.scaleY = img.height / height;
 
+    console.log('=== DEBUG INITIALIZE CROP ===');
+    console.log('Imagem original:', img.width, 'x', img.height);
+    console.log('Canvas final:', width, 'x', height);
+    console.log('ScaleX calculado:', state.cropData.scaleX);
+    console.log('ScaleY calculado:', state.cropData.scaleY);
+    console.log('=============================');
+
     // Desenha imagem
     ctx.drawImage(img, 0, 0, width, height);
 
@@ -669,11 +676,24 @@ function confirmCrop() {
     const canvas = elements.cropCanvas;
     const img = state.cropData.image;
 
+    console.log('=== DEBUG CROP ===');
+    console.log('Imagem original:', img.width, 'x', img.height);
+    console.log('Canvas:', canvas.width, 'x', canvas.height);
+    console.log('ScaleX:', state.cropData.scaleX, 'ScaleY:', state.cropData.scaleY);
+    console.log('Seleção no canvas - startX:', state.cropData.startX, 'startY:', state.cropData.startY);
+    console.log('Seleção no canvas - endX:', state.cropData.endX, 'endY:', state.cropData.endY);
+    console.log('Largura seleção canvas:', Math.abs(state.cropData.endX - state.cropData.startX));
+    console.log('Altura seleção canvas:', Math.abs(state.cropData.endY - state.cropData.startY));
+
     // Calcula coordenadas na imagem original usando escalas separadas para X e Y
     const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scaleX;
     const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scaleY;
     const width = Math.abs(state.cropData.endX - state.cropData.startX) * state.cropData.scaleX;
     const height = Math.abs(state.cropData.endY - state.cropData.startY) * state.cropData.scaleY;
+
+    console.log('Crop na imagem original - X:', x, 'Y:', y);
+    console.log('Crop na imagem original - Width:', width, 'Height:', height);
+    console.log('==================');
 
     // Cria canvas temporário para crop
     const tempCanvas = document.createElement('canvas');
