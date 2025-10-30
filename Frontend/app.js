@@ -505,8 +505,11 @@ function drawCropOverlay() {
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
 
-    // Redesenha imagem
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    // Limpa e pinta fundo preto
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // Desenha imagem completa
     ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
 
     // Calcula retângulo de seleção
@@ -515,11 +518,11 @@ function drawCropOverlay() {
     const width = Math.abs(state.cropData.endX - state.cropData.startX);
     const height = Math.abs(state.cropData.endY - state.cropData.startY);
 
-    // Desenha overlay escurecido
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    // Desenha overlay escurecido sobre toda a imagem
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // Limpa área selecionada
+    // Limpa área selecionada e redesenha sem escurecimento
     ctx.clearRect(x, y, width, height);
     ctx.drawImage(img, x * state.cropData.scale, y * state.cropData.scale,
         width * state.cropData.scale, height * state.cropData.scale,
@@ -527,28 +530,29 @@ function drawCropOverlay() {
 
     // Desenha borda da seleção
     ctx.strokeStyle = '#007AFF';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     ctx.strokeRect(x, y, width, height);
 
-    // Desenha cantos
-    const cornerSize = 20;
+    // Desenha cantos mais visíveis
+    const cornerSize = 30;
+    const cornerThickness = 4;
     ctx.fillStyle = '#007AFF';
 
     // Canto superior esquerdo
-    ctx.fillRect(x - 2, y - 2, cornerSize, 4);
-    ctx.fillRect(x - 2, y - 2, 4, cornerSize);
+    ctx.fillRect(x - 2, y - 2, cornerSize, cornerThickness);
+    ctx.fillRect(x - 2, y - 2, cornerThickness, cornerSize);
 
     // Canto superior direito
-    ctx.fillRect(x + width - cornerSize + 2, y - 2, cornerSize, 4);
-    ctx.fillRect(x + width - 2, y - 2, 4, cornerSize);
+    ctx.fillRect(x + width - cornerSize + 2, y - 2, cornerSize, cornerThickness);
+    ctx.fillRect(x + width - 2, y - 2, cornerThickness, cornerSize);
 
     // Canto inferior esquerdo
-    ctx.fillRect(x - 2, y + height - 2, cornerSize, 4);
-    ctx.fillRect(x - 2, y + height - cornerSize + 2, 4, cornerSize);
+    ctx.fillRect(x - 2, y + height - 2, cornerSize, cornerThickness);
+    ctx.fillRect(x - 2, y + height - cornerSize + 2, cornerThickness, cornerSize);
 
     // Canto inferior direito
-    ctx.fillRect(x + width - cornerSize + 2, y + height - 2, cornerSize, 4);
-    ctx.fillRect(x + width - 2, y + height - cornerSize + 2, 4, cornerSize);
+    ctx.fillRect(x + width - cornerSize + 2, y + height - 2, cornerSize, cornerThickness);
+    ctx.fillRect(x + width - 2, y + height - cornerSize + 2, cornerThickness, cornerSize);
 }
 
 function resetCrop() {
