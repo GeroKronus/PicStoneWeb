@@ -40,6 +40,7 @@ const elements = {
     previewImage: document.getElementById('previewImage'),
     clearPhotoBtn: document.getElementById('clearPhotoBtn'),
     adjustImageBtn: document.getElementById('adjustImageBtn'),
+    resetImageBtn: document.getElementById('resetImageBtn'),
     uploadForm: document.getElementById('uploadForm'),
     submitBtn: document.getElementById('submitBtn'),
     uploadProgress: document.getElementById('uploadProgress'),
@@ -86,6 +87,7 @@ function setupEventListeners() {
 
     elements.clearPhotoBtn.addEventListener('click', clearPhoto);
     elements.adjustImageBtn.addEventListener('click', abrirCropParaAjuste);
+    elements.resetImageBtn.addEventListener('click', resetToOriginalImage);
     elements.uploadForm.addEventListener('submit', handleUpload);
     elements.logoutBtn.addEventListener('click', handleLogout);
     elements.historyBtn.addEventListener('click', showHistoryScreen);
@@ -688,6 +690,8 @@ function confirmCrop() {
             compressAndPreviewImage(file);
             // Mostra botão mockup pois já tem imagem disponível
             elements.mockupBtn.classList.remove('hidden');
+            // Mostra botão de reset pois a imagem foi modificada
+            elements.resetImageBtn.classList.remove('hidden');
             showMainScreen();
         }
     }, 'image/jpeg', 0.9);
@@ -711,6 +715,28 @@ function abrirCropParaAjuste() {
     state.cropData.image = state.originalPhoto;
     initializeCropCanvas();
     showCropScreen();
+}
+
+function resetToOriginalImage() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma imagem original disponível', 'error');
+        return;
+    }
+
+    // Converte a imagem original de volta para File e exibe
+    const canvas = document.createElement('canvas');
+    canvas.width = state.originalPhoto.width;
+    canvas.height = state.originalPhoto.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(state.originalPhoto, 0, 0);
+
+    canvas.toBlob((blob) => {
+        const file = new File([blob], 'original.jpg', { type: 'image/jpeg' });
+        compressAndPreviewImage(file);
+        // Oculta botão de reset pois voltou ao original
+        elements.resetImageBtn.classList.add('hidden');
+        showMessage('Imagem original restaurada', 'success');
+    }, 'image/jpeg', 0.9);
 }
 
 // ========== MOCKUP DE CAVALETES ==========
@@ -764,12 +790,14 @@ async function gerarMockup(imagemCropada) {
             throw new Error(data.mensagem || 'Erro ao gerar mockup');
         }
 
-        // Exibe resultado
-        if (data.caminhosGerados && data.caminhosGerados.length > 0) {
-            const mockupUrl = `${API_URL}/uploads/${data.caminhosGerados[0]}`;
+        // Exibe resultado (ATENÇÃO: backend retorna com C maiúsculo)
+        if (data.CaminhosGerados && data.CaminhosGerados.length > 0) {
+            const mockupUrl = `${API_URL}/uploads/${data.CaminhosGerados[0]}`;
             elements.mockupImage.src = mockupUrl;
             showScreen(elements.mockupResultScreen);
-            showMockupMessage(data.mensagem, 'success');
+            showMockupMessage(data.Mensagem, 'success');
+        } else {
+            throw new Error('Nenhum mockup foi gerado');
         }
 
         // Reseta modo mockup

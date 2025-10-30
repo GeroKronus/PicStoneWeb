@@ -278,6 +278,35 @@ body {
     opacity: 1;
 }
 
+.btn-reset-icon {
+    position: absolute;
+    top: 24px;
+    right: 120px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    opacity: 0.8;
+}
+
+.btn-reset-icon:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+.btn-reset-icon.hidden {
+    display: none;
+}
+
 
 /* Progress */
 .upload-progress {
