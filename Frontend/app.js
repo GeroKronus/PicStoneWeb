@@ -487,7 +487,8 @@ function initializeCropCanvas() {
     canvas.height = height;
 
     // Calcula escala para conversão de coordenadas canvas -> imagem original
-    state.cropData.scale = img.width / width;
+    state.cropData.scaleX = img.width / width;
+    state.cropData.scaleY = img.height / height;
 
     // Desenha imagem
     ctx.drawImage(img, 0, 0, width, height);
@@ -668,11 +669,11 @@ function confirmCrop() {
     const canvas = elements.cropCanvas;
     const img = state.cropData.image;
 
-    // Calcula coordenadas na imagem original
-    const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scale;
-    const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scale;
-    const width = Math.abs(state.cropData.endX - state.cropData.startX) * state.cropData.scale;
-    const height = Math.abs(state.cropData.endY - state.cropData.startY) * state.cropData.scale;
+    // Calcula coordenadas na imagem original usando escalas separadas para X e Y
+    const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scaleX;
+    const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scaleY;
+    const width = Math.abs(state.cropData.endX - state.cropData.startX) * state.cropData.scaleX;
+    const height = Math.abs(state.cropData.endY - state.cropData.startY) * state.cropData.scaleY;
 
     // Cria canvas temporário para crop
     const tempCanvas = document.createElement('canvas');
