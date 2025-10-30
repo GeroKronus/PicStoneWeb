@@ -31,9 +31,9 @@
 
     <!-- FluentFTP para transferência de arquivos -->
     <PackageReference Include="FluentFTP" Version="49.0.2" />
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
 
     <!-- SkiaSharp para manipulação de imagens -->
-    <PackageReference Include="SkiaSharp" Version="2.88.7" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
 
     <!-- Swagger para documentação -->
