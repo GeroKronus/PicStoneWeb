@@ -319,6 +319,16 @@ namespace PicStoneFotoAPI.Controllers
             {
                 _logger.LogInformation("=== POPULANDO TABELA DE MATERIAIS ===");
 
+                // Garante que a tabela existe
+                await _context.Database.ExecuteSqlRawAsync(@"
+                    CREATE TABLE IF NOT EXISTS ""Materiais"" (
+                        ""Id"" SERIAL PRIMARY KEY,
+                        ""Nome"" VARCHAR(100) NOT NULL UNIQUE,
+                        ""Ativo"" BOOLEAN NOT NULL DEFAULT TRUE,
+                        ""Ordem"" INTEGER NOT NULL DEFAULT 0
+                    )
+                ");
+
                 var materiais = new[]
                 {
                     "NUAGE", "CALACATA", "ARTIC WHITE", "SNOW FLAKES", "WHITE LUX",
