@@ -155,6 +155,73 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// GET /api/migration/add-new-columns
+        /// Adiciona novas colunas Material e Bloco na tabela FotosMobile
+        /// </summary>
+        [HttpGet("add-new-columns")]
+        public async Task<IActionResult> AddNewColumns()
+        {
+            try
+            {
+                _logger.LogInformation("=== ADICIONANDO NOVAS COLUNAS ===");
+
+                // Verifica conexão
+                var canConnect = await _context.Database.CanConnectAsync();
+                if (!canConnect)
+                {
+                    return StatusCode(500, new
+                    {
+                        sucesso = false,
+                        mensagem = "Não foi possível conectar ao banco de dados"
+                    });
+                }
+
+                // Adiciona colunas Material e Bloco se não existirem
+                var sqlCommands = new[]
+                {
+                    "ALTER TABLE \"FotosMobile\" ADD COLUMN IF NOT EXISTS \"Material\" TEXT NULL",
+                    "ALTER TABLE \"FotosMobile\" ADD COLUMN IF NOT EXISTS \"Bloco\" TEXT NULL"
+                };
+
+                var results = new List<object>();
+
+                foreach (var sql in sqlCommands)
+                {
+                    try
+                    {
+                        await _context.Database.ExecuteSqlRawAsync(sql);
+                        _logger.LogInformation("SQL executado: {Sql}", sql);
+                        results.Add(new { comando = sql, sucesso = true, erro = (string)null });
+                    }
+                    catch (Exception exSql)
+                    {
+                        _logger.LogError(exSql, "Erro ao executar: {Sql}", sql);
+                        results.Add(new { comando = sql, sucesso = false, erro = exSql.Message });
+                    }
+                }
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    mensagem = "Colunas adicionadas com sucesso!",
+                    comandos = results,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao adicionar colunas");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    mensagem = "Erro ao adicionar colunas",
+                    erro = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
         /// GET /api/migration/status
         /// Verifica o status do banco de dados
         /// </summary>
