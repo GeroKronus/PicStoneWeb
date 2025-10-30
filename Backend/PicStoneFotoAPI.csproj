@@ -34,6 +34,7 @@
 
     <!-- SkiaSharp para manipulação de imagens -->
     <PackageReference Include="SkiaSharp" Version="2.88.7" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
 
     <!-- Swagger para documentação -->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
