@@ -225,6 +225,46 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// GET /api/migration/clear-photos
+        /// Limpa todos os dados da tabela FotosMobile (mantém usuários)
+        /// </summary>
+        [HttpGet("clear-photos")]
+        public async Task<IActionResult> ClearPhotos()
+        {
+            try
+            {
+                _logger.LogInformation("=== LIMPANDO TABELA DE FOTOS ===");
+
+                // Conta quantas fotos existem
+                var count = await _context.FotosMobile.CountAsync();
+
+                // Deleta todas as fotos
+                await _context.Database.ExecuteSqlRawAsync("DELETE FROM \"FotosMobile\"");
+
+                _logger.LogInformation("{Count} fotos deletadas", count);
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    mensagem = "Tabela de fotos limpa com sucesso!",
+                    fotosRemovidas = count,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao limpar tabela de fotos");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    mensagem = "Erro ao limpar tabela de fotos",
+                    erro = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
         /// GET /api/migration/status
         /// Verifica o status do banco de dados
         /// </summary>
