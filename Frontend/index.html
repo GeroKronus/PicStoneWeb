@@ -101,6 +101,9 @@
                 <div id="uploadMessage" class="message hidden"></div>
             </form>
 
+            <!-- Botão Simular Cavalete -->
+            <button id="mockupBtn" class="btn btn-mockup hidden">📐 Simular Cavalete</button>
+
             <!-- Botão de Histórico -->
             <button id="historyBtn" class="btn btn-secondary">Ver Histórico</button>
         </div>
@@ -126,6 +129,69 @@
                 <button id="resetCropBtn" class="btn btn-secondary">Resetar</button>
                 <button id="confirmCropBtn" class="btn btn-primary">Confirmar Corte</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Tela de Configuração de Mockup -->
+    <div id="mockupConfigScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelMockupBtn" class="btn-icon">← Voltar</button>
+                <h1>Simular Cavalete</h1>
+            </div>
+
+            <div class="mockup-config-card">
+                <div class="form-group">
+                    <label>Tipo de Cavalete</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="tipoCavalete" value="simples" checked>
+                            <span>🖼️ Simples (1 chapa)</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="tipoCavalete" value="duplo">
+                            <span>🖼️🖼️ Duplo Bookmatch (2 chapas espelhadas)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fundo</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="fundoCavalete" value="claro" checked>
+                            <span>☀️ Claro</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="fundoCavalete" value="escuro">
+                            <span>🌙 Escuro</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="continuarCropMockupBtn" class="btn btn-primary">Continuar para Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Resultado do Mockup -->
+    <div id="mockupResultScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backToMainBtn" class="btn-icon">← Voltar</button>
+                <h1>Mockup Gerado</h1>
+            </div>
+
+            <div id="mockupPreview" class="photo-preview">
+                <img id="mockupImage" src="" alt="Mockup">
+            </div>
+
+            <div class="mockup-actions">
+                <button id="downloadMockupBtn" class="btn btn-primary">⬇️ Baixar Mockup</button>
+                <button id="newMockupBtn" class="btn btn-secondary">🔄 Gerar Novo</button>
+            </div>
+
+            <div id="mockupMessage" class="message hidden"></div>
         </div>
     </div>
 

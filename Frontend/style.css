@@ -434,3 +434,73 @@ body {
 .crop-actions .btn {
     flex: 1;
 }
+
+/* Mockup Styles */
+.btn-mockup {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-top: 10px;
+}
+
+.btn-mockup:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(102, 126, 234, 0.4);
+}
+
+.mockup-config-card {
+    background: var(--card-background);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.radio-option:hover {
+    border-color: var(--primary-color);
+    background: rgba(37, 99, 235, 0.05);
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 12px;
+    cursor: pointer;
+}
+
+.radio-option input[type="radio"]:checked + span {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.radio-option span {
+    font-size: 16px;
+}
+
+.mockup-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.mockup-actions .btn {
+    flex: 1;
+}
+
+#mockupPreview img {
+    width: 100%;
+    border-radius: 12px;
+}

@@ -98,6 +98,7 @@ builder.Services.AddCors(options =>
 // ========== REGISTRO DE SERVIÇOS ==========
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<FotoService>();
+builder.Services.AddScoped<MockupService>();
 
 // ========== CONTROLLERS E SWAGGER ==========
 builder.Services.AddControllers();

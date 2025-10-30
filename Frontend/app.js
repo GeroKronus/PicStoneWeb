@@ -7,6 +7,8 @@ const state = {
     username: localStorage.getItem('username') || null,
     currentPhoto: null,
     currentPhotoFile: null,
+    originalPhoto: null, // Foto original para mockup
+    mockupMode: false, // Indica se está em modo mockup
     cropData: {
         image: null,
         startX: 0,
@@ -15,6 +17,10 @@ const state = {
         endY: 0,
         isDragging: false,
         scale: 1
+    },
+    mockupConfig: {
+        tipo: 'simples',
+        fundo: 'claro'
     }
 };
 
@@ -24,6 +30,8 @@ const elements = {
     mainScreen: document.getElementById('mainScreen'),
     cropScreen: document.getElementById('cropScreen'),
     historyScreen: document.getElementById('historyScreen'),
+    mockupConfigScreen: document.getElementById('mockupConfigScreen'),
+    mockupResultScreen: document.getElementById('mockupResultScreen'),
     loginForm: document.getElementById('loginForm'),
     loginError: document.getElementById('loginError'),
     captureBtn: document.getElementById('captureBtn'),
@@ -43,7 +51,15 @@ const elements = {
     cropCanvas: document.getElementById('cropCanvas'),
     cancelCropBtn: document.getElementById('cancelCropBtn'),
     resetCropBtn: document.getElementById('resetCropBtn'),
-    confirmCropBtn: document.getElementById('confirmCropBtn')
+    confirmCropBtn: document.getElementById('confirmCropBtn'),
+    mockupBtn: document.getElementById('mockupBtn'),
+    cancelMockupBtn: document.getElementById('cancelMockupBtn'),
+    continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
+    backToMainBtn: document.getElementById('backToMainBtn'),
+    downloadMockupBtn: document.getElementById('downloadMockupBtn'),
+    newMockupBtn: document.getElementById('newMockupBtn'),
+    mockupImage: document.getElementById('mockupImage'),
+    mockupMessage: document.getElementById('mockupMessage')
 };
 
 // ========== INICIALIZAÇÃO ==========
@@ -84,6 +100,14 @@ function setupEventListeners() {
     elements.cropCanvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     elements.cropCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     elements.cropCanvas.addEventListener('touchend', endCrop);
+
+    // Mockup event listeners
+    elements.mockupBtn.addEventListener('click', startMockupFlow);
+    elements.cancelMockupBtn.addEventListener('click', () => showMainScreen());
+    elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
+    elements.backToMainBtn.addEventListener('click', () => showMainScreen());
+    elements.newMockupBtn.addEventListener('click', startMockupFlow);
+    elements.downloadMockupBtn.addEventListener('click', downloadMockup);
 }
 
 // ========== AUTENTICAÇÃO ==========
@@ -295,11 +319,15 @@ async function handleUpload(e) {
 
         showMessage(data.mensagem, 'success');
 
+        // Mostra botão de mockup
+        elements.mockupBtn.classList.remove('hidden');
+
         // Limpa formulário após sucesso
         setTimeout(() => {
             clearPhoto();
             elements.uploadForm.reset();
-        }, 2000);
+            elements.mockupBtn.classList.add('hidden');
+        }, 5000);
 
     } catch (error) {
         showMessage(error.message, 'error');
@@ -595,6 +623,11 @@ function confirmCrop() {
     const canvas = elements.cropCanvas;
     const img = state.cropData.image;
 
+    // Salva imagem original para mockup (se não for modo mockup)
+    if (!state.mockupMode) {
+        state.originalPhoto = img;
+    }
+
     // Calcula coordenadas na imagem original
     const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scale;
     const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scale;
@@ -613,15 +646,110 @@ function confirmCrop() {
     // Converte para blob e cria arquivo
     tempCanvas.toBlob((blob) => {
         const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
-        compressAndPreviewImage(file);
-        showMainScreen();
+
+        // Se for modo mockup, gera o mockup
+        if (state.mockupMode) {
+            gerarMockup(file);
+        } else {
+            compressAndPreviewImage(file);
+            showMainScreen();
+        }
     }, 'image/jpeg', 0.9);
 }
 
 function cancelCrop() {
     // Limpa input file para permitir selecionar a mesma imagem novamente
     elements.fileInput.value = '';
+    state.mockupMode = false;
     showMainScreen();
+}
+
+// ========== MOCKUP DE CAVALETES ==========
+function startMockupFlow() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma foto disponível para mockup', 'error');
+        return;
+    }
+
+    // Mostra tela de configuração
+    showScreen(elements.mockupConfigScreen);
+}
+
+function abrirCropParaMockup() {
+    // Captura configuração selecionada
+    const tipoSelecionado = document.querySelector('input[name="tipoCavalete"]:checked');
+    const fundoSelecionado = document.querySelector('input[name="fundoCavalete"]:checked');
+
+    state.mockupConfig.tipo = tipoSelecionado ? tipoSelecionado.value : 'simples';
+    state.mockupConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
+
+    // Ativa modo mockup
+    state.mockupMode = true;
+
+    // Carrega imagem original no crop
+    state.cropData.image = state.originalPhoto;
+    initializeCropCanvas();
+    showCropScreen();
+}
+
+async function gerarMockup(imagemCropada) {
+    try {
+        elements.uploadProgress.classList.remove('hidden');
+
+        const formData = new FormData();
+        formData.append('ImagemCropada', imagemCropada);
+        formData.append('TipoCavalete', state.mockupConfig.tipo);
+        formData.append('Fundo', state.mockupConfig.fundo);
+
+        const response = await fetch(`${API_URL}/api/mockup/gerar`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.mensagem || 'Erro ao gerar mockup');
+        }
+
+        // Exibe resultado
+        if (data.caminhosGerados && data.caminhosGerados.length > 0) {
+            const mockupUrl = `${API_URL}/uploads/${data.caminhosGerados[0]}`;
+            elements.mockupImage.src = mockupUrl;
+            showScreen(elements.mockupResultScreen);
+            showMockupMessage(data.mensagem, 'success');
+        }
+
+        // Reseta modo mockup
+        state.mockupMode = false;
+
+    } catch (error) {
+        showMockupMessage(error.message, 'error');
+        state.mockupMode = false;
+        showMainScreen();
+    } finally {
+        elements.uploadProgress.classList.add('hidden');
+    }
+}
+
+function downloadMockup() {
+    const link = document.createElement('a');
+    link.href = elements.mockupImage.src;
+    link.download = `mockup_${Date.now()}.jpg`;
+    link.click();
+}
+
+function showMockupMessage(message, type) {
+    elements.mockupMessage.textContent = message;
+    elements.mockupMessage.className = `message ${type}`;
+    elements.mockupMessage.classList.remove('hidden');
+
+    setTimeout(() => {
+        elements.mockupMessage.classList.add('hidden');
+    }, 5000);
 }
 
 // ========== SERVICE WORKER (para PWA futuro) ==========
