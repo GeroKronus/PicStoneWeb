@@ -286,37 +286,19 @@ namespace PicStoneFotoAPI.Services
                     Typeface = SKTypeface.Default
                 };
 
-                // Monta o texto da legenda
-                var linha1 = $"Material: {request.Material}";
-                var linha2 = $"Bloco: {request.Bloco}";
-                var linha3 = $"Chapa: {request.Chapa}";
-                var linha4 = request.Espessura.HasValue ? $"Espessura: {request.Espessura}mm" : "";
+                // Monta o texto da legenda no padrão PicStone: Material BLOCK Bloco Espessura SLAB Chapa
+                var espessura = request.Espessura.HasValue ? $"{request.Espessura}mm" : "";
+                var legenda = $"{request.Material} BLOCK {request.Bloco} {espessura} SLAB {request.Chapa}".Trim();
 
-                _logger.LogInformation("Legendas: {L1}, {L2}, {L3}, {L4}", linha1, linha2, linha3, linha4);
+                _logger.LogInformation("Legenda: {Legenda}", legenda);
 
-                // Posição inicial (canto superior esquerdo com margem)
+                // Posição (canto superior esquerdo com margem)
                 float x = 20;
                 float y = 60;
-                float lineHeight = 50;
 
-                // Desenha cada linha (primeiro a sombra, depois o texto)
-                canvas.DrawText(linha1, x, y, shadowPaint);
-                canvas.DrawText(linha1, x, y, paint);
-
-                y += lineHeight;
-                canvas.DrawText(linha2, x, y, shadowPaint);
-                canvas.DrawText(linha2, x, y, paint);
-
-                y += lineHeight;
-                canvas.DrawText(linha3, x, y, shadowPaint);
-                canvas.DrawText(linha3, x, y, paint);
-
-                if (!string.IsNullOrEmpty(linha4))
-                {
-                    y += lineHeight;
-                    canvas.DrawText(linha4, x, y, shadowPaint);
-                    canvas.DrawText(linha4, x, y, paint);
-                }
+                // Desenha o texto (primeiro a sombra, depois o texto)
+                canvas.DrawText(legenda, x, y, shadowPaint);
+                canvas.DrawText(legenda, x, y, paint);
 
                 _logger.LogInformation("Texto desenhado no canvas");
 
