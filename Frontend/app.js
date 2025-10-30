@@ -183,20 +183,28 @@ async function loadMaterials() {
 function handleFileSelect(e) {
     const file = e.target.files[0];
 
-    if (!file) return;
+    console.log('handleFileSelect chamado', file);
+
+    if (!file) {
+        console.log('Nenhum arquivo selecionado');
+        return;
+    }
 
     // Valida tipo de arquivo
     if (!file.type.startsWith('image/')) {
+        console.log('Arquivo não é imagem:', file.type);
         showMessage('Por favor, selecione uma imagem válida', 'error');
         return;
     }
 
     // Valida tamanho (10MB)
     if (file.size > 10 * 1024 * 1024) {
+        console.log('Arquivo muito grande:', file.size);
         showMessage('Arquivo muito grande. Máximo 10MB', 'error');
         return;
     }
 
+    console.log('Abrindo tela de crop...');
     // Abre tela de crop
     openCropScreen(file);
 }
@@ -370,34 +378,57 @@ function formatDate(dateString) {
 
 // ========== CROP DE IMAGEM ==========
 function openCropScreen(file) {
+    console.log('openCropScreen chamado', file);
     const reader = new FileReader();
 
     reader.onload = (e) => {
+        console.log('FileReader onload disparado');
         const img = new Image();
         img.onload = () => {
+            console.log('Imagem carregada:', img.width, 'x', img.height);
             state.cropData.image = img;
             initializeCropCanvas();
             showCropScreen();
         };
+        img.onerror = (err) => {
+            console.error('Erro ao carregar imagem:', err);
+        };
         img.src = e.target.result;
+    };
+
+    reader.onerror = (err) => {
+        console.error('Erro no FileReader:', err);
     };
 
     reader.readAsDataURL(file);
 }
 
 function showCropScreen() {
+    console.log('showCropScreen chamado');
+    console.log('mainScreen classes antes:', elements.mainScreen.className);
+    console.log('cropScreen classes antes:', elements.cropScreen.className);
+
     elements.mainScreen.classList.remove('active');
     elements.cropScreen.classList.add('active');
+
+    console.log('mainScreen classes depois:', elements.mainScreen.className);
+    console.log('cropScreen classes depois:', elements.cropScreen.className);
 }
 
 function initializeCropCanvas() {
+    console.log('initializeCropCanvas chamado');
     const canvas = elements.cropCanvas;
     const ctx = canvas.getContext('2d');
     const img = state.cropData.image;
 
+    console.log('Canvas element:', canvas);
+    console.log('Dimensões da imagem original:', img.width, 'x', img.height);
+
     // Calcula escala para caber no canvas mantendo proporção
     const maxWidth = window.innerWidth - 64; // Margem
     const maxHeight = window.innerHeight * 0.6;
+
+    console.log('Dimensões máximas permitidas:', maxWidth, 'x', maxHeight);
 
     let width = img.width;
     let height = img.height;
@@ -412,14 +443,18 @@ function initializeCropCanvas() {
         height = maxHeight;
     }
 
+    console.log('Dimensões finais do canvas:', width, 'x', height);
+
     canvas.width = width;
     canvas.height = height;
 
     // Calcula escala para conversão de coordenadas canvas -> imagem original
     state.cropData.scale = img.width / width;
+    console.log('Escala calculada:', state.cropData.scale);
 
     // Desenha imagem
     ctx.drawImage(img, 0, 0, width, height);
+    console.log('Imagem desenhada no canvas');
 
     // Define seleção inicial (imagem inteira)
     state.cropData.startX = 0;
@@ -427,7 +462,10 @@ function initializeCropCanvas() {
     state.cropData.endX = width;
     state.cropData.endY = height;
 
+    console.log('Seleção inicial:', state.cropData);
+
     drawCropOverlay();
+    console.log('Overlay desenhado');
 }
 
 function getCanvasCoords(e) {
