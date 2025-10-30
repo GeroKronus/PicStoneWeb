@@ -1,0 +1,121 @@
+════════════════════════════════════════════════════════════════
+    📸 PicStone - LEIA-ME PRIMEIRO!
+════════════════════════════════════════════════════════════════
+
+🚀 INÍCIO MAIS FÁCIL (FUNCIONA EM QUALQUER TERMINAL):
+
+   Clique duas vezes em:
+
+   ⭐ INICIAR-AQUI.bat
+
+   Este arquivo detecta automaticamente seu terminal e executa
+   a versão correta!
+
+════════════════════════════════════════════════════════════════
+
+📝 NOTA: Você está usando PowerShell!
+
+Os arquivos .BAT não funcionam no PowerShell.
+Use os arquivos .PS1 (PowerShell scripts) em vez disso!
+
+════════════════════════════════════════════════════════════════
+
+✅ COMO INICIAR (POWERSHELL):
+
+   1. Abra o PowerShell nesta pasta
+
+   2. Execute:
+      .\MENU.ps1
+
+   3. Se aparecer erro de política de execução, execute:
+      Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+   4. Depois execute novamente:
+      .\MENU.ps1
+
+════════════════════════════════════════════════════════════════
+
+🪟 COMO INICIAR (CMD/COMMAND PROMPT):
+
+   Se preferir usar o Command Prompt tradicional:
+
+   1. Pressione Win+R
+   2. Digite: cmd
+   3. Navegue até esta pasta:
+      cd "D:\Claude Code\PicStone WEB"
+   4. Execute:
+      MENU.bat
+
+════════════════════════════════════════════════════════════════
+
+⚡ INÍCIO RÁPIDO (POWERSHELL):
+
+   # Libera execução de scripts (uma vez)
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+   # Inicia o menu
+   .\MENU.ps1
+
+   # Ou inicia diretamente o servidor
+   .\iniciar-local.ps1
+
+════════════════════════════════════════════════════════════════
+
+📁 ARQUIVOS DISPONÍVEIS:
+
+   PARA POWERSHELL (.PS1):
+   ├── MENU.ps1              ⭐ Menu interativo
+   └── iniciar-local.ps1     ⭐ Inicia servidor
+
+   PARA CMD (.BAT):
+   ├── MENU.bat              ⭐ Menu interativo
+   ├── iniciar-local.bat     ⭐ Inicia servidor
+   ├── parar-servidor.bat    ⭐ Para servidor
+   ├── testar-conexao-sql.bat
+   ├── descobrir-ip.bat
+   ├── limpar-build.bat
+   └── abrir-vscode.bat
+
+════════════════════════════════════════════════════════════════
+
+🔐 ERRO: "Execução de scripts desabilitada"
+
+   Se aparecer este erro:
+
+   "não pode ser carregado porque a execução de scripts foi
+   desabilitada neste sistema"
+
+   SOLUÇÃO:
+
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+   Depois pressione S (Sim) e Enter
+
+════════════════════════════════════════════════════════════════
+
+🎯 ALTERNATIVA MANUAL:
+
+   Se não quiser usar os scripts, faça manualmente:
+
+   1. Abra PowerShell ou CMD
+   2. cd "D:\Claude Code\PicStone WEB\Backend"
+   3. dotnet restore
+   4. dotnet run
+   5. Acesse: http://localhost:5000
+
+════════════════════════════════════════════════════════════════
+
+📚 DOCUMENTAÇÃO:
+
+   - README.md          → Documentação técnica completa
+   - GUIA_RAPIDO.md     → Guia de deploy Railway
+   - SCRIPTS.md         → Documentação dos scripts
+   - RESUMO_DO_PROJETO.md → Overview do projeto
+
+════════════════════════════════════════════════════════════════
+
+💡 DICA: Use o MENU.ps1 (PowerShell) ou MENU.bat (CMD)
+
+   PowerShell é mais moderno e tem cores melhores! 🎨
+
+════════════════════════════════════════════════════════════════

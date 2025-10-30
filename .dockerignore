@@ -1,0 +1,35 @@
+# Arquivos de build e cache
+**/bin/
+**/obj/
+**/out/
+**/.vs/
+**/.vscode/
+
+# Arquivos de log
+**/logs/
+*.log
+
+# Uploads locais
+**/uploads/
+
+# Node modules (se houver)
+**/node_modules/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentação
+*.md
+!README.md
+
+# Arquivos de ambiente
+.env
+.env.local
+
+# Arquivos temporários
+**/*.tmp
+**/*.temp
+**/.DS_Store
+**/Thumbs.db

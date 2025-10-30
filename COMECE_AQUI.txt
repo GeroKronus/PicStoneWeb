@@ -1,0 +1,155 @@
+════════════════════════════════════════════════════════════════
+    📸 PicStone - Sistema de Captura de Fotos Mobile
+════════════════════════════════════════════════════════════════
+
+🚀 INICIAR RAPIDAMENTE:
+
+   1. Clique duas vezes em: MENU.bat
+   2. Escolha opção [1] - Iniciar Servidor Local
+   3. Aguarde carregar (pode demorar na primeira vez)
+   4. Acesse: http://localhost:5000
+   5. Login: admin / admin123
+
+════════════════════════════════════════════════════════════════
+
+📱 TESTAR NO CELULAR:
+
+   1. Inicie o servidor (MENU.bat → opção [1])
+   2. Descubra seu IP (MENU.bat → opção [4])
+   3. No celular, acesse: http://SEU_IP:5000
+   4. Use as mesmas credenciais (admin/admin123)
+
+   ⚠️ IMPORTANTE: Celular e PC na mesma rede Wi-Fi!
+
+════════════════════════════════════════════════════════════════
+
+📚 DOCUMENTAÇÃO:
+
+   - README.md          → Documentação completa
+   - GUIA_RAPIDO.md     → Guia de deploy no Railway
+   - SCRIPTS.md         → Explicação dos arquivos .bat
+
+════════════════════════════════════════════════════════════════
+
+🛠️ UTILITÁRIOS DISPONÍVEIS:
+
+   MENU.bat                → Menu interativo principal ⭐
+   iniciar-local.bat       → Inicia o servidor
+   parar-servidor.bat      → Para o servidor
+   testar-conexao-sql.bat  → Testa SQL Server
+   descobrir-ip.bat        → Mostra IP para mobile
+   limpar-build.bat        → Limpa arquivos temporários
+   abrir-vscode.bat        → Abre no Visual Studio Code
+
+════════════════════════════════════════════════════════════════
+
+🔧 PRÉ-REQUISITOS:
+
+   ✅ .NET 8.0 SDK instalado
+   ✅ Acesso ao SQL Server (131.255.255.16:11433)
+   ✅ Windows 10/11
+
+   Baixar .NET: https://dotnet.microsoft.com/download/dotnet/8.0
+
+════════════════════════════════════════════════════════════════
+
+🌐 ENDPOINTS DA API:
+
+   POST /api/auth/login          → Fazer login
+   POST /api/fotos/upload        → Upload de foto
+   GET  /api/fotos/historico     → Ver histórico
+   GET  /api/fotos/processos     → Listar processos
+   GET  /swagger                 → Documentação da API
+
+════════════════════════════════════════════════════════════════
+
+📊 BANCO DE DADOS:
+
+   Servidor:   131.255.255.16
+   Porta:      11433
+   Database:   DADOSADV_Q
+   Tabelas:    FotosMobile, Usuarios
+
+   ✅ Tabelas são criadas automaticamente na primeira execução
+
+════════════════════════════════════════════════════════════════
+
+🐛 PROBLEMAS COMUNS:
+
+   ❌ "dotnet: command not found"
+      → Instale o .NET 8.0 SDK
+
+   ❌ "Cannot connect to SQL Server"
+      → Execute: testar-conexao-sql.bat
+      → Verifique firewall e credenciais
+
+   ❌ "Porta 5000 já está em uso"
+      → Execute: parar-servidor.bat
+
+   ❌ Servidor não responde
+      → Feche tudo e reabra MENU.bat
+      → Escolha opção [5] para limpar, depois [1] para iniciar
+
+════════════════════════════════════════════════════════════════
+
+☁️ DEPLOY NO RAILWAY:
+
+   1. npm i -g @railway/cli
+   2. railway login
+   3. railway init
+   4. Configure variáveis de ambiente no painel
+   5. railway up
+
+   Detalhes completos em: GUIA_RAPIDO.md
+
+════════════════════════════════════════════════════════════════
+
+📁 ESTRUTURA DO PROJETO:
+
+   Backend/
+      ├── Controllers/     → Endpoints da API
+      ├── Services/        → Lógica de negócio
+      ├── Models/          → Entidades
+      └── Data/            → Entity Framework
+
+   Frontend/
+      ├── index.html       → Interface mobile
+      ├── style.css        → Estilos
+      └── app.js           → Lógica JavaScript
+
+════════════════════════════════════════════════════════════════
+
+💡 DICAS:
+
+   • Use o MENU.bat para facilitar sua vida
+   • Swagger está em: http://localhost:5000/swagger
+   • Logs estão em: Backend/logs/
+   • Uploads são salvos em: Backend/uploads/
+   • Altere a senha padrão em produção!
+
+════════════════════════════════════════════════════════════════
+
+🎯 PRÓXIMOS PASSOS:
+
+   1. ✅ Execute localmente e teste
+   2. ⬜ Configure as variáveis de ambiente
+   3. ⬜ Teste no celular (mesma rede Wi-Fi)
+   4. ⬜ Ajuste processos disponíveis (se necessário)
+   5. ⬜ Faça deploy no Railway
+   6. ⬜ Configure domínio customizado
+
+════════════════════════════════════════════════════════════════
+
+📞 SUPORTE:
+
+   Para dúvidas ou problemas:
+   1. Consulte README.md
+   2. Verifique logs em Backend/logs/
+   3. Teste endpoints via Swagger
+
+════════════════════════════════════════════════════════════════
+
+Desenvolvido com ❤️ para PicStone Qualidade
+
+Versão 1.0.0 - 2025
+════════════════════════════════════════════════════════════════
