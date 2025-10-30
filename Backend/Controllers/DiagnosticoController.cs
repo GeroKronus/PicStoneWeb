@@ -203,6 +203,46 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// GET /api/diagnostico/connectionstring-raw
+        /// Análise byte a byte da connection string
+        /// </summary>
+        [HttpGet("connectionstring-raw")]
+        public IActionResult ConnectionStringRaw()
+        {
+            try
+            {
+                var databaseUrl = _configuration["DATABASE_URL"];
+
+                if (string.IsNullOrEmpty(databaseUrl))
+                {
+                    return Ok(new { erro = "DATABASE_URL está nula ou vazia" });
+                }
+
+                var primeiros50 = databaseUrl.Length > 50 ? databaseUrl.Substring(0, 50) : databaseUrl;
+                var bytes = System.Text.Encoding.UTF8.GetBytes(primeiros50);
+                var bytesHex = BitConverter.ToString(bytes);
+
+                return Ok(new
+                {
+                    comprimento = databaseUrl.Length,
+                    primeiros50Chars = primeiros50,
+                    primeiros50Bytes = bytesHex,
+                    primeiroChar = databaseUrl[0],
+                    primeiroCharCode = (int)databaseUrl[0],
+                    temEspacoNoInicio = databaseUrl.StartsWith(" "),
+                    temTabNoInicio = databaseUrl.StartsWith("\t"),
+                    stringTrimmed = databaseUrl.Trim(),
+                    comprimentoAposTrim = databaseUrl.Trim().Length,
+                    diferencaTrim = databaseUrl.Length - databaseUrl.Trim().Length
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { erro = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// GET /api/diagnostico/database-info
         /// Informações detalhadas do banco
         /// </summary>
