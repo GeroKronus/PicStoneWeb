@@ -219,26 +219,60 @@ namespace PicStoneFotoAPI.Services
         {
             try
             {
+                _logger.LogInformation("=== INICIANDO ADIÇÃO DE LEGENDA ===");
+                _logger.LogInformation("Caminho: {Caminho}", caminhoImagem);
+                _logger.LogInformation("Material: {Material}, Bloco: {Bloco}, Chapa: {Chapa}",
+                    request.Material, request.Bloco, request.Chapa);
+
+                // Verifica se arquivo existe
+                if (!File.Exists(caminhoImagem))
+                {
+                    _logger.LogError("Arquivo não encontrado para adicionar legenda: {Caminho}", caminhoImagem);
+                    return Task.CompletedTask;
+                }
+
+                var tamanhoAntes = new FileInfo(caminhoImagem).Length;
+                _logger.LogInformation("Tamanho do arquivo antes: {Tamanho} bytes", tamanhoAntes);
+
                 // Carrega a imagem
+                _logger.LogInformation("Carregando imagem...");
                 using var inputStream = File.OpenRead(caminhoImagem);
                 using var original = SKBitmap.Decode(inputStream);
                 inputStream.Close();
 
+                if (original == null)
+                {
+                    _logger.LogError("Falha ao decodificar imagem");
+                    return Task.CompletedTask;
+                }
+
+                _logger.LogInformation("Imagem carregada: {Width}x{Height}", original.Width, original.Height);
+
                 // Cria uma superfície para desenhar
-                using var surface = SKSurface.Create(new SKImageInfo(original.Width, original.Height));
+                var imageInfo = new SKImageInfo(original.Width, original.Height);
+                using var surface = SKSurface.Create(imageInfo);
+
+                if (surface == null)
+                {
+                    _logger.LogError("Falha ao criar superfície de desenho");
+                    return Task.CompletedTask;
+                }
+
                 var canvas = surface.Canvas;
 
                 // Desenha a imagem original
+                canvas.Clear(SKColors.White);
                 canvas.DrawBitmap(original, 0, 0);
+                _logger.LogInformation("Imagem original desenhada no canvas");
 
-                // Configuração do texto
+                // Configuração do texto (usando fonte padrão, sem especificar família)
                 using var paint = new SKPaint
                 {
                     Color = SKColors.White,
                     TextSize = 40,
                     IsAntialias = true,
                     Style = SKPaintStyle.Fill,
-                    Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
+                    Typeface = SKTypeface.Default
                 };
 
                 // Configuração da sombra/outline para melhor legibilidade
@@ -249,7 +283,7 @@ namespace PicStoneFotoAPI.Services
                     IsAntialias = true,
                     Style = SKPaintStyle.Stroke,
                     StrokeWidth = 3,
-                    Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
+                    Typeface = SKTypeface.Default
                 };
 
                 // Monta o texto da legenda
@@ -257,6 +291,8 @@ namespace PicStoneFotoAPI.Services
                 var linha2 = $"Bloco: {request.Bloco}";
                 var linha3 = $"Chapa: {request.Chapa}";
                 var linha4 = request.Espessura.HasValue ? $"Espessura: {request.Espessura}mm" : "";
+
+                _logger.LogInformation("Legendas: {L1}, {L2}, {L3}, {L4}", linha1, linha2, linha3, linha4);
 
                 // Posição inicial (canto superior esquerdo com margem)
                 float x = 20;
@@ -282,17 +318,27 @@ namespace PicStoneFotoAPI.Services
                     canvas.DrawText(linha4, x, y, paint);
                 }
 
+                _logger.LogInformation("Texto desenhado no canvas");
+
                 // Salva a imagem com a legenda
                 using var image = surface.Snapshot();
                 using var data = image.Encode(SKEncodedImageFormat.Jpeg, 90);
-                using var outputStream = File.OpenWrite(caminhoImagem);
-                data.SaveTo(outputStream);
 
-                _logger.LogInformation("Legenda adicionada à imagem: {CaminhoImagem}", caminhoImagem);
+                // Sobrescreve o arquivo original
+                using var outputStream = File.OpenWrite(caminhoImagem);
+                outputStream.SetLength(0); // Limpa conteúdo anterior
+                data.SaveTo(outputStream);
+                outputStream.Flush();
+
+                var tamanhoDepois = new FileInfo(caminhoImagem).Length;
+                _logger.LogInformation("Tamanho do arquivo depois: {Tamanho} bytes", tamanhoDepois);
+                _logger.LogInformation("=== LEGENDA ADICIONADA COM SUCESSO ===");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao adicionar legenda na imagem: {CaminhoImagem}", caminhoImagem);
+                _logger.LogError(ex, "ERRO CRÍTICO ao adicionar legenda na imagem: {CaminhoImagem}", caminhoImagem);
+                _logger.LogError("Tipo: {Type}, Mensagem: {Message}", ex.GetType().FullName, ex.Message);
+                _logger.LogError("Stack: {Stack}", ex.StackTrace);
                 // Não lança exceção para não bloquear o upload
             }
 
