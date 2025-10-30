@@ -39,6 +39,7 @@ const elements = {
     photoPreview: document.getElementById('photoPreview'),
     previewImage: document.getElementById('previewImage'),
     clearPhotoBtn: document.getElementById('clearPhotoBtn'),
+    adjustImageBtn: document.getElementById('adjustImageBtn'),
     uploadForm: document.getElementById('uploadForm'),
     submitBtn: document.getElementById('submitBtn'),
     uploadProgress: document.getElementById('uploadProgress'),
@@ -83,6 +84,7 @@ function setupEventListeners() {
     elements.fileInput.addEventListener('input', handleFileSelect); // Fallback mobile
 
     elements.clearPhotoBtn.addEventListener('click', clearPhoto);
+    elements.adjustImageBtn.addEventListener('click', abrirCropParaAjuste);
     elements.uploadForm.addEventListener('submit', handleUpload);
     elements.logoutBtn.addEventListener('click', handleLogout);
     elements.historyBtn.addEventListener('click', showHistoryScreen);
@@ -225,8 +227,20 @@ function handleFileSelect(e) {
         return;
     }
 
-    // Abre tela de crop
-    openCropScreen(file);
+    // Salva arquivo e exibe preview (SEM abrir crop automaticamente)
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            // Salva imagem original
+            state.originalPhoto = img;
+
+            // Converte para arquivo e exibe preview
+            compressAndPreviewImage(file);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
 function compressAndPreviewImage(file) {
@@ -623,11 +637,6 @@ function confirmCrop() {
     const canvas = elements.cropCanvas;
     const img = state.cropData.image;
 
-    // Salva imagem original para mockup (se não for modo mockup)
-    if (!state.mockupMode) {
-        state.originalPhoto = img;
-    }
-
     // Calcula coordenadas na imagem original
     const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scale;
     const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scale;
@@ -662,6 +671,19 @@ function cancelCrop() {
     elements.fileInput.value = '';
     state.mockupMode = false;
     showMainScreen();
+}
+
+function abrirCropParaAjuste() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma imagem disponível para ajustar', 'error');
+        return;
+    }
+
+    // Carrega imagem original no crop (modo ajuste normal)
+    state.mockupMode = false;
+    state.cropData.image = state.originalPhoto;
+    initializeCropCanvas();
+    showCropScreen();
 }
 
 // ========== MOCKUP DE CAVALETES ==========

@@ -253,6 +253,29 @@ body {
     transform: scale(1.1);
 }
 
+.btn-adjust {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    z-index: 10;
+}
+
+.btn-adjust:hover {
+    background: var(--primary-hover);
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(37, 99, 235, 0.4);
+}
+
 /* Progress */
 .upload-progress {
     margin-top: 20px;
