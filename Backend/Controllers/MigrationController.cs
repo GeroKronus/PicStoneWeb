@@ -96,6 +96,65 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// GET /api/migration/create-admin
+        /// Força a criação do usuário admin
+        /// </summary>
+        [HttpGet("create-admin")]
+        public async Task<IActionResult> CreateAdmin()
+        {
+            try
+            {
+                // Hash da senha "admin123"
+                var passwordHash = BCrypt.Net.BCrypt.HashPassword("admin123");
+
+                // Criar usuário diretamente no banco
+                var usuario = new Models.Usuario
+                {
+                    Username = "admin",
+                    PasswordHash = passwordHash,
+                    NomeCompleto = "Administrador",
+                    Ativo = true,
+                    DataCriacao = DateTime.Now
+                };
+
+                // Verificar se já existe
+                var existente = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == "admin");
+                if (existente != null)
+                {
+                    return Ok(new
+                    {
+                        sucesso = true,
+                        mensagem = "Usuário admin já existe",
+                        usuario = new { existente.Id, existente.Username, existente.NomeCompleto }
+                    });
+                }
+
+                // Adicionar e salvar
+                _context.Usuarios.Add(usuario);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    mensagem = "Usuário admin criado com sucesso!",
+                    usuario = new { usuario.Id, usuario.Username, usuario.NomeCompleto }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar usuário admin");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    mensagem = "Erro ao criar usuário admin",
+                    erro = ex.Message,
+                    innerError = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace?.Split('\n').Take(10).ToArray()
+                });
+            }
+        }
+
+        /// <summary>
         /// GET /api/migration/status
         /// Verifica o status do banco de dados
         /// </summary>
