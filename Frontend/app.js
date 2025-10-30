@@ -444,9 +444,18 @@ function getCanvasCoords(e) {
         clientY = e.clientY;
     }
 
+    // Calcula a posição relativa ao canvas
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    // Converte coordenadas CSS para coordenadas do canvas
+    // (necessário quando canvas é redimensionado via CSS)
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
     return {
-        x: clientX - rect.left,
-        y: clientY - rect.top
+        x: Math.max(0, Math.min(canvas.width, x * scaleX)),
+        y: Math.max(0, Math.min(canvas.height, y * scaleY))
     };
 }
 
