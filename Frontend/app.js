@@ -517,39 +517,34 @@ function drawCropOverlay() {
     // Desenha imagem completa
     ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
 
-    // Salva estado do contexto
-    ctx.save();
+    // Desenha overlay escurecido em 4 retângulos ao redor da seleção
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
 
-    // Desenha retângulo de máscara em toda a área
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    // Topo
+    ctx.fillRect(0, 0, canvasWidth, y);
 
-    // Usa destination-out para "recortar" a área selecionada da máscara
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-    ctx.fillRect(x, y, width, height);
+    // Esquerda (da altura da seleção)
+    ctx.fillRect(0, y, x, height);
 
-    // Restaura composição normal
-    ctx.restore();
+    // Direita (da altura da seleção)
+    ctx.fillRect(x + width, y, canvasWidth - (x + width), height);
 
-    // Desenha borda da seleção
+    // Baixo
+    ctx.fillRect(0, y + height, canvasWidth, canvasHeight - (y + height));
+
+    // Desenha borda da seleção (tracejada branca)
     ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.setLineDash([8, 4]);
     ctx.strokeRect(x, y, width, height);
     ctx.setLineDash([]);
 
-    // Desenha borda sólida interna
-    ctx.strokeStyle = '#007AFF';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x + 1.5, y + 1.5, width - 3, height - 3);
-
-    // Desenha cantos
-    const cornerSize = 30;
-    const cornerThickness = 5;
+    // Desenha cantos brancos com sombra
+    const cornerSize = 25;
+    const cornerThickness = 4;
     ctx.fillStyle = '#FFFFFF';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-    ctx.shadowBlur = 4;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 3;
 
     // Canto superior esquerdo
     ctx.fillRect(x, y, cornerSize, cornerThickness);
