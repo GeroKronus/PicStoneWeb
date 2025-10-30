@@ -269,10 +269,10 @@ namespace PicStoneFotoAPI.Services
                 using var paint = new SKPaint
                 {
                     Color = SKColors.Black,
-                    TextSize = 40,
+                    TextSize = 20,
                     IsAntialias = true,
                     Style = SKPaintStyle.Fill,
-                    Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
+                    Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal)
                 };
 
                 // Monta o texto da legenda no padrão PicStone: Material BLOCK Bloco Espessura SLAB Chapa
@@ -287,10 +287,10 @@ namespace PicStoneFotoAPI.Services
 
                 // Posição (canto superior esquerdo com margem)
                 float x = 20;
-                float y = 60;
+                float y = 40;
 
                 // Calcula dimensões do retângulo com padding
-                float padding = 10;
+                float padding = 8;
                 var backgroundRect = new SKRect(
                     x - padding,
                     y + textBounds.Top - padding,
@@ -298,10 +298,10 @@ namespace PicStoneFotoAPI.Services
                     y + textBounds.Bottom + padding
                 );
 
-                // Desenha retângulo branco semitransparente de fundo
+                // Desenha retângulo branco semitransparente de fundo (50% opacidade)
                 using var backgroundPaint = new SKPaint
                 {
-                    Color = new SKColor(255, 255, 255, 200), // Branco com 78% de opacidade (200/255)
+                    Color = new SKColor(255, 255, 255, 128), // Branco com 50% de opacidade (128/255)
                     Style = SKPaintStyle.Fill,
                     IsAntialias = true
                 };
