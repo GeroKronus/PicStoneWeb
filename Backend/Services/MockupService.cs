@@ -48,22 +48,24 @@ namespace PicStoneFotoAPI.Services
 
                 var caminhos = new List<string>();
 
-                // Gera mockup baseado no tipo
-                if (request.TipoCavalete.ToLower() == "simples")
-                {
-                    var caminho = await GerarCavaleteSimples(bitmapCropado, request.Fundo);
-                    caminhos.Add(caminho);
-                }
-                else // duplo
-                {
-                    var caminho = await GerarCavaleteDuplo(bitmapCropado, request.Fundo);
-                    caminhos.Add(caminho);
-                }
+                // Gera SEMPRE os 3 mockups como no VB.NET original
+
+                // CavaletePronto - Duplo: original à esquerda, espelho à direita
+                var caminhoDuplo1 = await GerarCavaleteDuplo(bitmapCropado, request.Fundo, inverterLados: false);
+                caminhos.Add(caminhoDuplo1);
+
+                // CavaletePronto2 - Duplo invertido: espelho à esquerda, original à direita
+                var caminhoDuplo2 = await GerarCavaleteDuplo(bitmapCropado, request.Fundo, inverterLados: true);
+                caminhos.Add(caminhoDuplo2);
+
+                // CavaletePronto3 - Simples
+                var caminhoSimples = await GerarCavaleteSimples(bitmapCropado, request.Fundo);
+                caminhos.Add(caminhoSimples);
 
                 return new MockupResponse
                 {
                     Sucesso = true,
-                    Mensagem = "Mockup gerado com sucesso!",
+                    Mensagem = "3 mockups gerados com sucesso!",
                     CaminhosGerados = caminhos
                 };
             }
@@ -155,7 +157,7 @@ namespace PicStoneFotoAPI.Services
             return nomeArquivo;
         }
 
-        private async Task<string> GerarCavaleteDuplo(SKBitmap chapaCropada, string fundo)
+        private async Task<string> GerarCavaleteDuplo(SKBitmap chapaCropada, string fundo, bool inverterLados)
         {
             // Nome do arquivo de moldura
             var nomeMoldura = fundo.ToLower() == "claro"
@@ -164,9 +166,7 @@ namespace PicStoneFotoAPI.Services
 
             var caminhoMoldura = Path.Combine(_moldurasPath, nomeMoldura);
 
-            _logger.LogInformation("Gerando cavalete duplo - Moldura: {NomeMoldura}", nomeMoldura);
-            _logger.LogInformation("Caminho moldura: {CaminhoMoldura}", caminhoMoldura);
-            _logger.LogInformation("Arquivo existe: {Existe}", File.Exists(caminhoMoldura));
+            _logger.LogInformation("Gerando cavalete duplo (invertido={Inv}) - Moldura: {NomeMoldura}", inverterLados, nomeMoldura);
 
             if (!File.Exists(caminhoMoldura))
             {
@@ -192,14 +192,6 @@ namespace PicStoneFotoAPI.Services
             int larguraCanvas = 3102;
             int alturaCanvas = (int)(1247 / propEntreProps);
 
-            _logger.LogInformation("=== DEBUG MOCKUP DUPLO ===");
-            _logger.LogInformation("Crop original: {W}x{H}", chapaCropada.Width, chapaCropada.Height);
-            _logger.LogInformation("PropCrop: {Prop}", propCrop);
-            _logger.LogInformation("PropEntreProps: {PropEntreProps}", propEntreProps);
-            _logger.LogInformation("Crop redimensionado: {W}x{H}", larguraJanela, alturaCropRedim);
-            _logger.LogInformation("Canvas final: {W}x{H}", larguraCanvas, alturaCanvas);
-            _logger.LogInformation("===========================");
-
             // Redimensiona a chapa para largura da janela com altura proporcional
             var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(larguraJanela, alturaCropRedim), SKFilterQuality.High);
 
@@ -221,14 +213,26 @@ namespace PicStoneFotoAPI.Services
 
             // Posição das chapas (como no VB.NET: Y = 262 / PropEntreProps)
             int posY = (int)(262 / propEntreProps);
-            canvas.DrawBitmap(chapaRedimensionada, 58, posY);      // Chapa 1
-            canvas.DrawBitmap(chapaEspelhada, 1557, posY);         // Chapa 2 (espelhada)
+
+            if (inverterLados)
+            {
+                // CavaletePronto2: espelho à esquerda, original à direita
+                canvas.DrawBitmap(chapaEspelhada, 58, posY);
+                canvas.DrawBitmap(chapaRedimensionada, 1557, posY);
+            }
+            else
+            {
+                // CavaletePronto: original à esquerda, espelho à direita
+                canvas.DrawBitmap(chapaRedimensionada, 58, posY);
+                canvas.DrawBitmap(chapaEspelhada, 1557, posY);
+            }
 
             // Sobrepõe a moldura redimensionada
             canvas.DrawBitmap(molduraRedimensionada, 0, 0);
 
             // Salva resultado
-            var nomeArquivo = $"mockup_duplo_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
+            var sufixo = inverterLados ? "invertido" : "normal";
+            var nomeArquivo = $"mockup_duplo_{sufixo}_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
             var caminhoFinal = Path.Combine(_uploadPath, nomeArquivo);
 
             using var image = surface.Snapshot();
@@ -236,7 +240,7 @@ namespace PicStoneFotoAPI.Services
             using var outputStream = File.OpenWrite(caminhoFinal);
             data.SaveTo(outputStream);
 
-            _logger.LogInformation("Cavalete duplo gerado: {Caminho}", caminhoFinal);
+            _logger.LogInformation("Cavalete duplo {Tipo} gerado: {Caminho}", sufixo, caminhoFinal);
             return nomeArquivo;
         }
     }

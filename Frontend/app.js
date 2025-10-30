@@ -58,9 +58,9 @@ const elements = {
     cancelMockupBtn: document.getElementById('cancelMockupBtn'),
     continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
     backToMainBtn: document.getElementById('backToMainBtn'),
-    downloadMockupBtn: document.getElementById('downloadMockupBtn'),
+    downloadAllMockupsBtn: document.getElementById('downloadAllMockupsBtn'),
     newMockupBtn: document.getElementById('newMockupBtn'),
-    mockupImage: document.getElementById('mockupImage'),
+    mockupsGallery: document.getElementById('mockupsGallery'),
     mockupMessage: document.getElementById('mockupMessage')
 };
 
@@ -110,7 +110,16 @@ function setupEventListeners() {
     elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
     elements.backToMainBtn.addEventListener('click', () => showMainScreen());
     elements.newMockupBtn.addEventListener('click', startMockupFlow);
-    elements.downloadMockupBtn.addEventListener('click', downloadMockup);
+    elements.downloadAllMockupsBtn.addEventListener('click', downloadAllMockups);
+
+    // Event delegation para botões de download individual
+    elements.mockupsGallery.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-download-single')) {
+            const url = e.target.dataset.url;
+            const nome = e.target.dataset.nome;
+            downloadMockup(url, nome);
+        }
+    });
 }
 
 // ========== AUTENTICAÇÃO ==========
@@ -819,19 +828,37 @@ async function gerarMockup(imagemCropada) {
             throw new Error(data.mensagem || 'Erro ao gerar mockup');
         }
 
-        // Exibe resultado (backend retorna em camelCase)
+        // Exibe resultado (backend retorna em camelCase) - agora são 3 mockups
         if (data.caminhosGerados && data.caminhosGerados.length > 0) {
-            const mockupUrl = `${API_URL}/uploads/${data.caminhosGerados[0]}`;
-            console.log('Mockup URL:', mockupUrl);
-            console.log('Mockup Image Element:', elements.mockupImage);
-            console.log('Mockup Result Screen:', elements.mockupResultScreen);
+            const gallery = document.getElementById('mockupsGallery');
+            gallery.innerHTML = ''; // Limpa galeria
 
-            elements.mockupImage.src = mockupUrl;
-            console.log('Image src definido:', elements.mockupImage.src);
+            // Labels para os 3 mockups
+            const labels = [
+                'Cavalete Duplo - Original/Espelho',
+                'Cavalete Duplo - Espelho/Original',
+                'Cavalete Simples'
+            ];
+
+            data.caminhosGerados.forEach((caminho, index) => {
+                const mockupUrl = `${API_URL}/uploads/${caminho}`;
+
+                const mockupItem = document.createElement('div');
+                mockupItem.className = 'mockup-item';
+                mockupItem.innerHTML = `
+                    <h3>${labels[index] || `Mockup ${index + 1}`}</h3>
+                    <img src="${mockupUrl}" alt="${labels[index]}">
+                    <button class="btn btn-secondary btn-download-single" data-url="${mockupUrl}" data-nome="${caminho}">
+                        ⬇️ Baixar
+                    </button>
+                `;
+                gallery.appendChild(mockupItem);
+            });
+
+            // Salva URLs para download em massa
+            state.mockupUrls = data.caminhosGerados.map(c => `${API_URL}/uploads/${c}`);
 
             showScreen(elements.mockupResultScreen);
-            console.log('Screen mostrada');
-
             showMockupMessage(data.mensagem, 'success');
         } else {
             throw new Error('Nenhum mockup foi gerado');
@@ -849,11 +876,29 @@ async function gerarMockup(imagemCropada) {
     }
 }
 
-function downloadMockup() {
+function downloadMockup(url, nome) {
     const link = document.createElement('a');
-    link.href = elements.mockupImage.src;
-    link.download = `mockup_${Date.now()}.jpg`;
+    link.href = url;
+    link.download = nome || `mockup_${Date.now()}.jpg`;
     link.click();
+}
+
+function downloadAllMockups() {
+    if (!state.mockupUrls || state.mockupUrls.length === 0) {
+        showMockupMessage('Nenhum mockup disponível para download', 'error');
+        return;
+    }
+
+    state.mockupUrls.forEach((url, index) => {
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `mockup_${index + 1}_${Date.now()}.jpg`;
+            link.click();
+        }, index * 500); // Delay de 500ms entre cada download
+    });
+
+    showMockupMessage('Baixando todos os mockups...', 'success');
 }
 
 function showMockupMessage(message, type) {
