@@ -138,14 +138,45 @@ function showLoginScreen() {
     showScreen(elements.loginScreen);
 }
 
-function showMainScreen() {
+async function showMainScreen() {
     showScreen(elements.mainScreen);
     elements.userDisplay.textContent = `Olá, ${state.username}`;
+    await loadMaterials();
 }
 
 async function showHistoryScreen() {
     showScreen(elements.historyScreen);
     await loadHistory();
+}
+
+// ========== MATERIAIS ==========
+async function loadMaterials() {
+    const materialSelect = document.getElementById('material');
+
+    try {
+        const response = await fetch(`${API_URL}/api/materiais`);
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar materiais');
+        }
+
+        const materiais = await response.json();
+
+        // Limpa opções existentes
+        materialSelect.innerHTML = '<option value="">Selecione um material</option>';
+
+        // Adiciona materiais como opções
+        materiais.forEach(material => {
+            const option = document.createElement('option');
+            option.value = material;
+            option.textContent = material;
+            materialSelect.appendChild(option);
+        });
+
+    } catch (error) {
+        console.error('Erro ao carregar materiais:', error);
+        materialSelect.innerHTML = '<option value="">Erro ao carregar materiais</option>';
+    }
 }
 
 // ========== CAPTURA DE FOTO ==========

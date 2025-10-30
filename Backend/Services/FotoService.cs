@@ -276,7 +276,7 @@ namespace PicStoneFotoAPI.Services
                 };
 
                 // Monta o texto da legenda no padrão PicStone: Material BLOCK Bloco Espessura SLAB Chapa
-                var espessura = request.Espessura.HasValue ? $"{request.Espessura}mm" : "";
+                var espessura = request.Espessura.HasValue ? $"{request.Espessura}cm" : "";
                 var legenda = $"{request.Material} BLOCK {request.Bloco} {espessura} SLAB {request.Chapa}".Trim();
 
                 _logger.LogInformation("Legenda: {Legenda}", legenda);

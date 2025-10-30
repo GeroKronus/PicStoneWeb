@@ -14,6 +14,7 @@ namespace PicStoneFotoAPI.Data
 
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<FotoMobile> FotosMobile { get; set; }
+        public DbSet<Material> Materiais { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -43,6 +44,17 @@ namespace PicStoneFotoAPI.Data
                 entity.Property(e => e.PasswordHash).HasMaxLength(255).IsRequired();
                 entity.Property(e => e.NomeCompleto).HasMaxLength(200);
                 entity.HasIndex(e => e.Username).IsUnique();
+            });
+
+            // Configuração da tabela Materiais
+            modelBuilder.Entity<Material>(entity =>
+            {
+                entity.ToTable("Materiais");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Nome).HasMaxLength(100).IsRequired();
+                entity.Property(e => e.Ativo).IsRequired();
+                entity.Property(e => e.Ordem).IsRequired();
+                entity.HasIndex(e => e.Nome).IsUnique();
             });
         }
     }

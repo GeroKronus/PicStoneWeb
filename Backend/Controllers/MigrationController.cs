@@ -307,5 +307,74 @@ namespace PicStoneFotoAPI.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// GET /api/migration/populate-materials
+        /// Cria tabela e popula com lista de materiais
+        /// </summary>
+        [HttpGet("populate-materials")]
+        public async Task<IActionResult> PopulateMaterials()
+        {
+            try
+            {
+                _logger.LogInformation("=== POPULANDO TABELA DE MATERIAIS ===");
+
+                var materiais = new[]
+                {
+                    "NUAGE", "CALACATA", "ARTIC WHITE", "SNOW FLAKES", "WHITE LUX",
+                    "DELICATUS SUPREME", "INFINITY BLUE", "TYPHOON", "LONDON SKY",
+                    "MAHALO", "PERLA VENATO", "MATARAZZO", "AZUL BLUE", "SNOW WHITE",
+                    "AZZURRA BAY", "VICTORIA", "BIANCO ANTICO", "FANTASY LUX",
+                    "WHITE TAJ", "ARANTIS", "ALGA GREEN", "SOLARIUS"
+                };
+
+                var materiaisExistentes = await _context.Materiais.CountAsync();
+
+                if (materiaisExistentes > 0)
+                {
+                    return Ok(new
+                    {
+                        sucesso = true,
+                        mensagem = "Materiais já existem no banco",
+                        total = materiaisExistentes
+                    });
+                }
+
+                // Adiciona materiais em ordem alfabética
+                var materiaisOrdenados = materiais.OrderBy(m => m).ToArray();
+                for (int i = 0; i < materiaisOrdenados.Length; i++)
+                {
+                    _context.Materiais.Add(new Models.Material
+                    {
+                        Nome = materiaisOrdenados[i],
+                        Ativo = true,
+                        Ordem = i + 1
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("{Count} materiais adicionados com sucesso", materiaisOrdenados.Length);
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    mensagem = "Materiais populados com sucesso!",
+                    total = materiaisOrdenados.Length,
+                    materiais = materiaisOrdenados
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao popular materiais");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    mensagem = "Erro ao popular materiais",
+                    erro = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
     }
 }
