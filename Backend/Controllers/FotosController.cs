@@ -29,19 +29,42 @@ namespace PicStoneFotoAPI.Controllers
         [HttpPost("upload")]
         public async Task<IActionResult> Upload([FromForm] FotoUploadRequest request)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                _logger.LogInformation("=== UPLOAD INICIADO ===");
+                _logger.LogInformation("Material: {Material}, Bloco: {Bloco}, Chapa: {Chapa}",
+                    request.Material, request.Bloco, request.Chapa);
+
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("ModelState inválido: {Errors}",
+                        string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
+                    return BadRequest(ModelState);
+                }
+
+                var response = await _fotoService.ProcessarUploadAsync(request, User);
+
+                if (!response.Sucesso)
+                {
+                    _logger.LogError("Upload falhou: {Mensagem}", response.Mensagem);
+                    return BadRequest(response);
+                }
+
+                _logger.LogInformation("Upload concluído com sucesso: {NomeArquivo}", response.NomeArquivo);
+                return Ok(response);
             }
-
-            var response = await _fotoService.ProcessarUploadAsync(request, User);
-
-            if (!response.Sucesso)
+            catch (Exception ex)
             {
-                return BadRequest(response);
+                _logger.LogError(ex, "ERRO CRÍTICO NO UPLOAD");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    mensagem = "Erro ao processar foto",
+                    erro = ex.Message,
+                    innerError = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace?.Split('\n').Take(10).ToArray()
+                });
             }
-
-            return Ok(response);
         }
 
         /// <summary>

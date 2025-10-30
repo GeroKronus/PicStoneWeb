@@ -59,8 +59,15 @@ namespace PicStoneFotoAPI.Services
                 // Salva arquivo no disco
                 await SalvarArquivoAsync(request.Arquivo, caminhoCompleto);
 
-                // Adicionar legenda na imagem
-                await AdicionarLegendaNaImagemAsync(caminhoCompleto, request);
+                // Adicionar legenda na imagem (não bloqueia upload se falhar)
+                try
+                {
+                    await AdicionarLegendaNaImagemAsync(caminhoCompleto, request);
+                }
+                catch (Exception exLegenda)
+                {
+                    _logger.LogWarning(exLegenda, "Falha ao adicionar legenda, continuando com upload");
+                }
 
                 // Registra no banco de dados
                 var username = user.Identity?.Name ?? "Desconhecido";
