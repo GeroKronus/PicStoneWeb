@@ -253,28 +253,31 @@ body {
     transform: scale(1.1);
 }
 
-.btn-adjust {
+.btn-crop-icon {
     position: absolute;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--primary-color);
+    top: 24px;
+    right: 74px;
+    background: rgba(0, 0, 0, 0.5);
     color: white;
     border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.3s;
-    z-index: 10;
+    opacity: 0.8;
 }
 
-.btn-adjust:hover {
-    background: var(--primary-hover);
-    transform: translateX(-50%) translateY(-2px);
-    box-shadow: 0 8px 15px -3px rgba(37, 99, 235, 0.4);
+.btn-crop-icon:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: scale(1.1);
+    opacity: 1;
 }
+
 
 /* Progress */
 .upload-progress {

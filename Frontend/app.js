@@ -686,6 +686,8 @@ function confirmCrop() {
             gerarMockup(file);
         } else {
             compressAndPreviewImage(file);
+            // Mostra botão mockup pois já tem imagem disponível
+            elements.mockupBtn.classList.remove('hidden');
             showMainScreen();
         }
     }, 'image/jpeg', 0.9);
