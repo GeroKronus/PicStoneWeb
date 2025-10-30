@@ -459,6 +459,17 @@ body {
     font-size: 14px;
 }
 
+.crop-instructions p {
+    margin: 0 0 8px 0;
+}
+
+.crop-instructions small {
+    display: block;
+    color: var(--primary-color);
+    font-size: 12px;
+    font-weight: 500;
+}
+
 .crop-container {
     background: #000000;
     border-radius: 16px;
@@ -482,12 +493,15 @@ body {
 
 .crop-actions {
     display: flex;
+    justify-content: center;
     gap: 12px;
     margin-top: 20px;
 }
 
 .crop-actions .btn {
-    flex: 1;
+    flex: none;
+    width: auto;
+    min-width: 200px;
 }
 
 /* Mockup Styles */

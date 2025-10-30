@@ -53,7 +53,6 @@ const elements = {
     cropCanvas: document.getElementById('cropCanvas'),
     cancelCropBtn: document.getElementById('cancelCropBtn'),
     resetCropBtn: document.getElementById('resetCropBtn'),
-    confirmCropBtn: document.getElementById('confirmCropBtn'),
     mockupBtn: document.getElementById('mockupBtn'),
     photoIndicator: document.getElementById('photoIndicator'),
     cancelMockupBtn: document.getElementById('cancelMockupBtn'),
@@ -96,7 +95,6 @@ function setupEventListeners() {
     // Crop event listeners
     elements.cancelCropBtn.addEventListener('click', cancelCrop);
     elements.resetCropBtn.addEventListener('click', resetCrop);
-    elements.confirmCropBtn.addEventListener('click', confirmCrop);
 
     // Canvas mouse/touch events
     elements.cropCanvas.addEventListener('mousedown', startCrop);
@@ -567,7 +565,13 @@ function endCrop(e) {
 
     if (width < 50 || height < 50) {
         resetCrop();
+        return;
     }
+
+    // Executa o crop automaticamente após pequeno delay para feedback visual
+    setTimeout(() => {
+        confirmCrop();
+    }, 300);
 }
 
 function handleTouchStart(e) {
