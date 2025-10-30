@@ -6,13 +6,23 @@ const state = {
     token: localStorage.getItem('token') || null,
     username: localStorage.getItem('username') || null,
     currentPhoto: null,
-    currentPhotoFile: null
+    currentPhotoFile: null,
+    cropData: {
+        image: null,
+        startX: 0,
+        startY: 0,
+        endX: 0,
+        endY: 0,
+        isDragging: false,
+        scale: 1
+    }
 };
 
 // Elementos DOM
 const elements = {
     loginScreen: document.getElementById('loginScreen'),
     mainScreen: document.getElementById('mainScreen'),
+    cropScreen: document.getElementById('cropScreen'),
     historyScreen: document.getElementById('historyScreen'),
     loginForm: document.getElementById('loginForm'),
     loginError: document.getElementById('loginError'),
@@ -29,7 +39,11 @@ const elements = {
     logoutBtn: document.getElementById('logoutBtn'),
     historyBtn: document.getElementById('historyBtn'),
     backBtn: document.getElementById('backBtn'),
-    historyList: document.getElementById('historyList')
+    historyList: document.getElementById('historyList'),
+    cropCanvas: document.getElementById('cropCanvas'),
+    cancelCropBtn: document.getElementById('cancelCropBtn'),
+    resetCropBtn: document.getElementById('resetCropBtn'),
+    confirmCropBtn: document.getElementById('confirmCropBtn')
 };
 
 // ========== INICIALIZAÇÃO ==========
@@ -53,6 +67,19 @@ function setupEventListeners() {
     elements.logoutBtn.addEventListener('click', handleLogout);
     elements.historyBtn.addEventListener('click', showHistoryScreen);
     elements.backBtn.addEventListener('click', showMainScreen);
+
+    // Crop event listeners
+    elements.cancelCropBtn.addEventListener('click', cancelCrop);
+    elements.resetCropBtn.addEventListener('click', resetCrop);
+    elements.confirmCropBtn.addEventListener('click', confirmCrop);
+
+    // Canvas mouse/touch events
+    elements.cropCanvas.addEventListener('mousedown', startCrop);
+    elements.cropCanvas.addEventListener('mousemove', updateCrop);
+    elements.cropCanvas.addEventListener('mouseup', endCrop);
+    elements.cropCanvas.addEventListener('touchstart', handleTouchStart);
+    elements.cropCanvas.addEventListener('touchmove', handleTouchMove);
+    elements.cropCanvas.addEventListener('touchend', endCrop);
 }
 
 // ========== AUTENTICAÇÃO ==========
@@ -139,8 +166,8 @@ function handleFileSelect(e) {
         return;
     }
 
-    // Comprime e exibe preview
-    compressAndPreviewImage(file);
+    // Abre tela de crop
+    openCropScreen(file);
 }
 
 function compressAndPreviewImage(file) {
@@ -308,6 +335,233 @@ function showMessage(message, type) {
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleString('pt-BR');
+}
+
+// ========== CROP DE IMAGEM ==========
+function openCropScreen(file) {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            state.cropData.image = img;
+            initializeCropCanvas();
+            showCropScreen();
+        };
+        img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+}
+
+function showCropScreen() {
+    elements.mainScreen.classList.remove('active');
+    elements.cropScreen.classList.add('active');
+}
+
+function initializeCropCanvas() {
+    const canvas = elements.cropCanvas;
+    const ctx = canvas.getContext('2d');
+    const img = state.cropData.image;
+
+    // Calcula escala para caber no canvas mantendo proporção
+    const maxWidth = window.innerWidth - 64; // Margem
+    const maxHeight = window.innerHeight * 0.6;
+
+    let width = img.width;
+    let height = img.height;
+
+    if (width > maxWidth) {
+        height = (maxWidth / width) * height;
+        width = maxWidth;
+    }
+
+    if (height > maxHeight) {
+        width = (maxHeight / height) * width;
+        height = maxHeight;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Calcula escala para conversão de coordenadas canvas -> imagem original
+    state.cropData.scale = img.width / width;
+
+    // Desenha imagem
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // Define seleção inicial (imagem inteira)
+    state.cropData.startX = 0;
+    state.cropData.startY = 0;
+    state.cropData.endX = width;
+    state.cropData.endY = height;
+
+    drawCropOverlay();
+}
+
+function getCanvasCoords(e) {
+    const canvas = elements.cropCanvas;
+    const rect = canvas.getBoundingClientRect();
+
+    let clientX, clientY;
+
+    if (e.touches && e.touches[0]) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+
+    return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+    };
+}
+
+function startCrop(e) {
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+
+    state.cropData.isDragging = true;
+    state.cropData.startX = coords.x;
+    state.cropData.startY = coords.y;
+    state.cropData.endX = coords.x;
+    state.cropData.endY = coords.y;
+}
+
+function updateCrop(e) {
+    if (!state.cropData.isDragging) return;
+
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+
+    state.cropData.endX = coords.x;
+    state.cropData.endY = coords.y;
+
+    drawCropOverlay();
+}
+
+function endCrop(e) {
+    if (!state.cropData.isDragging) return;
+
+    e.preventDefault();
+    state.cropData.isDragging = false;
+
+    // Garante que a área tenha pelo menos 50x50 pixels
+    const width = Math.abs(state.cropData.endX - state.cropData.startX);
+    const height = Math.abs(state.cropData.endY - state.cropData.startY);
+
+    if (width < 50 || height < 50) {
+        resetCrop();
+    }
+}
+
+function handleTouchStart(e) {
+    startCrop(e);
+}
+
+function handleTouchMove(e) {
+    updateCrop(e);
+}
+
+function drawCropOverlay() {
+    const canvas = elements.cropCanvas;
+    const ctx = canvas.getContext('2d');
+    const img = state.cropData.image;
+
+    // Calcula dimensões atuais do canvas
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+
+    // Redesenha imagem
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+
+    // Calcula retângulo de seleção
+    const x = Math.min(state.cropData.startX, state.cropData.endX);
+    const y = Math.min(state.cropData.startY, state.cropData.endY);
+    const width = Math.abs(state.cropData.endX - state.cropData.startX);
+    const height = Math.abs(state.cropData.endY - state.cropData.startY);
+
+    // Desenha overlay escurecido
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // Limpa área selecionada
+    ctx.clearRect(x, y, width, height);
+    ctx.drawImage(img, x * state.cropData.scale, y * state.cropData.scale,
+        width * state.cropData.scale, height * state.cropData.scale,
+        x, y, width, height);
+
+    // Desenha borda da seleção
+    ctx.strokeStyle = '#007AFF';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+
+    // Desenha cantos
+    const cornerSize = 20;
+    ctx.fillStyle = '#007AFF';
+
+    // Canto superior esquerdo
+    ctx.fillRect(x - 2, y - 2, cornerSize, 4);
+    ctx.fillRect(x - 2, y - 2, 4, cornerSize);
+
+    // Canto superior direito
+    ctx.fillRect(x + width - cornerSize + 2, y - 2, cornerSize, 4);
+    ctx.fillRect(x + width - 2, y - 2, 4, cornerSize);
+
+    // Canto inferior esquerdo
+    ctx.fillRect(x - 2, y + height - 2, cornerSize, 4);
+    ctx.fillRect(x - 2, y + height - cornerSize + 2, 4, cornerSize);
+
+    // Canto inferior direito
+    ctx.fillRect(x + width - cornerSize + 2, y + height - 2, cornerSize, 4);
+    ctx.fillRect(x + width - 2, y + height - cornerSize + 2, 4, cornerSize);
+}
+
+function resetCrop() {
+    const canvas = elements.cropCanvas;
+
+    state.cropData.startX = 0;
+    state.cropData.startY = 0;
+    state.cropData.endX = canvas.width;
+    state.cropData.endY = canvas.height;
+
+    drawCropOverlay();
+}
+
+function confirmCrop() {
+    const canvas = elements.cropCanvas;
+    const img = state.cropData.image;
+
+    // Calcula coordenadas na imagem original
+    const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scale;
+    const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scale;
+    const width = Math.abs(state.cropData.endX - state.cropData.startX) * state.cropData.scale;
+    const height = Math.abs(state.cropData.endY - state.cropData.startY) * state.cropData.scale;
+
+    // Cria canvas temporário para crop
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // Desenha área cortada
+    tempCtx.drawImage(img, x, y, width, height, 0, 0, width, height);
+
+    // Converte para blob e cria arquivo
+    tempCanvas.toBlob((blob) => {
+        const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
+        compressAndPreviewImage(file);
+        showMainScreen();
+    }, 'image/jpeg', 0.9);
+}
+
+function cancelCrop() {
+    // Limpa input file para permitir selecionar a mesma imagem novamente
+    elements.fileInput.value = '';
+    showMainScreen();
 }
 
 // ========== SERVICE WORKER (para PWA futuro) ==========

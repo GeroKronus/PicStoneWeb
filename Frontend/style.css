@@ -395,3 +395,41 @@ body {
 .capture-section {
     margin: 20px 0;
 }
+
+/* Crop Screen Styles */
+.crop-instructions {
+    text-align: center;
+    margin: 20px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.crop-container {
+    background: var(--card-background);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#cropCanvas {
+    max-width: 100%;
+    max-height: 60vh;
+    cursor: crosshair;
+    border-radius: 8px;
+    touch-action: none;
+}
+
+.crop-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.crop-actions .btn {
+    flex: 1;
+}
