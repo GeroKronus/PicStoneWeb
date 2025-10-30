@@ -177,10 +177,13 @@ namespace PicStoneFotoAPI.Controllers
                 }
 
                 // Adiciona colunas Material e Bloco se não existirem
+                // E remove restrição NOT NULL de Lote e Processo (agora são opcionais)
                 var sqlCommands = new[]
                 {
                     "ALTER TABLE \"FotosMobile\" ADD COLUMN IF NOT EXISTS \"Material\" TEXT NULL",
-                    "ALTER TABLE \"FotosMobile\" ADD COLUMN IF NOT EXISTS \"Bloco\" TEXT NULL"
+                    "ALTER TABLE \"FotosMobile\" ADD COLUMN IF NOT EXISTS \"Bloco\" TEXT NULL",
+                    "ALTER TABLE \"FotosMobile\" ALTER COLUMN \"Lote\" DROP NOT NULL",
+                    "ALTER TABLE \"FotosMobile\" ALTER COLUMN \"Processo\" DROP NOT NULL"
                 };
 
                 var results = new List<object>();
