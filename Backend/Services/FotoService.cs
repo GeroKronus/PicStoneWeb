@@ -104,10 +104,19 @@ namespace PicStoneFotoAPI.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao processar upload de foto");
+
+                var innerMsg = ex.InnerException?.Message ?? "";
+                var fullMessage = $"Erro ao processar foto: {ex.Message}";
+
+                if (!string.IsNullOrEmpty(innerMsg))
+                {
+                    fullMessage += $" | Detalhe: {innerMsg}";
+                }
+
                 return new FotoUploadResponse
                 {
                     Sucesso = false,
-                    Mensagem = $"Erro ao processar foto: {ex.Message}"
+                    Mensagem = fullMessage
                 };
             }
         }
