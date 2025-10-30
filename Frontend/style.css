@@ -410,18 +410,20 @@ body {
     padding: 16px;
     margin-bottom: 20px;
     box-shadow: var(--shadow);
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     justify-content: center;
     align-items: center;
+    min-height: 300px;
 }
 
 #cropCanvas {
     max-width: 100%;
-    max-height: 60vh;
+    height: auto;
     cursor: crosshair;
     border-radius: 8px;
     touch-action: none;
+    display: block;
 }
 
 .crop-actions {
