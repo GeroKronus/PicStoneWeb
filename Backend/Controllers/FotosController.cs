@@ -81,5 +81,33 @@ namespace PicStoneFotoAPI.Controllers
                 "Acabamento"
             });
         }
+
+        /// <summary>
+        /// GET /api/fotos/imagem/{nomeArquivo}
+        /// Retorna a imagem especificada (requer autenticação)
+        /// </summary>
+        [HttpGet("imagem/{nomeArquivo}")]
+        public IActionResult ObterImagem(string nomeArquivo)
+        {
+            try
+            {
+                var uploadPath = Environment.GetEnvironmentVariable("UPLOAD_PATH") ?? "./uploads";
+                var caminhoCompleto = Path.Combine(uploadPath, nomeArquivo);
+
+                if (!System.IO.File.Exists(caminhoCompleto))
+                {
+                    _logger.LogWarning("Imagem não encontrada: {Caminho}", caminhoCompleto);
+                    return NotFound(new { mensagem = "Imagem não encontrada" });
+                }
+
+                var bytes = System.IO.File.ReadAllBytes(caminhoCompleto);
+                return File(bytes, "image/jpeg");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao buscar imagem: {NomeArquivo}", nomeArquivo);
+                return StatusCode(500, new { mensagem = "Erro ao buscar imagem" });
+            }
+        }
     }
 }

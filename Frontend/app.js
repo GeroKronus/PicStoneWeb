@@ -271,10 +271,20 @@ async function loadHistory() {
 
         elements.historyList.innerHTML = data.fotos.map(foto => `
             <div class="history-item">
+                <img src="${API_URL}/api/fotos/imagem/${foto.nomeArquivo}?token=${state.token}"
+                     alt="${foto.nomeArquivo}"
+                     style="width: 100%; max-width: 400px; border-radius: 8px; margin-bottom: 10px;"
+                     onerror="this.style.display='none'">
                 <h3>${foto.nomeArquivo}</h3>
                 <p><strong>Lote:</strong> ${foto.lote} | <strong>Chapa:</strong> ${foto.chapa}</p>
                 <p><strong>Processo:</strong> ${foto.processo} ${foto.espessura ? `| <strong>Espessura:</strong> ${foto.espessura}mm` : ''}</p>
                 <small>Enviado por ${foto.usuario} em ${formatDate(foto.dataUpload)}</small>
+                <br>
+                <a href="${API_URL}/api/fotos/imagem/${foto.nomeArquivo}?token=${state.token}"
+                   target="_blank"
+                   style="color: #2563eb; text-decoration: none; font-size: 14px;">
+                   🔗 Abrir imagem em nova aba
+                </a>
             </div>
         `).join('');
 
