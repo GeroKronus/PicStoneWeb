@@ -798,9 +798,9 @@ async function gerarMockup(imagemCropada) {
             throw new Error(data.mensagem || 'Erro ao gerar mockup');
         }
 
-        // Exibe resultado (ATENÇÃO: backend retorna com C maiúsculo)
-        if (data.CaminhosGerados && data.CaminhosGerados.length > 0) {
-            const mockupUrl = `${API_URL}/uploads/${data.CaminhosGerados[0]}`;
+        // Exibe resultado (backend retorna em camelCase)
+        if (data.caminhosGerados && data.caminhosGerados.length > 0) {
+            const mockupUrl = `${API_URL}/uploads/${data.caminhosGerados[0]}`;
             console.log('Mockup URL:', mockupUrl);
             console.log('Mockup Image Element:', elements.mockupImage);
             console.log('Mockup Result Screen:', elements.mockupResultScreen);
@@ -811,7 +811,7 @@ async function gerarMockup(imagemCropada) {
             showScreen(elements.mockupResultScreen);
             console.log('Screen mostrada');
 
-            showMockupMessage(data.Mensagem, 'success');
+            showMockupMessage(data.mensagem, 'success');
         } else {
             throw new Error('Nenhum mockup foi gerado');
         }
