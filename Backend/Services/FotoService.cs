@@ -126,12 +126,21 @@ namespace PicStoneFotoAPI.Services
         /// </summary>
         public async Task<List<FotoMobile>> ObterHistoricoAsync(int limite = 50)
         {
-            return await Task.Run(() =>
-                _context.FotosMobile
+            try
+            {
+                var fotos = await _context.FotosMobile
                     .OrderByDescending(f => f.DataUpload)
                     .Take(limite)
-                    .ToList()
-            );
+                    .ToListAsync();
+
+                _logger.LogInformation("Histórico obtido: {Count} fotos", fotos.Count);
+                return fotos;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao obter histórico");
+                throw;
+            }
         }
 
         /// <summary>
