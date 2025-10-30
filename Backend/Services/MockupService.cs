@@ -108,9 +108,20 @@ namespace PicStoneFotoAPI.Services
             int larguraCanvas = 1599;
             int alturaCanvas = (int)(628 / propEntreProps);
 
-            _logger.LogInformation("PropImagBook: {Prop}, AlturaImagMold: {Altura}, PropEntreProps: {PropEntreProps}",
-                propImagBook, alturaImagMold, propEntreProps);
-            _logger.LogInformation("Canvas: {Largura}x{Altura}", larguraCanvas, alturaCanvas);
+            // Posição da chapa
+            int posX = 55;
+            int posY = (int)(130 / propEntreProps);
+
+            _logger.LogInformation("=== DEBUG MOCKUP SIMPLES ===");
+            _logger.LogInformation("Crop original: {W}x{H}", chapaCropada.Width, chapaCropada.Height);
+            _logger.LogInformation("PropImagBook: {Prop}", propImagBook);
+            _logger.LogInformation("AlturaImagMold: {Altura}", alturaImagMold);
+            _logger.LogInformation("PropEntreProps: {PropEntreProps}", propEntreProps);
+            _logger.LogInformation("Canvas final: {W}x{H}", larguraCanvas, alturaCanvas);
+            _logger.LogInformation("Chapa redimensionada: 1487x{H}", alturaImagMold);
+            _logger.LogInformation("Posição chapa: X={X} Y={Y}", posX, posY);
+            _logger.LogInformation("Chapa vai até Y={YFim} (canvas altura={CanvasH})", posY + alturaImagMold, alturaCanvas);
+            _logger.LogInformation("============================");
 
             // Redimensiona a chapa para largura 1487 com altura proporcional
             var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(1487, alturaImagMold), SKFilterQuality.High);
@@ -124,8 +135,6 @@ namespace PicStoneFotoAPI.Services
             canvas.Clear(SKColors.Transparent);
 
             // Desenha a chapa no fundo (posição Y proporcional)
-            int posX = 55;
-            int posY = (int)(130 / propEntreProps);
             canvas.DrawBitmap(chapaRedimensionada, posX, posY);
 
             // Sobrepõe a moldura redimensionada
@@ -174,9 +183,19 @@ namespace PicStoneFotoAPI.Services
             int larguraCanvas = 3102;
             int alturaCanvas = (int)(1247 / propEntreProps);
 
-            _logger.LogInformation("PropImagBook: {Prop}, AlturaImagMold: {Altura}, PropEntreProps: {PropEntreProps}",
-                propImagBook, alturaImagMold, propEntreProps);
-            _logger.LogInformation("Canvas: {Largura}x{Altura}", larguraCanvas, alturaCanvas);
+            // Posição da chapa
+            int posY = (int)(262 / propEntreProps);
+
+            _logger.LogInformation("=== DEBUG MOCKUP DUPLO ===");
+            _logger.LogInformation("Crop original: {W}x{H}", chapaCropada.Width, chapaCropada.Height);
+            _logger.LogInformation("PropImagBook: {Prop}", propImagBook);
+            _logger.LogInformation("AlturaImagMold: {Altura}", alturaImagMold);
+            _logger.LogInformation("PropEntreProps: {PropEntreProps}", propEntreProps);
+            _logger.LogInformation("Canvas final: {W}x{H}", larguraCanvas, alturaCanvas);
+            _logger.LogInformation("Chapa redimensionada: 1487x{H}", alturaImagMold);
+            _logger.LogInformation("Posição chapas: Y={Y}", posY);
+            _logger.LogInformation("Chapas vão até Y={YFim} (canvas altura={CanvasH})", posY + alturaImagMold, alturaCanvas);
+            _logger.LogInformation("===========================");
 
             // Redimensiona a chapa para largura 1487 com altura proporcional
             var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(1487, alturaImagMold), SKFilterQuality.High);
@@ -198,7 +217,6 @@ namespace PicStoneFotoAPI.Services
             canvas.Clear(SKColors.Transparent);
 
             // Desenha as duas chapas (posição Y proporcional)
-            int posY = (int)(262 / propEntreProps);
             canvas.DrawBitmap(chapaRedimensionada, 58, posY);      // Chapa 1
             canvas.DrawBitmap(chapaEspelhada, 1557, posY);         // Chapa 2 (espelhada)
 
