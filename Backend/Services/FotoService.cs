@@ -265,25 +265,14 @@ namespace PicStoneFotoAPI.Services
                 canvas.DrawBitmap(original, 0, 0);
                 _logger.LogInformation("Imagem original desenhada no canvas");
 
-                // Configuração do texto (usando fonte padrão, sem especificar família)
+                // Configuração do texto em Arial preto
                 using var paint = new SKPaint
-                {
-                    Color = SKColors.White,
-                    TextSize = 40,
-                    IsAntialias = true,
-                    Style = SKPaintStyle.Fill,
-                    Typeface = SKTypeface.Default
-                };
-
-                // Configuração da sombra/outline para melhor legibilidade
-                using var shadowPaint = new SKPaint
                 {
                     Color = SKColors.Black,
                     TextSize = 40,
                     IsAntialias = true,
-                    Style = SKPaintStyle.Stroke,
-                    StrokeWidth = 3,
-                    Typeface = SKTypeface.Default
+                    Style = SKPaintStyle.Fill,
+                    Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
                 };
 
                 // Monta o texto da legenda no padrão PicStone: Material BLOCK Bloco Espessura SLAB Chapa
@@ -292,12 +281,33 @@ namespace PicStoneFotoAPI.Services
 
                 _logger.LogInformation("Legenda: {Legenda}", legenda);
 
+                // Mede o tamanho do texto para criar o retângulo de fundo
+                var textBounds = new SKRect();
+                paint.MeasureText(legenda, ref textBounds);
+
                 // Posição (canto superior esquerdo com margem)
                 float x = 20;
                 float y = 60;
 
-                // Desenha o texto (primeiro a sombra, depois o texto)
-                canvas.DrawText(legenda, x, y, shadowPaint);
+                // Calcula dimensões do retângulo com padding
+                float padding = 10;
+                var backgroundRect = new SKRect(
+                    x - padding,
+                    y + textBounds.Top - padding,
+                    x + textBounds.Width + padding,
+                    y + textBounds.Bottom + padding
+                );
+
+                // Desenha retângulo branco semitransparente de fundo
+                using var backgroundPaint = new SKPaint
+                {
+                    Color = new SKColor(255, 255, 255, 200), // Branco com 78% de opacidade (200/255)
+                    Style = SKPaintStyle.Fill,
+                    IsAntialias = true
+                };
+                canvas.DrawRect(backgroundRect, backgroundPaint);
+
+                // Desenha o texto preto por cima
                 canvas.DrawText(legenda, x, y, paint);
 
                 _logger.LogInformation("Texto desenhado no canvas");
