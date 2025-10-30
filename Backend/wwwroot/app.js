@@ -6,14 +6,32 @@ const state = {
     token: localStorage.getItem('token') || null,
     username: localStorage.getItem('username') || null,
     currentPhoto: null,
-    currentPhotoFile: null
+    currentPhotoFile: null,
+    originalPhoto: null, // Foto original para mockup
+    mockupMode: false, // Indica se está em modo mockup
+    cropData: {
+        image: null,
+        startX: 0,
+        startY: 0,
+        endX: 0,
+        endY: 0,
+        isDragging: false,
+        scale: 1
+    },
+    mockupConfig: {
+        tipo: 'simples',
+        fundo: 'claro'
+    }
 };
 
 // Elementos DOM
 const elements = {
     loginScreen: document.getElementById('loginScreen'),
     mainScreen: document.getElementById('mainScreen'),
+    cropScreen: document.getElementById('cropScreen'),
     historyScreen: document.getElementById('historyScreen'),
+    mockupConfigScreen: document.getElementById('mockupConfigScreen'),
+    mockupResultScreen: document.getElementById('mockupResultScreen'),
     loginForm: document.getElementById('loginForm'),
     loginError: document.getElementById('loginError'),
     captureBtn: document.getElementById('captureBtn'),
@@ -21,6 +39,7 @@ const elements = {
     photoPreview: document.getElementById('photoPreview'),
     previewImage: document.getElementById('previewImage'),
     clearPhotoBtn: document.getElementById('clearPhotoBtn'),
+    adjustImageBtn: document.getElementById('adjustImageBtn'),
     uploadForm: document.getElementById('uploadForm'),
     submitBtn: document.getElementById('submitBtn'),
     uploadProgress: document.getElementById('uploadProgress'),
@@ -29,7 +48,20 @@ const elements = {
     logoutBtn: document.getElementById('logoutBtn'),
     historyBtn: document.getElementById('historyBtn'),
     backBtn: document.getElementById('backBtn'),
-    historyList: document.getElementById('historyList')
+    historyList: document.getElementById('historyList'),
+    cropCanvas: document.getElementById('cropCanvas'),
+    cancelCropBtn: document.getElementById('cancelCropBtn'),
+    resetCropBtn: document.getElementById('resetCropBtn'),
+    confirmCropBtn: document.getElementById('confirmCropBtn'),
+    mockupBtn: document.getElementById('mockupBtn'),
+    photoIndicator: document.getElementById('photoIndicator'),
+    cancelMockupBtn: document.getElementById('cancelMockupBtn'),
+    continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
+    backToMainBtn: document.getElementById('backToMainBtn'),
+    downloadMockupBtn: document.getElementById('downloadMockupBtn'),
+    newMockupBtn: document.getElementById('newMockupBtn'),
+    mockupImage: document.getElementById('mockupImage'),
+    mockupMessage: document.getElementById('mockupMessage')
 };
 
 // ========== INICIALIZAÇÃO ==========
@@ -46,13 +78,39 @@ document.addEventListener('DOMContentLoaded', () => {
 // ========== EVENT LISTENERS ==========
 function setupEventListeners() {
     elements.loginForm.addEventListener('submit', handleLogin);
+
+    // Captura de foto - múltiplos eventos para compatibilidade mobile
     elements.captureBtn.addEventListener('click', () => elements.fileInput.click());
     elements.fileInput.addEventListener('change', handleFileSelect);
+    elements.fileInput.addEventListener('input', handleFileSelect); // Fallback mobile
+
     elements.clearPhotoBtn.addEventListener('click', clearPhoto);
+    elements.adjustImageBtn.addEventListener('click', abrirCropParaAjuste);
     elements.uploadForm.addEventListener('submit', handleUpload);
     elements.logoutBtn.addEventListener('click', handleLogout);
     elements.historyBtn.addEventListener('click', showHistoryScreen);
     elements.backBtn.addEventListener('click', showMainScreen);
+
+    // Crop event listeners
+    elements.cancelCropBtn.addEventListener('click', cancelCrop);
+    elements.resetCropBtn.addEventListener('click', resetCrop);
+    elements.confirmCropBtn.addEventListener('click', confirmCrop);
+
+    // Canvas mouse/touch events
+    elements.cropCanvas.addEventListener('mousedown', startCrop);
+    elements.cropCanvas.addEventListener('mousemove', updateCrop);
+    elements.cropCanvas.addEventListener('mouseup', endCrop);
+    elements.cropCanvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    elements.cropCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    elements.cropCanvas.addEventListener('touchend', endCrop);
+
+    // Mockup event listeners
+    elements.mockupBtn.addEventListener('click', startMockupFlow);
+    elements.cancelMockupBtn.addEventListener('click', () => showMainScreen());
+    elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
+    elements.backToMainBtn.addEventListener('click', () => showMainScreen());
+    elements.newMockupBtn.addEventListener('click', startMockupFlow);
+    elements.downloadMockupBtn.addEventListener('click', downloadMockup);
 }
 
 // ========== AUTENTICAÇÃO ==========
@@ -111,14 +169,45 @@ function showLoginScreen() {
     showScreen(elements.loginScreen);
 }
 
-function showMainScreen() {
+async function showMainScreen() {
     showScreen(elements.mainScreen);
     elements.userDisplay.textContent = `Olá, ${state.username}`;
+    await loadMaterials();
 }
 
 async function showHistoryScreen() {
     showScreen(elements.historyScreen);
     await loadHistory();
+}
+
+// ========== MATERIAIS ==========
+async function loadMaterials() {
+    const materialSelect = document.getElementById('material');
+
+    try {
+        const response = await fetch(`${API_URL}/api/materiais`);
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar materiais');
+        }
+
+        const materiais = await response.json();
+
+        // Limpa opções existentes
+        materialSelect.innerHTML = '<option value="">Selecione um material</option>';
+
+        // Adiciona materiais como opções
+        materiais.forEach(material => {
+            const option = document.createElement('option');
+            option.value = material;
+            option.textContent = material;
+            materialSelect.appendChild(option);
+        });
+
+    } catch (error) {
+        console.error('Erro ao carregar materiais:', error);
+        materialSelect.innerHTML = '<option value="">Erro ao carregar materiais</option>';
+    }
 }
 
 // ========== CAPTURA DE FOTO ==========
@@ -139,8 +228,23 @@ function handleFileSelect(e) {
         return;
     }
 
-    // Comprime e exibe preview
-    compressAndPreviewImage(file);
+    // NOVA FOTO - Limpa estado anterior e oculta botões
+    clearPhotoState();
+
+    // Salva arquivo e exibe preview (SEM abrir crop automaticamente)
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            // Salva imagem original (permanece até nova foto)
+            state.originalPhoto = img;
+
+            // Converte para arquivo e exibe preview
+            compressAndPreviewImage(file);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
 function compressAndPreviewImage(file) {
@@ -186,11 +290,25 @@ function compressAndPreviewImage(file) {
 }
 
 function clearPhoto() {
+    // Limpa TUDO incluindo imagem original (usuário clicou no X)
     state.currentPhotoFile = null;
+    state.originalPhoto = null;
     elements.previewImage.src = '';
     elements.photoPreview.classList.add('hidden');
     elements.fileInput.value = '';
     elements.submitBtn.disabled = true;
+    elements.mockupBtn.classList.add('hidden');
+    elements.photoIndicator.classList.add('hidden');
+}
+
+function clearPhotoState() {
+    // Limpa apenas estado atual (para preparar nova foto)
+    state.currentPhotoFile = null;
+    elements.previewImage.src = '';
+    elements.photoPreview.classList.add('hidden');
+    elements.submitBtn.disabled = true;
+    elements.mockupBtn.classList.add('hidden');
+    elements.photoIndicator.classList.add('hidden');
 }
 
 // ========== UPLOAD ==========
@@ -204,9 +322,9 @@ async function handleUpload(e) {
 
     const formData = new FormData();
     formData.append('Arquivo', state.currentPhotoFile);
-    formData.append('Lote', document.getElementById('lote').value);
+    formData.append('Material', document.getElementById('material').value);
+    formData.append('Bloco', document.getElementById('bloco').value);
     formData.append('Chapa', document.getElementById('chapa').value);
-    formData.append('Processo', document.getElementById('processo').value);
 
     const espessura = document.getElementById('espessura').value;
     if (espessura) {
@@ -233,10 +351,21 @@ async function handleUpload(e) {
 
         showMessage(data.mensagem, 'success');
 
-        // Limpa formulário após sucesso
+        // Mostra botão de mockup (permanece visível)
+        elements.mockupBtn.classList.remove('hidden');
+
+        // Limpa apenas o preview e formulário (mantém imagem original)
         setTimeout(() => {
-            clearPhoto();
+            state.currentPhotoFile = null;
+            elements.previewImage.src = '';
+            elements.photoPreview.classList.add('hidden');
+            elements.fileInput.value = '';
+            elements.submitBtn.disabled = true;
             elements.uploadForm.reset();
+            // Mostra indicador de foto disponível
+            elements.photoIndicator.classList.remove('hidden');
+            // NÃO limpa state.originalPhoto - fica disponível para mockup/ajuste
+            // NÃO oculta mockupBtn - fica acessível
         }, 2000);
 
     } catch (error) {
@@ -276,8 +405,9 @@ async function loadHistory() {
                      style="width: 100%; max-width: 400px; border-radius: 8px; margin-bottom: 10px;"
                      onerror="this.style.display='none'">
                 <h3>${foto.nomeArquivo}</h3>
-                <p><strong>Lote:</strong> ${foto.lote} | <strong>Chapa:</strong> ${foto.chapa}</p>
-                <p><strong>Processo:</strong> ${foto.processo} ${foto.espessura ? `| <strong>Espessura:</strong> ${foto.espessura}mm` : ''}</p>
+                <p><strong>Material:</strong> ${foto.material || 'N/A'}</p>
+                <p><strong>Bloco:</strong> ${foto.bloco || foto.lote || 'N/A'} | <strong>Chapa:</strong> ${foto.chapa}</p>
+                <p>${foto.espessura ? `<strong>Espessura:</strong> ${foto.espessura}mm` : ''}</p>
                 <small>Enviado por ${foto.usuario} em ${formatDate(foto.dataUpload)}</small>
                 <br>
                 <a href="${API_URL}/api/fotos/imagem/${foto.nomeArquivo}?token=${state.token}"
@@ -307,6 +437,366 @@ function showMessage(message, type) {
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleString('pt-BR');
+}
+
+// ========== CROP DE IMAGEM ==========
+function openCropScreen(file) {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            state.cropData.image = img;
+            initializeCropCanvas();
+            showCropScreen();
+        };
+        img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+}
+
+function showCropScreen() {
+    elements.mainScreen.classList.remove('active');
+    elements.cropScreen.classList.add('active');
+}
+
+function initializeCropCanvas() {
+    const canvas = elements.cropCanvas;
+    const ctx = canvas.getContext('2d');
+    const img = state.cropData.image;
+
+    // Calcula escala para caber no canvas mantendo proporção
+    const maxWidth = window.innerWidth - 64; // Margem
+    const maxHeight = window.innerHeight * 0.6;
+
+    let width = img.width;
+    let height = img.height;
+
+    if (width > maxWidth) {
+        height = (maxWidth / width) * height;
+        width = maxWidth;
+    }
+
+    if (height > maxHeight) {
+        width = (maxHeight / height) * width;
+        height = maxHeight;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Calcula escala para conversão de coordenadas canvas -> imagem original
+    state.cropData.scale = img.width / width;
+
+    // Desenha imagem
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // Define seleção inicial (imagem inteira)
+    state.cropData.startX = 0;
+    state.cropData.startY = 0;
+    state.cropData.endX = width;
+    state.cropData.endY = height;
+
+    drawCropOverlay();
+}
+
+function getCanvasCoords(e) {
+    const canvas = elements.cropCanvas;
+    const rect = canvas.getBoundingClientRect();
+
+    let clientX, clientY;
+
+    if (e.touches && e.touches[0]) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+
+    // Calcula a posição relativa ao canvas
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    // Converte coordenadas CSS para coordenadas do canvas
+    // (necessário quando canvas é redimensionado via CSS)
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    return {
+        x: Math.max(0, Math.min(canvas.width, x * scaleX)),
+        y: Math.max(0, Math.min(canvas.height, y * scaleY))
+    };
+}
+
+function startCrop(e) {
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+
+    state.cropData.isDragging = true;
+    state.cropData.startX = coords.x;
+    state.cropData.startY = coords.y;
+    state.cropData.endX = coords.x;
+    state.cropData.endY = coords.y;
+}
+
+function updateCrop(e) {
+    if (!state.cropData.isDragging) return;
+
+    e.preventDefault();
+    const coords = getCanvasCoords(e);
+
+    state.cropData.endX = coords.x;
+    state.cropData.endY = coords.y;
+
+    drawCropOverlay();
+}
+
+function endCrop(e) {
+    if (!state.cropData.isDragging) return;
+
+    e.preventDefault();
+    state.cropData.isDragging = false;
+
+    // Garante que a área tenha pelo menos 50x50 pixels
+    const width = Math.abs(state.cropData.endX - state.cropData.startX);
+    const height = Math.abs(state.cropData.endY - state.cropData.startY);
+
+    if (width < 50 || height < 50) {
+        resetCrop();
+    }
+}
+
+function handleTouchStart(e) {
+    startCrop(e);
+}
+
+function handleTouchMove(e) {
+    updateCrop(e);
+}
+
+function drawCropOverlay() {
+    const canvas = elements.cropCanvas;
+    const ctx = canvas.getContext('2d');
+    const img = state.cropData.image;
+
+    // Calcula dimensões atuais do canvas
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+
+    // Calcula retângulo de seleção
+    const x = Math.min(state.cropData.startX, state.cropData.endX);
+    const y = Math.min(state.cropData.startY, state.cropData.endY);
+    const width = Math.abs(state.cropData.endX - state.cropData.startX);
+    const height = Math.abs(state.cropData.endY - state.cropData.startY);
+
+    // Limpa canvas
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // Desenha imagem completa
+    ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+
+    // Desenha overlay escurecido em 4 retângulos ao redor da seleção
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+
+    // Topo
+    ctx.fillRect(0, 0, canvasWidth, y);
+
+    // Esquerda (da altura da seleção)
+    ctx.fillRect(0, y, x, height);
+
+    // Direita (da altura da seleção)
+    ctx.fillRect(x + width, y, canvasWidth - (x + width), height);
+
+    // Baixo
+    ctx.fillRect(0, y + height, canvasWidth, canvasHeight - (y + height));
+
+    // Desenha borda da seleção (tracejada branca)
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 4]);
+    ctx.strokeRect(x, y, width, height);
+    ctx.setLineDash([]);
+
+    // Desenha cantos brancos com sombra
+    const cornerSize = 25;
+    const cornerThickness = 4;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 3;
+
+    // Canto superior esquerdo
+    ctx.fillRect(x, y, cornerSize, cornerThickness);
+    ctx.fillRect(x, y, cornerThickness, cornerSize);
+
+    // Canto superior direito
+    ctx.fillRect(x + width - cornerSize, y, cornerSize, cornerThickness);
+    ctx.fillRect(x + width - cornerThickness, y, cornerThickness, cornerSize);
+
+    // Canto inferior esquerdo
+    ctx.fillRect(x, y + height - cornerThickness, cornerSize, cornerThickness);
+    ctx.fillRect(x, y + height - cornerSize, cornerThickness, cornerSize);
+
+    // Canto inferior direito
+    ctx.fillRect(x + width - cornerSize, y + height - cornerThickness, cornerSize, cornerThickness);
+    ctx.fillRect(x + width - cornerThickness, y + height - cornerSize, cornerThickness, cornerSize);
+
+    // Remove sombra
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+}
+
+function resetCrop() {
+    const canvas = elements.cropCanvas;
+
+    state.cropData.startX = 0;
+    state.cropData.startY = 0;
+    state.cropData.endX = canvas.width;
+    state.cropData.endY = canvas.height;
+
+    drawCropOverlay();
+}
+
+function confirmCrop() {
+    const canvas = elements.cropCanvas;
+    const img = state.cropData.image;
+
+    // Calcula coordenadas na imagem original
+    const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scale;
+    const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scale;
+    const width = Math.abs(state.cropData.endX - state.cropData.startX) * state.cropData.scale;
+    const height = Math.abs(state.cropData.endY - state.cropData.startY) * state.cropData.scale;
+
+    // Cria canvas temporário para crop
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // Desenha área cortada
+    tempCtx.drawImage(img, x, y, width, height, 0, 0, width, height);
+
+    // Converte para blob e cria arquivo
+    tempCanvas.toBlob((blob) => {
+        const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
+
+        // Se for modo mockup, gera o mockup
+        if (state.mockupMode) {
+            gerarMockup(file);
+        } else {
+            compressAndPreviewImage(file);
+            showMainScreen();
+        }
+    }, 'image/jpeg', 0.9);
+}
+
+function cancelCrop() {
+    // Limpa input file para permitir selecionar a mesma imagem novamente
+    elements.fileInput.value = '';
+    state.mockupMode = false;
+    showMainScreen();
+}
+
+function abrirCropParaAjuste() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma imagem disponível para ajustar', 'error');
+        return;
+    }
+
+    // Carrega imagem original no crop (modo ajuste normal)
+    state.mockupMode = false;
+    state.cropData.image = state.originalPhoto;
+    initializeCropCanvas();
+    showCropScreen();
+}
+
+// ========== MOCKUP DE CAVALETES ==========
+function startMockupFlow() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma foto disponível para mockup', 'error');
+        return;
+    }
+
+    // Mostra tela de configuração
+    showScreen(elements.mockupConfigScreen);
+}
+
+function abrirCropParaMockup() {
+    // Captura configuração selecionada
+    const tipoSelecionado = document.querySelector('input[name="tipoCavalete"]:checked');
+    const fundoSelecionado = document.querySelector('input[name="fundoCavalete"]:checked');
+
+    state.mockupConfig.tipo = tipoSelecionado ? tipoSelecionado.value : 'simples';
+    state.mockupConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
+
+    // Ativa modo mockup
+    state.mockupMode = true;
+
+    // Carrega imagem original no crop
+    state.cropData.image = state.originalPhoto;
+    initializeCropCanvas();
+    showCropScreen();
+}
+
+async function gerarMockup(imagemCropada) {
+    try {
+        elements.uploadProgress.classList.remove('hidden');
+
+        const formData = new FormData();
+        formData.append('ImagemCropada', imagemCropada);
+        formData.append('TipoCavalete', state.mockupConfig.tipo);
+        formData.append('Fundo', state.mockupConfig.fundo);
+
+        const response = await fetch(`${API_URL}/api/mockup/gerar`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.mensagem || 'Erro ao gerar mockup');
+        }
+
+        // Exibe resultado
+        if (data.caminhosGerados && data.caminhosGerados.length > 0) {
+            const mockupUrl = `${API_URL}/uploads/${data.caminhosGerados[0]}`;
+            elements.mockupImage.src = mockupUrl;
+            showScreen(elements.mockupResultScreen);
+            showMockupMessage(data.mensagem, 'success');
+        }
+
+        // Reseta modo mockup
+        state.mockupMode = false;
+
+    } catch (error) {
+        showMockupMessage(error.message, 'error');
+        state.mockupMode = false;
+        showMainScreen();
+    } finally {
+        elements.uploadProgress.classList.add('hidden');
+    }
+}
+
+function downloadMockup() {
+    const link = document.createElement('a');
+    link.href = elements.mockupImage.src;
+    link.download = `mockup_${Date.now()}.jpg`;
+    link.click();
+}
+
+function showMockupMessage(message, type) {
+    elements.mockupMessage.textContent = message;
+    elements.mockupMessage.className = `message ${type}`;
+    elements.mockupMessage.classList.remove('hidden');
+
+    setTimeout(() => {
+        elements.mockupMessage.classList.add('hidden');
+    }, 5000);
 }
 
 // ========== SERVICE WORKER (para PWA futuro) ==========

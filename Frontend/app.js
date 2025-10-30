@@ -54,6 +54,7 @@ const elements = {
     resetCropBtn: document.getElementById('resetCropBtn'),
     confirmCropBtn: document.getElementById('confirmCropBtn'),
     mockupBtn: document.getElementById('mockupBtn'),
+    photoIndicator: document.getElementById('photoIndicator'),
     cancelMockupBtn: document.getElementById('cancelMockupBtn'),
     continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
     backToMainBtn: document.getElementById('backToMainBtn'),
@@ -227,12 +228,15 @@ function handleFileSelect(e) {
         return;
     }
 
+    // NOVA FOTO - Limpa estado anterior e oculta botões
+    clearPhotoState();
+
     // Salva arquivo e exibe preview (SEM abrir crop automaticamente)
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            // Salva imagem original
+            // Salva imagem original (permanece até nova foto)
             state.originalPhoto = img;
 
             // Converte para arquivo e exibe preview
@@ -286,11 +290,25 @@ function compressAndPreviewImage(file) {
 }
 
 function clearPhoto() {
+    // Limpa TUDO incluindo imagem original (usuário clicou no X)
     state.currentPhotoFile = null;
+    state.originalPhoto = null;
     elements.previewImage.src = '';
     elements.photoPreview.classList.add('hidden');
     elements.fileInput.value = '';
     elements.submitBtn.disabled = true;
+    elements.mockupBtn.classList.add('hidden');
+    elements.photoIndicator.classList.add('hidden');
+}
+
+function clearPhotoState() {
+    // Limpa apenas estado atual (para preparar nova foto)
+    state.currentPhotoFile = null;
+    elements.previewImage.src = '';
+    elements.photoPreview.classList.add('hidden');
+    elements.submitBtn.disabled = true;
+    elements.mockupBtn.classList.add('hidden');
+    elements.photoIndicator.classList.add('hidden');
 }
 
 // ========== UPLOAD ==========
@@ -333,15 +351,22 @@ async function handleUpload(e) {
 
         showMessage(data.mensagem, 'success');
 
-        // Mostra botão de mockup
+        // Mostra botão de mockup (permanece visível)
         elements.mockupBtn.classList.remove('hidden');
 
-        // Limpa formulário após sucesso
+        // Limpa apenas o preview e formulário (mantém imagem original)
         setTimeout(() => {
-            clearPhoto();
+            state.currentPhotoFile = null;
+            elements.previewImage.src = '';
+            elements.photoPreview.classList.add('hidden');
+            elements.fileInput.value = '';
+            elements.submitBtn.disabled = true;
             elements.uploadForm.reset();
-            elements.mockupBtn.classList.add('hidden');
-        }, 5000);
+            // Mostra indicador de foto disponível
+            elements.photoIndicator.classList.remove('hidden');
+            // NÃO limpa state.originalPhoto - fica disponível para mockup/ajuste
+            // NÃO oculta mockupBtn - fica acessível
+        }, 2000);
 
     } catch (error) {
         showMessage(error.message, 'error');

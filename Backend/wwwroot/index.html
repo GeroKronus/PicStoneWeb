@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PicStone - Captura de Fotos</title>
+    <title>PicStone Mobile - Captura de Fotos</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Tela de Login -->
     <div id="loginScreen" class="screen active">
         <div class="container">
-            <div class="header">
-                <h1>PicStone Qualidade</h1>
-                <p>Sistema de Captura de Fotos</p>
+            <div class="logo-container">
+                <img src="images/logo.png" alt="PicStone Mobile" class="logo-image">
+                <p class="app-description">Sistema de Captura de Fotos</p>
             </div>
 
             <form id="loginForm" class="form-card">
@@ -52,6 +52,7 @@
             <div id="photoPreview" class="photo-preview hidden">
                 <img id="previewImage" src="" alt="Preview">
                 <button id="clearPhotoBtn" class="btn-clear">✕</button>
+                <button id="adjustImageBtn" class="btn btn-adjust">✂️ Ajustar Imagem</button>
             </div>
 
             <!-- Botão de Captura -->
@@ -59,15 +60,22 @@
                 <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
                 <button id="captureBtn" class="btn btn-capture">
                     <span class="camera-icon">📷</span>
-                    Tirar Foto
+                    Escolher/Tirar Foto
                 </button>
             </div>
 
             <!-- Formulário de Dados -->
             <form id="uploadForm" class="form-card">
                 <div class="form-group">
-                    <label for="lote">Número do Lote *</label>
-                    <input type="text" id="lote" name="lote" required placeholder="Ex: 12345">
+                    <label for="material">Material *</label>
+                    <select id="material" name="material" required>
+                        <option value="">Carregando materiais...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="bloco">Número do Bloco *</label>
+                    <input type="text" id="bloco" name="bloco" required placeholder="Ex: 12345">
                 </div>
 
                 <div class="form-group">
@@ -76,18 +84,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="processo">Processo *</label>
-                    <select id="processo" name="processo" required>
-                        <option value="">Selecione...</option>
-                        <option value="Polimento">Polimento</option>
-                        <option value="Resina">Resina</option>
-                        <option value="Acabamento">Acabamento</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="espessura">Espessura (mm)</label>
-                    <input type="number" id="espessura" name="espessura" placeholder="Ex: 20">
+                    <label for="espessura">Espessura (cm)</label>
+                    <input type="number" id="espessura" name="espessura" placeholder="Ex: 2" step="0.1">
                 </div>
 
                 <button type="submit" id="submitBtn" class="btn btn-primary" disabled>
@@ -104,8 +102,103 @@
                 <div id="uploadMessage" class="message hidden"></div>
             </form>
 
+            <!-- Indicador de Foto Disponível -->
+            <div id="photoIndicator" class="photo-indicator hidden">
+                <p>✅ Foto salva e pronta para uso</p>
+                <small>Tire uma nova foto ou simule um cavalete com a foto atual</small>
+            </div>
+
+            <!-- Botão Simular Cavalete -->
+            <button id="mockupBtn" class="btn btn-mockup hidden">📐 Simular Cavalete</button>
+
             <!-- Botão de Histórico -->
             <button id="historyBtn" class="btn btn-secondary">Ver Histórico</button>
+        </div>
+    </div>
+
+    <!-- Tela de Crop -->
+    <div id="cropScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelCropBtn" class="btn-icon">← Cancelar</button>
+                <h1>Ajustar Imagem</h1>
+            </div>
+
+            <div class="crop-instructions">
+                <p>Arraste para selecionar a área de corte</p>
+            </div>
+
+            <div class="crop-container">
+                <canvas id="cropCanvas"></canvas>
+            </div>
+
+            <div class="crop-actions">
+                <button id="resetCropBtn" class="btn btn-secondary">Resetar</button>
+                <button id="confirmCropBtn" class="btn btn-primary">Confirmar Corte</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Configuração de Mockup -->
+    <div id="mockupConfigScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelMockupBtn" class="btn-icon">← Voltar</button>
+                <h1>Simular Cavalete</h1>
+            </div>
+
+            <div class="mockup-config-card">
+                <div class="form-group">
+                    <label>Tipo de Cavalete</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="tipoCavalete" value="simples" checked>
+                            <span>🖼️ Simples (1 chapa)</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="tipoCavalete" value="duplo">
+                            <span>🖼️🖼️ Duplo Bookmatch (2 chapas espelhadas)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fundo</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="fundoCavalete" value="claro" checked>
+                            <span>☀️ Claro</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="fundoCavalete" value="escuro">
+                            <span>🌙 Escuro</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="continuarCropMockupBtn" class="btn btn-primary">Continuar para Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Resultado do Mockup -->
+    <div id="mockupResultScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backToMainBtn" class="btn-icon">← Voltar</button>
+                <h1>Mockup Gerado</h1>
+            </div>
+
+            <div id="mockupPreview" class="photo-preview">
+                <img id="mockupImage" src="" alt="Mockup">
+            </div>
+
+            <div class="mockup-actions">
+                <button id="downloadMockupBtn" class="btn btn-primary">⬇️ Baixar Mockup</button>
+                <button id="newMockupBtn" class="btn btn-secondary">🔄 Gerar Novo</button>
+            </div>
+
+            <div id="mockupMessage" class="message hidden"></div>
         </div>
     </div>
 
