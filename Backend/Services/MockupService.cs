@@ -87,6 +87,15 @@ namespace PicStoneFotoAPI.Services
 
             var caminhoMoldura = Path.Combine(_moldurasPath, nomeMoldura);
 
+            _logger.LogInformation("Gerando cavalete simples - Moldura: {NomeMoldura}", nomeMoldura);
+            _logger.LogInformation("Caminho moldura: {CaminhoMoldura}", caminhoMoldura);
+            _logger.LogInformation("Arquivo existe: {Existe}", File.Exists(caminhoMoldura));
+
+            if (!File.Exists(caminhoMoldura))
+            {
+                throw new FileNotFoundException($"Moldura não encontrada: {caminhoMoldura}");
+            }
+
             using var streamMoldura = File.OpenRead(caminhoMoldura);
             using var moldura = SKBitmap.Decode(streamMoldura);
 
@@ -134,6 +143,15 @@ namespace PicStoneFotoAPI.Services
                 : "CAVALETE BASE Cinza.png";
 
             var caminhoMoldura = Path.Combine(_moldurasPath, nomeMoldura);
+
+            _logger.LogInformation("Gerando cavalete duplo - Moldura: {NomeMoldura}", nomeMoldura);
+            _logger.LogInformation("Caminho moldura: {CaminhoMoldura}", caminhoMoldura);
+            _logger.LogInformation("Arquivo existe: {Existe}", File.Exists(caminhoMoldura));
+
+            if (!File.Exists(caminhoMoldura))
+            {
+                throw new FileNotFoundException($"Moldura não encontrada: {caminhoMoldura}");
+            }
 
             using var streamMoldura = File.OpenRead(caminhoMoldura);
             using var moldura = SKBitmap.Decode(streamMoldura);
