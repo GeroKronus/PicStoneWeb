@@ -346,5 +346,37 @@ namespace PicStoneFotoAPI.Services
 
             _logger.LogError("Falha em todas as tentativas de FTP para {Arquivo}", nomeArquivo);
         }
+
+        /// <summary>
+        /// Testa conexão com o banco de dados
+        /// </summary>
+        public async Task<bool> TestDatabaseConnectionAsync()
+        {
+            try
+            {
+                return await _context.Database.CanConnectAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao testar conexão com banco");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Retorna contagem total de fotos no banco
+        /// </summary>
+        public async Task<int> GetPhotoCountAsync()
+        {
+            try
+            {
+                return await _context.FotosMobile.CountAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao contar fotos no banco");
+                return -1;
+            }
+        }
     }
 }

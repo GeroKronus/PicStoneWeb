@@ -76,23 +76,112 @@ namespace PicStoneFotoAPI.Controllers
         {
             try
             {
+                _logger.LogInformation("=== HISTÓRICO INICIADO ===");
+                _logger.LogInformation("Limite solicitado: {Limite}", limite);
+
                 var fotos = await _fotoService.ObterHistoricoAsync(limite);
+
+                _logger.LogInformation("Fotos retornadas: {Count}", fotos?.Count ?? 0);
+
                 return Ok(new
                 {
-                    total = fotos.Count,
-                    fotos = fotos
+                    total = fotos?.Count ?? 0,
+                    fotos = fotos ?? new System.Collections.Generic.List<PicStoneFotoAPI.Models.FotoMobile>()
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao buscar histórico de fotos");
+                _logger.LogError(ex, "ERRO CRÍTICO ao buscar histórico de fotos");
+                _logger.LogError("Tipo de exceção: {Type}", ex.GetType().FullName);
+                _logger.LogError("Mensagem: {Message}", ex.Message);
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("Inner Exception: {InnerType} - {InnerMessage}",
+                        ex.InnerException.GetType().FullName, ex.InnerException.Message);
+                }
+
                 return StatusCode(500, new
                 {
                     mensagem = "Erro ao buscar histórico",
                     erro = ex.Message,
+                    tipoErro = ex.GetType().FullName,
                     innerError = ex.InnerException?.Message,
-                    stackTrace = ex.StackTrace?.Split('\n').Take(10).ToArray()
+                    innerErrorType = ex.InnerException?.GetType().FullName,
+                    stackTrace = ex.StackTrace?.Split('\n').Take(15).ToArray()
                 });
+            }
+        }
+
+        /// <summary>
+        /// GET /api/fotos/debug-historico
+        /// Endpoint de debug completo para histórico (produção)
+        /// </summary>
+        [HttpGet("debug-historico")]
+        public async Task<IActionResult> DebugHistorico()
+        {
+            var debug = new Dictionary<string, object>();
+
+            try
+            {
+                debug["timestamp"] = DateTime.UtcNow;
+                debug["ambiente"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
+
+                // Teste 1: Conexão com banco
+                try
+                {
+                    var canConnect = await _fotoService.TestDatabaseConnectionAsync();
+                    debug["bancoConectado"] = canConnect;
+                }
+                catch (Exception exConn)
+                {
+                    debug["erroConexao"] = exConn.Message;
+                }
+
+                // Teste 2: Contagem de fotos
+                try
+                {
+                    var count = await _fotoService.GetPhotoCountAsync();
+                    debug["totalFotos"] = count;
+                }
+                catch (Exception exCount)
+                {
+                    debug["erroContagem"] = exCount.Message;
+                }
+
+                // Teste 3: Buscar histórico
+                try
+                {
+                    var fotos = await _fotoService.ObterHistoricoAsync(5);
+                    debug["historicoObtido"] = true;
+                    debug["fotosRetornadas"] = fotos?.Count ?? 0;
+
+                    if (fotos != null && fotos.Count > 0)
+                    {
+                        debug["primeiraFoto"] = new
+                        {
+                            fotos[0].Id,
+                            fotos[0].NomeArquivo,
+                            fotos[0].Material,
+                            fotos[0].Bloco,
+                            fotos[0].Chapa,
+                            fotos[0].DataUpload
+                        };
+                    }
+                }
+                catch (Exception exHist)
+                {
+                    debug["erroHistorico"] = exHist.Message;
+                    debug["erroHistoricoTipo"] = exHist.GetType().FullName;
+                    debug["erroHistoricoInner"] = exHist.InnerException?.Message;
+                    debug["erroHistoricoStack"] = exHist.StackTrace?.Split('\n').Take(10).ToArray();
+                }
+
+                return Ok(debug);
+            }
+            catch (Exception ex)
+            {
+                debug["erroGeral"] = ex.Message;
+                return StatusCode(500, debug);
             }
         }
 
