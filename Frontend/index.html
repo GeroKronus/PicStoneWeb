@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PicStone Mobile - Captura de Fotos</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Eruda - Console Mobile para Debug -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
 </head>
 <body>
     <!-- Tela de Login -->
@@ -56,7 +59,7 @@
 
             <!-- Botão de Captura -->
             <div class="capture-section">
-                <input type="file" id="fileInput" accept="image/*" hidden>
+                <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
                 <button id="captureBtn" class="btn btn-capture">
                     <span class="camera-icon">📷</span>
                     Escolher/Tirar Foto

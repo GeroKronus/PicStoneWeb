@@ -60,8 +60,17 @@ document.addEventListener('DOMContentLoaded', () => {
 // ========== EVENT LISTENERS ==========
 function setupEventListeners() {
     elements.loginForm.addEventListener('submit', handleLogin);
-    elements.captureBtn.addEventListener('click', () => elements.fileInput.click());
+
+    // Captura de foto - múltiplos eventos para compatibilidade mobile
+    elements.captureBtn.addEventListener('click', () => {
+        console.log('Botão de captura clicado');
+        elements.fileInput.click();
+    });
+
     elements.fileInput.addEventListener('change', handleFileSelect);
+    // Fallback para alguns navegadores mobile
+    elements.fileInput.addEventListener('input', handleFileSelect);
+
     elements.clearPhotoBtn.addEventListener('click', clearPhoto);
     elements.uploadForm.addEventListener('submit', handleUpload);
     elements.logoutBtn.addEventListener('click', handleLogout);
@@ -77,8 +86,8 @@ function setupEventListeners() {
     elements.cropCanvas.addEventListener('mousedown', startCrop);
     elements.cropCanvas.addEventListener('mousemove', updateCrop);
     elements.cropCanvas.addEventListener('mouseup', endCrop);
-    elements.cropCanvas.addEventListener('touchstart', handleTouchStart);
-    elements.cropCanvas.addEventListener('touchmove', handleTouchMove);
+    elements.cropCanvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    elements.cropCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     elements.cropCanvas.addEventListener('touchend', endCrop);
 }
 
@@ -184,11 +193,21 @@ function handleFileSelect(e) {
     const file = e.target.files[0];
 
     console.log('handleFileSelect chamado', file);
+    console.log('Tipo de evento:', e.type);
+    console.log('Target:', e.target);
 
     if (!file) {
         console.log('Nenhum arquivo selecionado');
+        console.error('ERRO: Nenhum arquivo em e.target.files[0]');
         return;
     }
+
+    console.log('Arquivo detectado:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: file.lastModified
+    });
 
     // Valida tipo de arquivo
     if (!file.type.startsWith('image/')) {
@@ -204,9 +223,16 @@ function handleFileSelect(e) {
         return;
     }
 
-    console.log('Abrindo tela de crop...');
-    // Abre tela de crop
-    openCropScreen(file);
+    console.log('✅ Validações OK! Abrindo tela de crop...');
+
+    try {
+        // Abre tela de crop
+        openCropScreen(file);
+    } catch (error) {
+        console.error('ERRO ao abrir crop:', error);
+        console.error('Stack:', error.stack);
+        alert('ERRO: ' + error.message);
+    }
 }
 
 function compressAndPreviewImage(file) {
@@ -378,41 +404,105 @@ function formatDate(dateString) {
 
 // ========== CROP DE IMAGEM ==========
 function openCropScreen(file) {
-    console.log('openCropScreen chamado', file);
+    console.log('========================================');
+    console.log('🎯 openCropScreen INICIADO');
+    console.log('Arquivo recebido:', file);
+    console.log('========================================');
+
+    if (!file) {
+        console.error('❌ ERRO CRÍTICO: File é null/undefined!');
+        alert('ERRO: Arquivo não fornecido para crop');
+        return;
+    }
+
     const reader = new FileReader();
+    console.log('📖 FileReader criado');
 
     reader.onload = (e) => {
-        console.log('FileReader onload disparado');
+        console.log('✅ FileReader.onload DISPARADO');
+        console.log('Dados lidos (primeiros 50 chars):', e.target.result.substring(0, 50));
+
         const img = new Image();
+        console.log('🖼️ Objeto Image criado');
+
         img.onload = () => {
-            console.log('Imagem carregada:', img.width, 'x', img.height);
+            console.log('✅ Image.onload DISPARADO');
+            console.log('📐 Dimensões da imagem:', img.width, 'x', img.height);
+
             state.cropData.image = img;
-            initializeCropCanvas();
-            showCropScreen();
+            console.log('💾 Imagem salva no state');
+
+            try {
+                console.log('🎨 Chamando initializeCropCanvas...');
+                initializeCropCanvas();
+                console.log('✅ initializeCropCanvas concluído');
+
+                console.log('📱 Chamando showCropScreen...');
+                showCropScreen();
+                console.log('✅ showCropScreen concluído');
+
+                console.log('========================================');
+                console.log('🎉 CROP SCREEN ABERTA COM SUCESSO!');
+                console.log('========================================');
+            } catch (error) {
+                console.error('❌ ERRO no processo de crop:', error);
+                console.error('Stack trace:', error.stack);
+                alert('ERRO ao inicializar crop: ' + error.message);
+            }
         };
+
         img.onerror = (err) => {
-            console.error('Erro ao carregar imagem:', err);
+            console.error('❌ ERRO ao carregar Image:', err);
+            alert('ERRO: Falha ao carregar imagem');
         };
+
         img.src = e.target.result;
+        console.log('🔗 img.src atribuído');
     };
 
     reader.onerror = (err) => {
-        console.error('Erro no FileReader:', err);
+        console.error('❌ ERRO no FileReader:', err);
+        alert('ERRO: Falha ao ler arquivo');
     };
 
+    console.log('📚 Iniciando leitura do arquivo...');
     reader.readAsDataURL(file);
 }
 
 function showCropScreen() {
-    console.log('showCropScreen chamado');
-    console.log('mainScreen classes antes:', elements.mainScreen.className);
-    console.log('cropScreen classes antes:', elements.cropScreen.className);
+    console.log('========================================');
+    console.log('📱 showCropScreen INICIADO');
+    console.log('========================================');
+
+    console.log('Elementos disponíveis:', {
+        mainScreen: !!elements.mainScreen,
+        cropScreen: !!elements.cropScreen
+    });
+
+    console.log('mainScreen classes ANTES:', elements.mainScreen.className);
+    console.log('cropScreen classes ANTES:', elements.cropScreen.className);
+
+    console.log('mainScreen display ANTES:', window.getComputedStyle(elements.mainScreen).display);
+    console.log('cropScreen display ANTES:', window.getComputedStyle(elements.cropScreen).display);
 
     elements.mainScreen.classList.remove('active');
-    elements.cropScreen.classList.add('active');
+    console.log('✅ Classe "active" removida de mainScreen');
 
-    console.log('mainScreen classes depois:', elements.mainScreen.className);
-    console.log('cropScreen classes depois:', elements.cropScreen.className);
+    elements.cropScreen.classList.add('active');
+    console.log('✅ Classe "active" adicionada a cropScreen');
+
+    console.log('mainScreen classes DEPOIS:', elements.mainScreen.className);
+    console.log('cropScreen classes DEPOIS:', elements.cropScreen.className);
+
+    // Força um reflow
+    void elements.cropScreen.offsetHeight;
+
+    console.log('mainScreen display DEPOIS:', window.getComputedStyle(elements.mainScreen).display);
+    console.log('cropScreen display DEPOIS:', window.getComputedStyle(elements.cropScreen).display);
+
+    console.log('========================================');
+    console.log('✅ showCropScreen CONCLUÍDO');
+    console.log('========================================');
 }
 
 function initializeCropCanvas() {
