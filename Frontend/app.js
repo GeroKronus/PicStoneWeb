@@ -61,7 +61,11 @@ const elements = {
     downloadAllMockupsBtn: document.getElementById('downloadAllMockupsBtn'),
     newMockupBtn: document.getElementById('newMockupBtn'),
     mockupsGallery: document.getElementById('mockupsGallery'),
-    mockupMessage: document.getElementById('mockupMessage')
+    mockupMessage: document.getElementById('mockupMessage'),
+    cropInfo: document.getElementById('cropInfo'),
+    cropInfoArea: document.getElementById('cropInfoArea'),
+    cropInfoMP: document.getElementById('cropInfoMP'),
+    cropInfoSize: document.getElementById('cropInfoSize')
 };
 
 // ========== INICIALIZAÇÃO ==========
@@ -462,6 +466,7 @@ function openCropScreen(file) {
 function showCropScreen() {
     elements.mainScreen.classList.remove('active');
     elements.cropScreen.classList.add('active');
+    elements.cropInfo.classList.add('hidden'); // Esconde até haver uma seleção
 }
 
 function initializeCropCanvas() {
@@ -639,15 +644,11 @@ function drawCropOverlay() {
     const estimatedMB = (estimatedBytes / 1048576).toFixed(2);
     const estimatedMP = (totalPixels / 1000000).toFixed(1);
 
-    // Desenha informações do crop no topo
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-    ctx.fillRect(10, 10, 300, 80);
-
-    ctx.font = '14px Arial';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(`Área: ${Math.round(cropWidthReal)} x ${Math.round(cropHeightReal)} px`, 20, 30);
-    ctx.fillText(`Megapixels: ${estimatedMP} MP`, 20, 50);
-    ctx.fillText(`Tamanho estimado: ${estimatedMB} MB`, 20, 70);
+    // Atualiza os elementos HTML com as informações do crop
+    elements.cropInfoArea.textContent = `${Math.round(cropWidthReal)} x ${Math.round(cropHeightReal)} px`;
+    elements.cropInfoMP.textContent = `${estimatedMP} MP`;
+    elements.cropInfoSize.textContent = `${estimatedMB} MB`;
+    elements.cropInfo.classList.remove('hidden');
 
     // Desenha borda da seleção (tracejada branca)
     ctx.strokeStyle = '#FFFFFF';
@@ -749,6 +750,7 @@ function cancelCrop() {
     // Limpa input file para permitir selecionar a mesma imagem novamente
     elements.fileInput.value = '';
     state.mockupMode = false;
+    elements.cropInfo.classList.add('hidden');
     showMainScreen();
 }
 
