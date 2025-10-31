@@ -61,9 +61,9 @@ namespace PicStoneFotoAPI.Services
                 int logoWidth = logo.Width;
                 int logoHeight = logo.Height;
 
-                // Posição: canto inferior direito com margem de 20px
-                int posX = canvasWidth - logoWidth - 20;
-                int posY = canvasHeight - logoHeight - 20;
+                // Posição: canto inferior direito colado nas margens
+                int posX = canvasWidth - logoWidth;
+                int posY = canvasHeight - logoHeight;
 
                 // Desenha a logo sem redimensionar
                 canvas.DrawBitmap(logo, posX, posY);
