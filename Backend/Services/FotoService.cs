@@ -57,17 +57,16 @@ namespace PicStoneFotoAPI.Services
                     return;
                 }
 
-                // Tamanho da logo (10% da largura do canvas)
-                int logoWidth = (int)(canvasWidth * 0.1);
-                int logoHeight = (int)(logoWidth * ((float)logo.Height / logo.Width));
+                // Usa tamanho original da logo (49x50 pixels)
+                int logoWidth = logo.Width;
+                int logoHeight = logo.Height;
 
                 // Posição: canto inferior direito com margem de 20px
                 int posX = canvasWidth - logoWidth - 20;
                 int posY = canvasHeight - logoHeight - 20;
 
-                // Redimensiona e desenha a logo
-                var logoRedimensionado = logo.Resize(new SKImageInfo(logoWidth, logoHeight), SKFilterQuality.High);
-                canvas.DrawBitmap(logoRedimensionado, posX, posY);
+                // Desenha a logo sem redimensionar
+                canvas.DrawBitmap(logo, posX, posY);
 
                 _logger.LogInformation("Marca d'água adicionada em foto com legenda");
             }
