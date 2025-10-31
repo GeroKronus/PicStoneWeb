@@ -262,16 +262,10 @@ function compressAndPreviewImage(file) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            // Comprime imagem para máximo 1920x1080
+            // Usa imagem original sem redimensionamento
             const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
-
-            if (width > 1920 || height > 1080) {
-                const ratio = Math.min(1920 / width, 1080 / height);
-                width = width * ratio;
-                height = height * ratio;
-            }
 
             canvas.width = width;
             canvas.height = height;
@@ -285,12 +279,12 @@ function compressAndPreviewImage(file) {
                     lastModified: Date.now()
                 });
 
-                // Exibe preview
+                // Exibe preview (qualidade reduzida apenas para preview)
                 elements.previewImage.src = canvas.toDataURL('image/jpeg', 0.85);
                 elements.photoPreview.classList.remove('hidden');
                 elements.submitBtn.disabled = false;
 
-            }, 'image/jpeg', 0.85);
+            }, 'image/jpeg', 0.95);
         };
         img.src = e.target.result;
     };
@@ -635,6 +629,26 @@ function drawCropOverlay() {
     // Baixo
     ctx.fillRect(0, y + height, canvasWidth, canvasHeight - (y + height));
 
+    // Calcula tamanho estimado do arquivo cropado
+    const cropWidthReal = width * state.cropData.scaleX;
+    const cropHeightReal = height * state.cropData.scaleY;
+    const totalPixels = cropWidthReal * cropHeightReal;
+
+    // Fórmula: bytes = pixels * bytesPerPixel (0.25 para JPEG Q95)
+    const estimatedBytes = totalPixels * 0.25;
+    const estimatedMB = (estimatedBytes / 1048576).toFixed(2);
+    const estimatedMP = (totalPixels / 1000000).toFixed(1);
+
+    // Desenha informações do crop no topo
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(10, 10, 300, 80);
+
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(`Área: ${Math.round(cropWidthReal)} x ${Math.round(cropHeightReal)} px`, 20, 30);
+    ctx.fillText(`Megapixels: ${estimatedMP} MP`, 20, 50);
+    ctx.fillText(`Tamanho estimado: ${estimatedMB} MB`, 20, 70);
+
     // Desenha borda da seleção (tracejada branca)
     ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 2;
@@ -713,7 +727,7 @@ function confirmCrop() {
     // Desenha área cortada
     tempCtx.drawImage(img, x, y, width, height, 0, 0, width, height);
 
-    // Converte para blob e cria arquivo
+    // Converte para blob e cria arquivo (qualidade 95%)
     tempCanvas.toBlob((blob) => {
         const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
 
@@ -728,7 +742,7 @@ function confirmCrop() {
             elements.resetImageBtn.classList.remove('hidden');
             showMainScreen();
         }
-    }, 'image/jpeg', 0.9);
+    }, 'image/jpeg', 0.95);
 }
 
 function cancelCrop() {
@@ -770,7 +784,7 @@ function resetToOriginalImage() {
         // Oculta botão de reset pois voltou ao original
         elements.resetImageBtn.classList.add('hidden');
         showMessage('Imagem original restaurada', 'success');
-    }, 'image/jpeg', 0.9);
+    }, 'image/jpeg', 0.95);
 }
 
 // ========== MOCKUP DE CAVALETES ==========
