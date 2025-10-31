@@ -627,6 +627,8 @@ body {
 
 .mockup-actions .btn {
     flex: 1;
+    min-width: 0;
+    white-space: nowrap;
 }
 
 #mockupPreview img {
