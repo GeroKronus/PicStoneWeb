@@ -326,7 +326,7 @@ async function handleUpload(e) {
     const formData = new FormData();
     formData.append('Arquivo', state.currentPhotoFile);
     formData.append('Material', document.getElementById('material').value);
-    formData.append('Bloco', document.getElementById('bloco').value);
+    formData.append('Bloco', document.getElementById('bloco').value.toUpperCase());
     formData.append('Chapa', document.getElementById('chapa').value);
 
     const espessura = document.getElementById('espessura').value;
