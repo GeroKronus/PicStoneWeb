@@ -31,8 +31,12 @@ namespace PicStoneFotoAPI.Services
 
             _logger.LogInformation($"Skew: input={w}x{h}, ratio={ratio}, distanciaTopo={distanciaTopo}, h2={h2}");
 
-            var surface = SKSurface.Create(new SKImageInfo(w, h));
+            // Calcula tamanho necessário para a surface considerando a transformação
+            int surfaceHeight = (int)Math.Max(h, h2 + distanciaTopo + 100);
+
+            var surface = SKSurface.Create(new SKImageInfo(w, surfaceHeight));
             var canvas = surface.Canvas;
+            canvas.Clear(SKColors.Transparent);
 
             // Calcula matriz de transformação 2D para perspectiva
             float[] t = Transform2d(w, h, 0, distanciaTopo, w, 0, 0, h2 + distanciaTopo, w, h);
