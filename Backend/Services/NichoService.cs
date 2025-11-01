@@ -81,6 +81,7 @@ namespace PicStoneFotoAPI.Services
                 for (int i = 0; i < 3; i++)
                 {
                     recortes[i] = CropBitmap(imagemBookMatch, retangulos[i]);
+                    _logger.LogInformation($"Recorte[{i}] criado: {recortes[i].Width}x{recortes[i].Height}");
                 }
 
                 // Redimensiona e prepara as peças do nicho
@@ -91,16 +92,24 @@ namespace PicStoneFotoAPI.Services
                 var lateralDir = recortes[2].Resize(new SKImageInfo(25, 400), SKFilterQuality.High);
                 var lateralEsq = recortes[2].Resize(new SKImageInfo(25, 400), SKFilterQuality.High);
 
+                _logger.LogInformation($"Peças redimensionadas - FundoNicho: {fundoNicho.Width}x{fundoNicho.Height}");
+
                 // Aplica transformações de perspectiva
+                _logger.LogInformation($"PatamarInf ANTES transform: {patamarInf.Width}x{patamarInf.Height}");
                 patamarInf = _transformService.RotateImage(patamarInf, 270);
+                _logger.LogInformation($"PatamarInf APÓS Rotate270: {patamarInf.Width}x{patamarInf.Height}");
                 patamarInf = _transformService.DistortionInclina(patamarInf, 600, 550, 50, 600, 25);
+                _logger.LogInformation($"PatamarInf APÓS DistortionInclina: {patamarInf.Width}x{patamarInf.Height}");
                 patamarInf = _transformService.RotateImage(patamarInf, 90);
+                _logger.LogInformation($"PatamarInf APÓS Rotate90: {patamarInf.Width}x{patamarInf.Height}");
 
                 patamarSup = _transformService.RotateImage(patamarSup, 270);
                 patamarSup = _transformService.DistortionInclina(patamarSup, 600, 550, 25, 600, 25);
                 patamarSup = _transformService.RotateImage(patamarSup, 270);
 
                 lateralEsq = _transformService.RotateImage(lateralEsq, 180);
+
+                _logger.LogInformation($"Laterais: Dir={lateralDir.Width}x{lateralDir.Height}, Esq={lateralEsq.Width}x{lateralEsq.Height}");
 
                 // Aplica ajustes de cor (pós-produção) para criar efeito 3D
                 patamarSup = _transformService.AjustarHSL(patamarSup, -2, -5, 1, 0);
@@ -121,10 +130,20 @@ namespace PicStoneFotoAPI.Services
                 };
 
                 // Desenha as peças em ordem
+                _logger.LogInformation("Desenhando peças no canvas 700x500:");
+                _logger.LogInformation($"  - FundoNicho {fundoNicho.Width}x{fundoNicho.Height} na posição (75, 50)");
                 canvas.DrawBitmap(fundoNicho, 75, 50, paint);
+
+                _logger.LogInformation($"  - LateralEsq {lateralEsq.Width}x{lateralEsq.Height} na posição (50, 50)");
                 canvas.DrawBitmap(lateralEsq, 50, 50, paint);
+
+                _logger.LogInformation($"  - LateralDir {lateralDir.Width}x{lateralDir.Height} na posição (625, 50)");
                 canvas.DrawBitmap(lateralDir, 625, 50, paint);
+
+                _logger.LogInformation($"  - PatamarInf {patamarInf.Width}x{patamarInf.Height} na posição (50, 400)");
                 canvas.DrawBitmap(patamarInf, 50, 400, paint);
+
+                _logger.LogInformation($"  - PatamarSup {patamarSup.Width}x{patamarSup.Height} na posição (50, 50)");
                 canvas.DrawBitmap(patamarSup, 50, 50, paint);
 
                 // Adiciona sombras
