@@ -551,6 +551,17 @@ body {
     box-shadow: 0 8px 15px -3px rgba(102, 126, 234, 0.4);
 }
 
+.btn-nicho {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    margin-top: 10px;
+}
+
+.btn-nicho:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(17, 153, 142, 0.4);
+}
+
 .mockup-config-card {
     background: var(--card-background);
     border-radius: 16px;

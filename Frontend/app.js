@@ -54,6 +54,7 @@ const elements = {
     cancelCropBtn: document.getElementById('cancelCropBtn'),
     resetCropBtn: document.getElementById('resetCropBtn'),
     mockupBtn: document.getElementById('mockupBtn'),
+    nichoBtn: document.getElementById('nichoBtn'),
     photoIndicator: document.getElementById('photoIndicator'),
     cancelMockupBtn: document.getElementById('cancelMockupBtn'),
     continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
@@ -110,6 +111,7 @@ function setupEventListeners() {
 
     // Mockup event listeners
     elements.mockupBtn.addEventListener('click', startMockupFlow);
+    elements.nichoBtn.addEventListener('click', startNichoFlow);
     elements.cancelMockupBtn.addEventListener('click', () => showMainScreen());
     elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
     elements.backToMainBtn.addEventListener('click', () => showMainScreen());
@@ -305,6 +307,7 @@ function clearPhoto() {
     elements.fileInput.value = '';
     elements.submitBtn.disabled = true;
     elements.mockupBtn.classList.add('hidden');
+    elements.nichoBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -315,6 +318,7 @@ function clearPhotoState() {
     elements.photoPreview.classList.add('hidden');
     elements.submitBtn.disabled = true;
     elements.mockupBtn.classList.add('hidden');
+    elements.nichoBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -358,8 +362,9 @@ async function handleUpload(e) {
 
         showMessage(data.mensagem, 'success');
 
-        // Mostra botão de mockup (permanece visível)
+        // Mostra botões de mockup (permanecem visíveis)
         elements.mockupBtn.classList.remove('hidden');
+        elements.nichoBtn.classList.remove('hidden');
 
         // Limpa apenas o preview e formulário (mantém imagem original)
         setTimeout(() => {
@@ -737,8 +742,9 @@ function confirmCrop() {
             gerarMockup(file);
         } else {
             compressAndPreviewImage(file);
-            // Mostra botão mockup pois já tem imagem disponível
+            // Mostra botões mockup pois já tem imagem disponível
             elements.mockupBtn.classList.remove('hidden');
+            elements.nichoBtn.classList.remove('hidden');
             // Mostra botão de reset pois a imagem foi modificada
             elements.resetImageBtn.classList.remove('hidden');
             showMainScreen();
@@ -922,6 +928,21 @@ function showMockupMessage(message, type) {
     setTimeout(() => {
         elements.mockupMessage.classList.add('hidden');
     }, 5000);
+}
+
+// ========== NICHO MOCKUP FLOW ==========
+function startNichoFlow() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma foto disponível para mockup de nicho', 'error');
+        return;
+    }
+
+    // Por enquanto, mostra mensagem informativa
+    // Futuramente: criar tela de configuração específica para nicho
+    showMessage('Função Simular Nicho em desenvolvimento! Em breve você poderá gerar mockups de nichos de banheiro.', 'info');
+
+    // TODO: Implementar tela de configuração e fluxo completo
+    // showScreen(elements.nichoConfigScreen);
 }
 
 // ========== SERVICE WORKER (para PWA futuro) ==========
