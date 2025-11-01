@@ -846,7 +846,7 @@ async function gerarMockup(imagemCropada) {
         const isBancada1 = state.mockupConfig.tipo === 'bancada1';
 
         const formData = new FormData();
-        formData.append(isNicho ? 'imagem' : 'ImagemCropada', imagemCropada);
+        formData.append((isNicho || isBancada1) ? 'imagem' : 'ImagemCropada', imagemCropada);
 
         if (isNicho) {
             // Parâmetros específicos do nicho
