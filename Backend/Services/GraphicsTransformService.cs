@@ -39,19 +39,20 @@ namespace PicStoneFotoAPI.Services
 
             _logger.LogInformation($"Transform2d result: [{t[0]}, {t[1]}, {t[2]}, {t[3]}, {t[4]}, {t[5]}, {t[6]}, {t[7]}, {t[8]}]");
 
-            // SKMatrix constructor expects: ScaleX, SkewX, TransX, SkewY, ScaleY, TransY, Persp0, Persp1, Persp2
-            // Transform2d returns a 3x3 matrix in row-major order
+            // SKMatrix expects column-major order!
+            // Transform2d returns: [m11, m12, m13, m21, m22, m23, m31, m32, m33]
+            // SKMatrix layout: ScaleX=m11, SkewX=m21, TransX=m31, SkewY=m12, ScaleY=m22, TransY=m32, Persp0=m13, Persp1=m23, Persp2=m33
             var matrix = new SKMatrix
             {
-                ScaleX = t[0],
-                SkewX = t[1],
-                TransX = t[2],
-                SkewY = t[3],
-                ScaleY = t[4],
-                TransY = t[5],
-                Persp0 = t[6],
-                Persp1 = t[7],
-                Persp2 = t[8]
+                ScaleX = t[0],  // m11
+                SkewX = t[3],   // m21 (not t[1]!)
+                TransX = t[6],  // m31 (not t[2]!)
+                SkewY = t[1],   // m12 (not t[3]!)
+                ScaleY = t[4],  // m22
+                TransY = t[7],  // m32 (not t[5]!)
+                Persp0 = t[2],  // m13 (not t[6]!)
+                Persp1 = t[5],  // m23 (not t[7]!)
+                Persp2 = t[8]   // m33
             };
 
             _logger.LogInformation($"SKMatrix: ScaleX={matrix.ScaleX}, SkewX={matrix.SkewX}, TransX={matrix.TransX}");
