@@ -253,7 +253,8 @@ namespace PicStoneFotoAPI.Services
         {
             try
             {
-                string pastaDebug = Path.Combine(Directory.GetCurrentDirectory(), "DEBUG_Bancada1");
+                // Salvar em pasta acessível via web (wwwroot/debug)
+                string pastaDebug = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "debug");
                 Directory.CreateDirectory(pastaDebug);
 
                 string caminhoCompleto = Path.Combine(pastaDebug, nomeArquivo);
@@ -263,7 +264,7 @@ namespace PicStoneFotoAPI.Services
                 using var stream = File.OpenWrite(caminhoCompleto);
                 data.SaveTo(stream);
 
-                _logger.LogInformation($"DEBUG: Salvo {nomeArquivo} ({bitmap.Width}x{bitmap.Height})");
+                _logger.LogWarning($"🔍 DEBUG SALVO: http://mobile.picstone.com.br/debug/{nomeArquivo} ({bitmap.Width}x{bitmap.Height})");
             }
             catch (Exception ex)
             {
