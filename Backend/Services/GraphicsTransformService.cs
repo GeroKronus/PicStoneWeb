@@ -29,18 +29,34 @@ namespace PicStoneFotoAPI.Services
             int h = input.Height;
             float h2 = h / ratio;
 
+            _logger.LogInformation($"Skew: input={w}x{h}, ratio={ratio}, distanciaTopo={distanciaTopo}, h2={h2}");
+
             var surface = SKSurface.Create(new SKImageInfo(w, h));
             var canvas = surface.Canvas;
 
             // Calcula matriz de transformação 2D para perspectiva
             float[] t = Transform2d(w, h, 0, distanciaTopo, w, 0, 0, h2 + distanciaTopo, w, h);
 
-            // Usa SKMatrix para transformação 2D (mais simples que SKMatrix44)
-            var matrix = new SKMatrix(
-                t[0], t[1], t[2],
-                t[3], t[4], t[5],
-                t[6], t[7], t[8]
-            );
+            _logger.LogInformation($"Transform2d result: [{t[0]}, {t[1]}, {t[2]}, {t[3]}, {t[4]}, {t[5]}, {t[6]}, {t[7]}, {t[8]}]");
+
+            // SKMatrix constructor expects: ScaleX, SkewX, TransX, SkewY, ScaleY, TransY, Persp0, Persp1, Persp2
+            // Transform2d returns a 3x3 matrix in row-major order
+            var matrix = new SKMatrix
+            {
+                ScaleX = t[0],
+                SkewX = t[1],
+                TransX = t[2],
+                SkewY = t[3],
+                ScaleY = t[4],
+                TransY = t[5],
+                Persp0 = t[6],
+                Persp1 = t[7],
+                Persp2 = t[8]
+            };
+
+            _logger.LogInformation($"SKMatrix: ScaleX={matrix.ScaleX}, SkewX={matrix.SkewX}, TransX={matrix.TransX}");
+            _logger.LogInformation($"SKMatrix: SkewY={matrix.SkewY}, ScaleY={matrix.ScaleY}, TransY={matrix.TransY}");
+            _logger.LogInformation($"SKMatrix: Persp0={matrix.Persp0}, Persp1={matrix.Persp1}, Persp2={matrix.Persp2}");
 
             canvas.SetMatrix(matrix);
             canvas.DrawBitmap(input, 0, 0);
