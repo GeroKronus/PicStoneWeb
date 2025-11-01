@@ -101,6 +101,7 @@ builder.Services.AddScoped<FotoService>();
 builder.Services.AddScoped<MockupService>();
 builder.Services.AddScoped<GraphicsTransformService>();
 builder.Services.AddScoped<NichoService>();
+builder.Services.AddScoped<BancadaService>();
 
 // ========== CONTROLLERS E SWAGGER ==========
 builder.Services.AddControllers();

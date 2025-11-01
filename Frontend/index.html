@@ -116,6 +116,7 @@
             <!-- Botões de Simulação -->
             <button id="mockupBtn" class="btn btn-mockup hidden">📐 Simular Cavalete</button>
             <button id="nichoBtn" class="btn btn-nicho hidden">🚿 Simular Nicho</button>
+            <button id="bancada1Btn" class="btn btn-bancada1 hidden">🪑 Simular Bancada #1</button>
 
             <!-- Botão de Histórico -->
             <button id="historyBtn" class="btn btn-secondary">Ver Histórico</button>
@@ -232,6 +233,36 @@
                 </div>
 
                 <button id="continuarCropNichoBtn" class="btn btn-primary">Continuar para Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Configuração da Bancada1 -->
+    <div id="bancada1ConfigScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelBancada1Btn" class="btn-icon">← Cancelar</button>
+                <h1>Configurar Bancada #1</h1>
+            </div>
+
+            <div class="mockup-config-card">
+                <div class="info-box">
+                    <p><strong>🪑 Mockup de Bancada / Countertop #1</strong></p>
+                    <p>Crie visualizações realistas de bancadas com sua pedra natural.</p>
+                    <p>Serão geradas 2 versões (normal e rotacionada 180°).</p>
+                </div>
+
+                <div class="config-section">
+                    <h3>Orientação</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="flipBancada1" name="flipBancada1">
+                            <span>↔️ Inverter Horizontalmente (Flip)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="continuarCropBancada1Btn" class="btn btn-primary">Continuar para Crop</button>
             </div>
         </div>
     </div>

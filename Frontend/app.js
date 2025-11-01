@@ -61,6 +61,11 @@ const elements = {
     cancelNichoBtn: document.getElementById('cancelNichoBtn'),
     continuarCropNichoBtn: document.getElementById('continuarCropNichoBtn'),
     continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
+    bancada1Btn: document.getElementById('bancada1Btn'),
+    bancada1ConfigScreen: document.getElementById('bancada1ConfigScreen'),
+    cancelBancada1Btn: document.getElementById('cancelBancada1Btn'),
+    continuarCropBancada1Btn: document.getElementById('continuarCropBancada1Btn'),
+    flipBancada1: document.getElementById('flipBancada1'),
     backToMainBtn: document.getElementById('backToMainBtn'),
     downloadAllMockupsBtn: document.getElementById('downloadAllMockupsBtn'),
     newMockupBtn: document.getElementById('newMockupBtn'),
@@ -115,10 +120,13 @@ function setupEventListeners() {
     // Mockup event listeners
     elements.mockupBtn.addEventListener('click', startMockupFlow);
     elements.nichoBtn.addEventListener('click', startNichoFlow);
+    elements.bancada1Btn.addEventListener('click', startBancada1Flow);
     elements.cancelMockupBtn.addEventListener('click', () => showMainScreen());
     elements.cancelNichoBtn.addEventListener('click', () => showMainScreen());
+    elements.cancelBancada1Btn.addEventListener('click', () => showMainScreen());
     elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
     elements.continuarCropNichoBtn.addEventListener('click', abrirCropParaNicho);
+    elements.continuarCropBancada1Btn.addEventListener('click', abrirCropParaBancada1);
     elements.backToMainBtn.addEventListener('click', () => showMainScreen());
     elements.newMockupBtn.addEventListener('click', startMockupFlow);
     elements.downloadAllMockupsBtn.addEventListener('click', downloadAllMockups);
@@ -313,6 +321,7 @@ function clearPhoto() {
     elements.submitBtn.disabled = true;
     elements.mockupBtn.classList.add('hidden');
     elements.nichoBtn.classList.add('hidden');
+    elements.bancada1Btn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -324,6 +333,7 @@ function clearPhotoState() {
     elements.submitBtn.disabled = true;
     elements.mockupBtn.classList.add('hidden');
     elements.nichoBtn.classList.add('hidden');
+    elements.bancada1Btn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -370,6 +380,7 @@ async function handleUpload(e) {
         // Mostra botões de mockup (permanecem visíveis)
         elements.mockupBtn.classList.remove('hidden');
         elements.nichoBtn.classList.remove('hidden');
+        elements.bancada1Btn.classList.remove('hidden');
 
         // Limpa apenas o preview e formulário (mantém imagem original)
         setTimeout(() => {
@@ -750,6 +761,7 @@ function confirmCrop() {
             // Mostra botões mockup pois já tem imagem disponível
             elements.mockupBtn.classList.remove('hidden');
             elements.nichoBtn.classList.remove('hidden');
+            elements.bancada1Btn.classList.remove('hidden');
             // Mostra botão de reset pois a imagem foi modificada
             elements.resetImageBtn.classList.remove('hidden');
             showMainScreen();
@@ -829,8 +841,9 @@ async function gerarMockup(imagemCropada) {
     try {
         elements.uploadProgress.classList.remove('hidden');
 
-        // Verifica se é nicho ou cavalete
+        // Verifica o tipo de mockup
         const isNicho = state.mockupConfig.tipo === 'nicho1';
+        const isBancada1 = state.mockupConfig.tipo === 'bancada1';
 
         const formData = new FormData();
         formData.append(isNicho ? 'imagem' : 'ImagemCropada', imagemCropada);
@@ -840,13 +853,16 @@ async function gerarMockup(imagemCropada) {
             formData.append('fundoEscuro', state.mockupConfig.fundo === 'escuro');
             formData.append('incluirShampoo', state.mockupConfig.incluirShampoo || false);
             formData.append('incluirSabonete', state.mockupConfig.incluirSabonete || false);
+        } else if (isBancada1) {
+            // Parâmetros específicos da bancada1
+            formData.append('flip', state.mockupConfig.flip || false);
         } else {
             // Parâmetros do cavalete
             formData.append('TipoCavalete', state.mockupConfig.tipo);
             formData.append('Fundo', state.mockupConfig.fundo);
         }
 
-        const endpoint = isNicho ? '/api/mockup/nicho1' : '/api/mockup/gerar';
+        const endpoint = isNicho ? '/api/mockup/nicho1' : (isBancada1 ? '/api/mockup/bancada1' : '/api/mockup/gerar');
 
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
@@ -866,25 +882,30 @@ async function gerarMockup(imagemCropada) {
             throw new Error(data.mensagem || 'Erro ao gerar mockup');
         }
 
-        // Exibe resultado (backend retorna diferente para nicho e cavalete)
+        // Exibe resultado (backend retorna diferente para nicho, bancada1 e cavalete)
         const caminhos = data.caminhosGerados || data.mockups;
 
         if (caminhos && caminhos.length > 0) {
             const gallery = document.getElementById('mockupsGallery');
             gallery.innerHTML = ''; // Limpa galeria
 
-            // Labels diferentes para nicho e cavalete
-            const labels = isNicho
-                ? ['Nicho - Versão Normal', 'Nicho - Rotacionado 180°']
-                : [
+            // Labels diferentes para cada tipo
+            let labels;
+            if (isNicho) {
+                labels = ['Nicho - Versão Normal', 'Nicho - Rotacionado 180°'];
+            } else if (isBancada1) {
+                labels = ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'];
+            } else {
+                labels = [
                     'Cavalete Duplo - Original/Espelho',
                     'Cavalete Duplo - Espelho/Original',
                     'Cavalete Simples'
                 ];
+            }
 
             caminhos.forEach((caminho, index) => {
-                // Para nicho, caminho já vem completo; para cavalete, precisa montar
-                const mockupUrl = isNicho ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
+                // Para nicho e bancada1, caminho já vem completo; para cavalete, precisa montar
+                const mockupUrl = (isNicho || isBancada1) ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
 
                 const mockupItem = document.createElement('div');
                 mockupItem.className = 'mockup-item';
@@ -899,7 +920,7 @@ async function gerarMockup(imagemCropada) {
             });
 
             // Salva URLs para download em massa
-            state.mockupUrls = isNicho
+            state.mockupUrls = (isNicho || isBancada1)
                 ? caminhos.map(c => `${API_URL}${c}`)
                 : caminhos.map(c => `${API_URL}/uploads/${c}`);
 
@@ -977,6 +998,36 @@ function abrirCropParaNicho() {
     state.mockupConfig.tipo = 'nicho1'; // Identifica que é nicho
     state.mockupConfig.incluirShampoo = incluirShampoo;
     state.mockupConfig.incluirSabonete = incluirSabonete;
+
+    // Ativa modo mockup
+    state.mockupMode = true;
+
+    // Carrega imagem original no crop
+    state.cropData.image = state.originalPhoto;
+    initializeCropCanvas();
+
+    // Mostra tela de crop
+    showScreen(elements.cropScreen);
+}
+
+// ========== BANCADA1 MOCKUP FLOW ==========
+function startBancada1Flow() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma foto disponível para mockup de bancada', 'error');
+        return;
+    }
+
+    // Mostra tela de configuração
+    showScreen(elements.bancada1ConfigScreen);
+}
+
+function abrirCropParaBancada1() {
+    // Captura configuração do flip
+    const flipCheckbox = elements.flipBancada1;
+    const flip = flipCheckbox ? flipCheckbox.checked : false;
+
+    state.mockupConfig.tipo = 'bancada1'; // Identifica que é bancada1
+    state.mockupConfig.flip = flip;
 
     // Ativa modo mockup
     state.mockupMode = true;

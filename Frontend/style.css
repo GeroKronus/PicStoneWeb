@@ -562,6 +562,17 @@ body {
     box-shadow: 0 8px 15px -3px rgba(17, 153, 142, 0.4);
 }
 
+.btn-bancada1 {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    margin-top: 10px;
+}
+
+.btn-bancada1:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(245, 87, 108, 0.4);
+}
+
 .mockup-config-card {
     background: var(--card-background);
     border-radius: 16px;
