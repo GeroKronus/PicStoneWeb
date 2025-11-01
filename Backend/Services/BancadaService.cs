@@ -61,11 +61,17 @@ namespace PicStoneFotoAPI.Services
                 _logger.LogInformation($"DoisTercos: {imagemDoisTercos.Width}x{imagemDoisTercos.Height}");
                 _logger.LogInformation($"UmTerco: {imagemUmTerco.Width}x{imagemUmTerco.Height}");
 
+                // DEBUG: Salvar partes cropadas
+                SalvarDebug(imagemDoisTercos, $"DEBUG_Bancada1_P{contaProcesso}_01_DoisTercos.png");
+                SalvarDebug(imagemUmTerco, $"DEBUG_Bancada1_P{contaProcesso}_02_UmTerco.png");
+
                 // Redimensiona a parte lateral (1/3)
                 var bitmapORI2 = imagemUmTerco.Resize(new SKImageInfo(460, 1150), SKFilterQuality.High);
+                SalvarDebug(bitmapORI2, $"DEBUG_Bancada1_P{contaProcesso}_03_LateralResized.png");
 
                 // Aplica distorção no topo (2/3)
                 var bmp2 = _transformService.DistortionInclina(imagemDoisTercos, 1180, 450, 450, 1180, 700);
+                SalvarDebug(bmp2, $"DEBUG_Bancada1_P{contaProcesso}_04_TopoDistorcido.png");
 
                 // Cria canvas para parte da bancada
                 var parteBancada = new SKBitmap(1400, 1400);
@@ -74,7 +80,9 @@ namespace PicStoneFotoAPI.Services
                     canvas.Clear(SKColors.Transparent);
                     canvas.DrawBitmap(bmp2, 50, 50);
                 }
+                SalvarDebug(parteBancada, $"DEBUG_Bancada1_P{contaProcesso}_05_ParteBancadaAntes.png");
                 parteBancada = _transformService.RotateImage(parteBancada, 83.3f);
+                SalvarDebug(parteBancada, $"DEBUG_Bancada1_P{contaProcesso}_06_ParteBancadaRotacionada.png");
 
                 // Cria canvas para parte do pé
                 var partePe = new SKBitmap(1400, 1400);
@@ -83,8 +91,11 @@ namespace PicStoneFotoAPI.Services
                     canvas.Clear(SKColors.Transparent);
                     canvas.DrawBitmap(bitmapORI2, 100, 100);
                 }
+                SalvarDebug(partePe, $"DEBUG_Bancada1_P{contaProcesso}_07_PartePeAntes.png");
                 partePe = _transformService.Skew(partePe, 0, 200);
+                SalvarDebug(partePe, $"DEBUG_Bancada1_P{contaProcesso}_08_PartePeSkew.png");
                 partePe = _transformService.RotateImage(partePe, 83.25f);
+                SalvarDebug(partePe, $"DEBUG_Bancada1_P{contaProcesso}_09_PartePeRotacionada.png");
 
                 // Monta o mosaico 1191x1051
                 int larguraMolduraVirtual = 1191;
@@ -104,8 +115,19 @@ namespace PicStoneFotoAPI.Services
                     // Desenha parte bancada e parte pé
                     canvas.DrawBitmap(parteBancada, -161, 474, paint);
                     canvas.DrawBitmap(partePe, -161, 777, paint);
+                }
 
-                    // Adiciona moldura bancada1.png
+                SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_10_MosaicoAntesMoldura.png");
+
+                // Adiciona moldura bancada1.png
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    using var paint = new SKPaint
+                    {
+                        FilterQuality = SKFilterQuality.High,
+                        IsAntialias = true
+                    };
+
                     var moldura = CarregarRecurso("bancada1.png");
                     if (moldura != null)
                     {
@@ -118,10 +140,17 @@ namespace PicStoneFotoAPI.Services
                     }
                 }
 
+                SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_11_MosaicoComMoldura.png");
+
                 // Flip horizontal se solicitado
                 if (flip)
                 {
                     mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                    SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_12_Final_Flipped.png");
+                }
+                else
+                {
+                    SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_12_Final.png");
                 }
 
                 resultado.Add(mosaicoEmBranco);
@@ -215,6 +244,28 @@ namespace PicStoneFotoAPI.Services
             {
                 _logger.LogError(ex, $"Erro ao carregar recurso: {nomeArquivo}");
                 return null;
+            }
+        }
+
+        private void SalvarDebug(SKBitmap bitmap, string nomeArquivo)
+        {
+            try
+            {
+                string pastaDebug = Path.Combine(Directory.GetCurrentDirectory(), "DEBUG_Bancada1");
+                Directory.CreateDirectory(pastaDebug);
+
+                string caminhoCompleto = Path.Combine(pastaDebug, nomeArquivo);
+
+                using var image = SKImage.FromBitmap(bitmap);
+                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                using var stream = File.OpenWrite(caminhoCompleto);
+                data.SaveTo(stream);
+
+                _logger.LogInformation($"DEBUG: Salvo {nomeArquivo} ({bitmap.Width}x{bitmap.Height})");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao salvar debug: {nomeArquivo}");
             }
         }
     }
