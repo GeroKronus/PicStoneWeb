@@ -93,7 +93,7 @@ namespace PicStoneFotoAPI.Services
                     canvas.DrawBitmap(bitmapORI2, 100, 100);
                 }
                 SalvarDebug(partePe, $"DEBUG_Bancada1_P{contaProcesso}_07_PartePeAntes.png");
-                partePe = _transformService.Skew(partePe, 0, 200);
+                partePe = _transformService.Skew(partePe, 7f, 200);
                 SalvarDebug(partePe, $"DEBUG_Bancada1_P{contaProcesso}_08_PartePeSkew.png");
                 partePe = _transformService.RotateImage(partePe, 83.25f);
                 SalvarDebug(partePe, $"DEBUG_Bancada1_P{contaProcesso}_09_PartePeRotacionada.png");
