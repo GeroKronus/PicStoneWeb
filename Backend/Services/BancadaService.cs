@@ -29,6 +29,7 @@ namespace PicStoneFotoAPI.Services
         /// <returns>Lista com 2 mockups (normal e rotacionado 180°)</returns>
         public List<SKBitmap> GerarBancada1(SKBitmap imagemOriginal, bool flip = false)
         {
+            _logger.LogWarning($"========== INICIANDO GerarBancada1 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
             var resultado = new List<SKBitmap>();
 
             // Processa 2 versões: normal e rotacionada 180°
