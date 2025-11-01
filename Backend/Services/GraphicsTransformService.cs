@@ -95,7 +95,8 @@ namespace PicStoneFotoAPI.Services
                 t[i] = t[i] / t[8];
             }
 
-            return new float[] { t[0], t[3], 0, t[6], t[1], t[4], 0, t[7], 0, 0, 1, 0, t[2], t[5], 0, t[8] };
+            // Retorna matriz 3x3 em ordem row-major: [m11, m12, m13, m21, m22, m23, m31, m32, m33]
+            return new float[] { t[0], t[3], t[6], t[1], t[4], t[7], t[2], t[5], t[8] };
         }
 
         /// <summary>
