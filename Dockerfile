@@ -31,6 +31,7 @@ COPY Frontend/ ./wwwroot/
 # Copia as pastas de recursos (molduras e logo)
 COPY Backend/Molduras/ ./Molduras/
 COPY Backend/Cavaletes/ ./Cavaletes/
+COPY Backend/MockupResources/ ./MockupResources/
 
 # Cria diretório para uploads
 RUN mkdir -p /app/uploads && chmod 777 /app/uploads

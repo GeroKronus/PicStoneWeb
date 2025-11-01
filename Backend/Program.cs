@@ -99,6 +99,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<FotoService>();
 builder.Services.AddScoped<MockupService>();
+builder.Services.AddScoped<GraphicsTransformService>();
+builder.Services.AddScoped<NichoService>();
 
 // ========== CONTROLLERS E SWAGGER ==========
 builder.Services.AddControllers();
