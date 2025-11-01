@@ -71,7 +71,8 @@ namespace PicStoneFotoAPI.Services
                 SalvarDebug(bitmapORI2, $"DEBUG_Bancada1_P{contaProcesso}_03_LateralResized.png");
 
                 // Aplica distorção no topo (2/3)
-                var bmp2 = _transformService.DistortionInclina(imagemDoisTercos, 1180, 450, 450, 1180, 700);
+                // Parâmetros: imagem, ladoMaior, ladoMenor, novaLargura, novaAltura, inclinacao
+                var bmp2 = _transformService.DistortionInclina(imagemDoisTercos, 1180, 450, 1180, 450, 700);
                 SalvarDebug(bmp2, $"DEBUG_Bancada1_P{contaProcesso}_04_TopoDistorcido.png");
 
                 // Cria canvas para parte da bancada
