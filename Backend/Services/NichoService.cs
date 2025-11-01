@@ -103,6 +103,17 @@ namespace PicStoneFotoAPI.Services
                 patamarInf = _transformService.RotateImage(patamarInf, 90);
                 _logger.LogInformation($"PatamarInf APÓS Rotate90: {patamarInf.Width}x{patamarInf.Height}");
 
+                // DEBUG: Salva PatamarInf transformado
+                var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
+                var debugPatamarInfPath = Path.Combine(uploadsPath, $"DEBUG_PatamarInf_{contaProcesso}.png");
+                using (var debugStream = File.OpenWrite(debugPatamarInfPath))
+                {
+                    using var debugImg = SKImage.FromBitmap(patamarInf);
+                    var debugImgData = debugImg.Encode(SKEncodedImageFormat.Png, 100);
+                    debugImgData.SaveTo(debugStream);
+                }
+                _logger.LogInformation($"DEBUG PatamarInf salvo: {debugPatamarInfPath}");
+
                 patamarSup = _transformService.RotateImage(patamarSup, 270);
                 patamarSup = _transformService.DistortionInclina(patamarSup, 600, 550, 25, 600, 25);
                 patamarSup = _transformService.RotateImage(patamarSup, 270);
@@ -150,7 +161,12 @@ namespace PicStoneFotoAPI.Services
                 var sombraNicho = CarregarRecurso("SombraNicho1.png");
                 if (sombraNicho != null)
                 {
+                    _logger.LogInformation($"Desenhando SombraNicho1: {sombraNicho.Width}x{sombraNicho.Height} na posição (0, 0)");
                     canvas.DrawBitmap(sombraNicho, 0, 0, paint);
+                }
+                else
+                {
+                    _logger.LogWarning("SombraNicho1.png NÃO foi carregado!");
                 }
 
                 // Adiciona objetos decorativos opcionais
@@ -173,6 +189,15 @@ namespace PicStoneFotoAPI.Services
                 }
 
                 var nichoMontado = surface.Snapshot();
+
+                // DEBUG: Salva BaseNicho para inspeção
+                _logger.LogInformation("BaseNicho montado (700x500) - salvando para debug");
+                var uploadsPathFinal = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
+                using var debugDataBase = nichoMontado.Encode(SKEncodedImageFormat.Png, 100);
+                var debugPath = Path.Combine(uploadsPathFinal, $"DEBUG_BaseNicho_{contaProcesso}.png");
+                using var debugFile = File.OpenWrite(debugPath);
+                debugDataBase.SaveTo(debugFile);
+                _logger.LogInformation($"DEBUG BaseNicho salvo em: {debugPath}");
 
                 // Cria canvas final 1000x1000 com fundo e sombra de borda
                 var surfaceFinal = SKSurface.Create(new SKImageInfo(1000, 1000));
