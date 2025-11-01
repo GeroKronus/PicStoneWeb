@@ -57,6 +57,9 @@ const elements = {
     nichoBtn: document.getElementById('nichoBtn'),
     photoIndicator: document.getElementById('photoIndicator'),
     cancelMockupBtn: document.getElementById('cancelMockupBtn'),
+    nichoConfigScreen: document.getElementById('nichoConfigScreen'),
+    cancelNichoBtn: document.getElementById('cancelNichoBtn'),
+    continuarCropNichoBtn: document.getElementById('continuarCropNichoBtn'),
     continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
     backToMainBtn: document.getElementById('backToMainBtn'),
     downloadAllMockupsBtn: document.getElementById('downloadAllMockupsBtn'),
@@ -113,7 +116,9 @@ function setupEventListeners() {
     elements.mockupBtn.addEventListener('click', startMockupFlow);
     elements.nichoBtn.addEventListener('click', startNichoFlow);
     elements.cancelMockupBtn.addEventListener('click', () => showMainScreen());
+    elements.cancelNichoBtn.addEventListener('click', () => showMainScreen());
     elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
+    elements.continuarCropNichoBtn.addEventListener('click', abrirCropParaNicho);
     elements.backToMainBtn.addEventListener('click', () => showMainScreen());
     elements.newMockupBtn.addEventListener('click', startMockupFlow);
     elements.downloadAllMockupsBtn.addEventListener('click', downloadAllMockups);
@@ -824,12 +829,26 @@ async function gerarMockup(imagemCropada) {
     try {
         elements.uploadProgress.classList.remove('hidden');
 
-        const formData = new FormData();
-        formData.append('ImagemCropada', imagemCropada);
-        formData.append('TipoCavalete', state.mockupConfig.tipo);
-        formData.append('Fundo', state.mockupConfig.fundo);
+        // Verifica se é nicho ou cavalete
+        const isNicho = state.mockupConfig.tipo === 'nicho1';
 
-        const response = await fetch(`${API_URL}/api/mockup/gerar`, {
+        const formData = new FormData();
+        formData.append(isNicho ? 'imagem' : 'ImagemCropada', imagemCropada);
+
+        if (isNicho) {
+            // Parâmetros específicos do nicho
+            formData.append('fundoEscuro', state.mockupConfig.fundo === 'escuro');
+            formData.append('incluirShampoo', state.mockupConfig.incluirShampoo || false);
+            formData.append('incluirSabonete', state.mockupConfig.incluirSabonete || false);
+        } else {
+            // Parâmetros do cavalete
+            formData.append('TipoCavalete', state.mockupConfig.tipo);
+            formData.append('Fundo', state.mockupConfig.fundo);
+        }
+
+        const endpoint = isNicho ? '/api/mockup/nicho1' : '/api/mockup/gerar';
+
+        const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${state.token}`
@@ -847,20 +866,25 @@ async function gerarMockup(imagemCropada) {
             throw new Error(data.mensagem || 'Erro ao gerar mockup');
         }
 
-        // Exibe resultado (backend retorna em camelCase) - agora são 3 mockups
-        if (data.caminhosGerados && data.caminhosGerados.length > 0) {
+        // Exibe resultado (backend retorna diferente para nicho e cavalete)
+        const caminhos = data.caminhosGerados || data.mockups;
+
+        if (caminhos && caminhos.length > 0) {
             const gallery = document.getElementById('mockupsGallery');
             gallery.innerHTML = ''; // Limpa galeria
 
-            // Labels para os 3 mockups
-            const labels = [
-                'Cavalete Duplo - Original/Espelho',
-                'Cavalete Duplo - Espelho/Original',
-                'Cavalete Simples'
-            ];
+            // Labels diferentes para nicho e cavalete
+            const labels = isNicho
+                ? ['Nicho - Versão Normal', 'Nicho - Rotacionado 180°']
+                : [
+                    'Cavalete Duplo - Original/Espelho',
+                    'Cavalete Duplo - Espelho/Original',
+                    'Cavalete Simples'
+                ];
 
-            data.caminhosGerados.forEach((caminho, index) => {
-                const mockupUrl = `${API_URL}/uploads/${caminho}`;
+            caminhos.forEach((caminho, index) => {
+                // Para nicho, caminho já vem completo; para cavalete, precisa montar
+                const mockupUrl = isNicho ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
 
                 const mockupItem = document.createElement('div');
                 mockupItem.className = 'mockup-item';
@@ -875,7 +899,9 @@ async function gerarMockup(imagemCropada) {
             });
 
             // Salva URLs para download em massa
-            state.mockupUrls = data.caminhosGerados.map(c => `${API_URL}/uploads/${c}`);
+            state.mockupUrls = isNicho
+                ? caminhos.map(c => `${API_URL}${c}`)
+                : caminhos.map(c => `${API_URL}/uploads/${c}`);
 
             showScreen(elements.mockupResultScreen);
             showMockupMessage(data.mensagem, 'success');
@@ -937,12 +963,30 @@ function startNichoFlow() {
         return;
     }
 
-    // Por enquanto, mostra mensagem informativa
-    // Futuramente: criar tela de configuração específica para nicho
-    showMessage('Função Simular Nicho em desenvolvimento! Em breve você poderá gerar mockups de nichos de banheiro.', 'info');
+    // Mostra tela de configuração
+    showScreen(elements.nichoConfigScreen);
+}
 
-    // TODO: Implementar tela de configuração e fluxo completo
-    // showScreen(elements.nichoConfigScreen);
+function abrirCropParaNicho() {
+    // Captura configurações do nicho
+    const fundoSelecionado = document.querySelector('input[name="fundoNicho"]:checked');
+    const incluirShampoo = document.getElementById('incluirShampoo').checked;
+    const incluirSabonete = document.getElementById('incluirSabonete').checked;
+
+    state.mockupConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
+    state.mockupConfig.tipo = 'nicho1'; // Identifica que é nicho
+    state.mockupConfig.incluirShampoo = incluirShampoo;
+    state.mockupConfig.incluirSabonete = incluirSabonete;
+
+    // Ativa modo mockup
+    state.mockupMode = true;
+
+    // Carrega imagem original no crop
+    state.cropData.image = state.originalPhoto;
+    initializeCropCanvas();
+
+    // Mostra tela de crop
+    showScreen(elements.cropScreen);
 }
 
 // ========== SERVICE WORKER (para PWA futuro) ==========

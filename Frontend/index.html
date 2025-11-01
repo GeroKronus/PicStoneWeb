@@ -188,6 +188,54 @@
         </div>
     </div>
 
+    <!-- Tela de Configuração do Nicho -->
+    <div id="nichoConfigScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelNichoBtn" class="btn-icon">← Cancelar</button>
+                <h1>Configurar Nicho</h1>
+            </div>
+
+            <div class="mockup-config-card">
+                <div class="info-box">
+                    <p><strong>🚿 Mockup de Nicho de Banheiro</strong></p>
+                    <p>Crie visualizações realistas de nichos com sua pedra natural.</p>
+                    <p>Serão geradas 2 versões (normal e rotacionada 180°).</p>
+                </div>
+
+                <div class="config-section">
+                    <h3>Fundo do Ambiente</h3>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="fundoNicho" value="claro" checked>
+                            <span>☀️ Claro (Branco)</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="fundoNicho" value="escuro">
+                            <span>🌙 Escuro (Cinza)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h3>Objetos Decorativos</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="incluirShampoo" name="incluirShampoo">
+                            <span>🧴 Incluir Frasco de Shampoo</span>
+                        </label>
+                        <label class="checkbox-option">
+                            <input type="checkbox" id="incluirSabonete" name="incluirSabonete">
+                            <span>🧼 Incluir Sabonete</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="continuarCropNichoBtn" class="btn btn-primary">Continuar para Crop</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Tela de Resultado do Mockup -->
     <div id="mockupResultScreen" class="screen">
         <div class="container">
@@ -197,7 +245,7 @@
             </div>
 
             <div id="mockupsGallery" class="mockups-gallery">
-                <!-- Os 3 mockups serão inseridos aqui dinamicamente -->
+                <!-- Os mockups serão inseridos aqui dinamicamente -->
             </div>
 
             <div class="mockup-actions">

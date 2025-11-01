@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PicStoneFotoAPI.Models;
 using PicStoneFotoAPI.Services;
+using SkiaSharp;
 
 namespace PicStoneFotoAPI.Controllers
 {
@@ -11,12 +12,17 @@ namespace PicStoneFotoAPI.Controllers
     public class MockupController : ControllerBase
     {
         private readonly MockupService _mockupService;
+        private readonly NichoService _nichoService;
         private readonly ILogger<MockupController> _logger;
+        private readonly string _uploadsPath;
 
-        public MockupController(MockupService mockupService, ILogger<MockupController> logger)
+        public MockupController(MockupService mockupService, NichoService nichoService, ILogger<MockupController> logger)
         {
             _mockupService = mockupService;
+            _nichoService = nichoService;
             _logger = logger;
+            _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
+            Directory.CreateDirectory(_uploadsPath);
         }
 
         /// <summary>
@@ -64,6 +70,97 @@ namespace PicStoneFotoAPI.Controllers
                     Sucesso = false,
                     Mensagem = $"Erro interno: {ex.Message}"
                 });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/mockup/nicho1
+        /// Gera mockup tipo Nicho1 (nicho de banheiro)
+        /// </summary>
+        [HttpPost("nicho1")]
+        public async Task<IActionResult> GerarNicho1([FromForm] IFormFile imagem,
+                                                       [FromForm] bool fundoEscuro = false,
+                                                       [FromForm] bool incluirShampoo = false,
+                                                       [FromForm] bool incluirSabonete = false)
+        {
+            try
+            {
+                _logger.LogInformation("=== NICHO1 REQUEST RECEBIDO ===");
+                _logger.LogInformation("Fundo: {Fundo}, Shampoo: {Shampoo}, Sabonete: {Sabonete}",
+                    fundoEscuro ? "Escuro" : "Claro", incluirShampoo, incluirSabonete);
+
+                if (imagem == null || imagem.Length == 0)
+                {
+                    return BadRequest(new { mensagem = "Nenhuma imagem foi enviada" });
+                }
+
+                _logger.LogInformation("Tamanho da imagem: {Tamanho} bytes", imagem.Length);
+
+                // Carrega imagem do usuário
+                SKBitmap imagemOriginal;
+                using (var stream = imagem.OpenReadStream())
+                {
+                    imagemOriginal = SKBitmap.Decode(stream);
+                }
+
+                if (imagemOriginal == null)
+                {
+                    return BadRequest(new { mensagem = "Não foi possível decodificar a imagem" });
+                }
+
+                _logger.LogInformation("Imagem decodificada: {Width}x{Height}", imagemOriginal.Width, imagemOriginal.Height);
+
+                // Gera os mockups (2 versões)
+                var mockups = await Task.Run(() => _nichoService.GerarNicho1(imagemOriginal, fundoEscuro, incluirShampoo, incluirSabonete));
+
+                if (mockups == null || mockups.Count == 0)
+                {
+                    return StatusCode(500, new { mensagem = "Erro ao gerar mockups" });
+                }
+
+                _logger.LogInformation("Mockups gerados: {Count} imagens", mockups.Count);
+
+                // Salva as imagens geradas
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var caminhos = new List<string>();
+
+                for (int i = 0; i < mockups.Count; i++)
+                {
+                    var sufixo = i == 0 ? "normal" : "rotacionado";
+                    var nomeArquivo = $"nicho1_{timestamp}_{sufixo}.jpg";
+                    var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
+
+                    // Salva com qualidade JPEG 95%
+                    using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
+                    {
+                        using (var image = SKImage.FromBitmap(mockups[i]))
+                        {
+                            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
+                            data.SaveTo(fileStream);
+                        }
+                    }
+
+                    caminhos.Add($"/uploads/mockups/{nomeArquivo}");
+                    _logger.LogInformation("Mockup Nicho1 salvo: {Caminho}", nomeArquivo);
+                }
+
+                // Limpa bitmaps
+                imagemOriginal.Dispose();
+                foreach (var mockup in mockups)
+                {
+                    mockup.Dispose();
+                }
+
+                return Ok(new
+                {
+                    mensagem = "Mockups de nicho gerados com sucesso!",
+                    mockups = caminhos
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar mockup Nicho1");
+                return StatusCode(500, new { mensagem = "Erro ao gerar mockup: " + ex.Message });
             }
         }
     }
