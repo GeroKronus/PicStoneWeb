@@ -43,6 +43,43 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// POST /api/auth/refresh
+        /// Renova token JWT se ainda válido
+        /// </summary>
+        [HttpPost("refresh")]
+        public IActionResult RefreshToken()
+        {
+            try
+            {
+                var authHeader = Request.Headers["Authorization"].ToString();
+                if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+                {
+                    return Unauthorized(new { mensagem = "Token não fornecido" });
+                }
+
+                var currentToken = authHeader.Replace("Bearer ", "");
+                var newToken = _authService.RenovarToken(currentToken);
+
+                if (newToken == null)
+                {
+                    return Unauthorized(new { mensagem = "Token inválido ou expirado" });
+                }
+
+                _logger.LogInformation("Token renovado com sucesso");
+
+                return Ok(new {
+                    token = newToken,
+                    expiresAt = DateTime.UtcNow.AddHours(8)
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao renovar token");
+                return StatusCode(500, new { mensagem = "Erro ao renovar token" });
+            }
+        }
+
+        /// <summary>
         /// GET /api/auth/health
         /// Verifica se a API está online
         /// </summary>

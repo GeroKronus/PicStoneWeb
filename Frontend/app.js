@@ -77,10 +77,97 @@ const elements = {
     cropInfoSize: document.getElementById('cropInfoSize')
 };
 
+// ========== AUTO-RENOVAÇÃO DE TOKEN ==========
+
+/**
+ * Decodifica JWT token para extrair payload
+ */
+function decodeToken(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (error) {
+        console.error('Erro ao decodificar token:', error);
+        return null;
+    }
+}
+
+/**
+ * Verifica se token expira em menos de 1 hora
+ */
+function tokenExpiresInLessThanOneHour(token) {
+    const decoded = decodeToken(token);
+    if (!decoded || !decoded.exp) {
+        return false;
+    }
+
+    const expirationTime = decoded.exp * 1000; // Converte para milissegundos
+    const currentTime = Date.now();
+    const oneHour = 60 * 60 * 1000; // 1 hora em milissegundos
+
+    return (expirationTime - currentTime) < oneHour;
+}
+
+/**
+ * Renova token JWT automaticamente
+ */
+async function renovarTokenAutomaticamente() {
+    if (!state.token) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/refresh`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            state.token = data.token;
+            localStorage.setItem('token', data.token);
+            console.log('✅ Token renovado automaticamente');
+        } else if (response.status === 401) {
+            // Token expirado ou inválido - redireciona para login
+            console.log('⚠️ Token expirado, redirecionando para login...');
+            logout();
+        }
+    } catch (error) {
+        console.error('Erro ao renovar token:', error);
+    }
+}
+
+/**
+ * Verifica token periodicamente e renova se necessário
+ */
+function iniciarVerificacaoToken() {
+    // Verifica a cada 30 minutos
+    setInterval(() => {
+        if (state.token && tokenExpiresInLessThanOneHour(state.token)) {
+            console.log('⏰ Token expirando em menos de 1 hora, renovando...');
+            renovarTokenAutomaticamente();
+        }
+    }, 30 * 60 * 1000); // 30 minutos
+
+    // Também verifica imediatamente ao iniciar
+    if (state.token && tokenExpiresInLessThanOneHour(state.token)) {
+        console.log('⏰ Token expirando em menos de 1 hora, renovando...');
+        renovarTokenAutomaticamente();
+    }
+}
+
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', () => {
     if (state.token) {
         showMainScreen();
+        iniciarVerificacaoToken();
     } else {
         showLoginScreen();
     }
@@ -168,6 +255,7 @@ async function handleLogin(e) {
         localStorage.setItem('username', data.username);
 
         showMainScreen();
+        iniciarVerificacaoToken(); // Inicia verificação automática do token
         elements.loginError.classList.add('hidden');
     } catch (error) {
         elements.loginError.textContent = error.message;

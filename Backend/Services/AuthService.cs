@@ -69,6 +69,40 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Renova token JWT (se ainda válido)
+        /// </summary>
+        public string? RenovarToken(string token)
+        {
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var jwtSecret = _configuration["JWT_SECRET"] ?? "ChaveSecretaPadraoParaDesenvolvimento123!@#";
+                var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+                tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.Zero
+                }, out SecurityToken validatedToken);
+
+                var jwtToken = (JwtSecurityToken)validatedToken;
+                var username = jwtToken.Claims.First(x => x.Type == ClaimTypes.Name).Value;
+                var userId = jwtToken.Claims.First(x => x.Type == ClaimTypes.NameIdentifier).Value;
+
+                // Cria novo token com mesmas claims
+                var usuario = new Usuario { Id = int.Parse(userId), Username = username };
+                return GerarTokenJWT(usuario);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Gera token JWT válido por 8 horas
         /// </summary>
         private string GerarTokenJWT(Usuario usuario)
