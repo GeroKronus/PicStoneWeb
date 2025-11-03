@@ -824,9 +824,10 @@ function startMockupFlow() {
 }
 
 function abrirCropParaMockup() {
-    // Captura apenas a configuração de fundo (tipo não é mais necessário)
+    // Captura configuração de fundo
     const fundoSelecionado = document.querySelector('input[name="fundoCavalete"]:checked');
     state.mockupConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
+    state.mockupConfig.tipo = 'cavalete'; // Define tipo como cavalete
 
     // Ativa modo mockup
     state.mockupMode = true;
@@ -857,8 +858,8 @@ async function gerarMockup(imagemCropada) {
             // Parâmetros específicos da bancada1
             formData.append('flip', state.mockupConfig.flip || false);
         } else {
-            // Parâmetros do cavalete
-            formData.append('TipoCavalete', state.mockupConfig.tipo);
+            // Parâmetros do cavalete (simples)
+            formData.append('TipoCavalete', 'simples'); // Sempre simples por enquanto
             formData.append('Fundo', state.mockupConfig.fundo);
         }
 
