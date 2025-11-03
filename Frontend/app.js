@@ -1245,41 +1245,79 @@ async function startBancada2Flow() {
     try {
         elements.uploadProgress.classList.remove('hidden');
 
-        // Converte originalPhoto para Blob
-        const blob = await fetch(state.originalPhoto).then(r => r.blob());
+        // Converte originalPhoto (Image) para Blob usando canvas
+        const img = state.originalPhoto;
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
 
-        const formData = new FormData();
-        formData.append('imagem', blob, 'foto.jpg');
-        formData.append('flip', false);
+        canvas.toBlob(async (blob) => {
+            try {
+                const formData = new FormData();
+                formData.append('imagem', blob, 'foto.jpg');
+                formData.append('flip', false);
 
-        const response = await fetch(`${API_URL}/api/mockup/bancada2`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${state.token}`
-            },
-            body: formData
-        });
+                const response = await fetch(`${API_URL}/api/mockup/bancada2`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`
+                    },
+                    body: formData
+                });
 
-        const data = await response.json();
+                const data = await response.json();
 
-        if (!response.ok) {
-            throw new Error(data.mensagem || 'Erro ao gerar mockup de bancada #2');
-        }
+                if (!response.ok) {
+                    throw new Error(data.mensagem || 'Erro ao gerar mockup de bancada #2');
+                }
 
-        // Exibe resultado
-        if (data.mockups && data.mockups.length > 0) {
-            displayMockupGallery(data.mockups);
-            showScreen(elements.mockupResultScreen);
-            showMockupMessage(data.mensagem, 'success');
-        } else {
-            throw new Error('Nenhum mockup foi gerado');
-        }
+                // Exibe resultado
+                const caminhos = data.mockups;
+                if (caminhos && caminhos.length > 0) {
+                    const gallery = document.getElementById('mockupsGallery');
+                    gallery.innerHTML = ''; // Limpa galeria
+
+                    const labels = ['Bancada #2 - Normal', 'Bancada #2 - Rotacionado 180°'];
+
+                    caminhos.forEach((caminho, index) => {
+                        const mockupUrl = `${API_URL}${caminho}`;
+                        const imgContainer = document.createElement('div');
+                        imgContainer.className = 'mockup-item';
+
+                        const label = document.createElement('p');
+                        label.className = 'mockup-label';
+                        label.textContent = labels[index] || `Mockup ${index + 1}`;
+
+                        const img = document.createElement('img');
+                        img.src = mockupUrl;
+                        img.alt = labels[index];
+                        img.className = 'mockup-image';
+
+                        imgContainer.appendChild(label);
+                        imgContainer.appendChild(img);
+                        gallery.appendChild(imgContainer);
+                    });
+
+                    showScreen(elements.mockupResultScreen);
+                    showMockupMessage(data.mensagem, 'success');
+                } else {
+                    throw new Error('Nenhum mockup foi gerado');
+                }
+
+            } catch (error) {
+                console.error('Erro ao gerar bancada #2:', error);
+                showMockupMessage(error.message, 'error');
+                showMainScreen();
+            } finally {
+                elements.uploadProgress.classList.add('hidden');
+            }
+        }, 'image/jpeg', 0.95);
 
     } catch (error) {
-        console.error('Erro ao gerar bancada #2:', error);
-        showMockupMessage(error.message, 'error');
-        showMainScreen();
-    } finally {
+        console.error('Erro ao preparar imagem:', error);
+        showMockupMessage('Erro ao preparar imagem: ' + error.message, 'error');
         elements.uploadProgress.classList.add('hidden');
     }
 }
