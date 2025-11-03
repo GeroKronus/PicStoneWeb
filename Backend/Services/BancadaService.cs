@@ -118,9 +118,10 @@ namespace PicStoneFotoAPI.Services
 
                     // Desenha parte bancada e parte pé
                     // VB.NET original: (-161, 474) e (-161, 777)
+                    // Ajuste: parteBancada mais para baixo (500 ao invés de 474) - fechar gap superior
                     // Ajuste Y: partePe mais para cima (730 ao invés de 777)
-                    // Ajuste X: partePe mais para esquerda (-168 ao invés de -161) para fechar gap lateral
-                    canvas.DrawBitmap(parteBancada, -161, 474, paint);
+                    // Ajuste X: partePe mais para esquerda (-168 ao invés de -161)
+                    canvas.DrawBitmap(parteBancada, -161, 500, paint); // Era 474, descendo para fechar gap
                     canvas.DrawBitmap(partePe, -168, 730, paint);
                 }
 
