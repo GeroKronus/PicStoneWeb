@@ -71,6 +71,7 @@ const elements = {
     cancelBancada1Btn: document.getElementById('cancelBancada1Btn'),
     continuarCropBancada1Btn: document.getElementById('continuarCropBancada1Btn'),
     flipBancada1: document.getElementById('flipBancada1'),
+    bancada2Btn: document.getElementById('bancada2Btn'),
     backToMainBtn: document.getElementById('backToMainBtn'),
     downloadAllMockupsBtn: document.getElementById('downloadAllMockupsBtn'),
     newMockupBtn: document.getElementById('newMockupBtn'),
@@ -227,6 +228,7 @@ function setupEventListeners() {
     elements.mockupBtn.addEventListener('click', startMockupFlow);
     elements.nichoBtn.addEventListener('click', startNichoFlow);
     elements.bancada1Btn.addEventListener('click', startBancada1Flow);
+    elements.bancada2Btn.addEventListener('click', startBancada2Flow);
     elements.cancelMockupBtn.addEventListener('click', () => showMainScreen());
     elements.cancelNichoBtn.addEventListener('click', () => showMainScreen());
     elements.cancelBancada1Btn.addEventListener('click', () => showMainScreen());
@@ -511,6 +513,7 @@ function clearPhoto() {
     elements.mockupBtn.classList.add('hidden');
     elements.nichoBtn.classList.add('hidden');
     elements.bancada1Btn.classList.add('hidden');
+    elements.bancada2Btn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -523,6 +526,7 @@ function clearPhotoState() {
     elements.mockupBtn.classList.add('hidden');
     elements.nichoBtn.classList.add('hidden');
     elements.bancada1Btn.classList.add('hidden');
+    elements.bancada2Btn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -570,6 +574,7 @@ async function handleUpload(e) {
         elements.mockupBtn.classList.remove('hidden');
         elements.nichoBtn.classList.remove('hidden');
         elements.bancada1Btn.classList.remove('hidden');
+        elements.bancada2Btn.classList.remove('hidden');
 
         // Limpa apenas o preview e formulário (mantém imagem original)
         setTimeout(() => {
@@ -1228,6 +1233,55 @@ function abrirCropParaBancada1() {
 
     // Mostra tela de crop
     showScreen(elements.cropScreen);
+}
+
+// ========== BANCADA2 MOCKUP FLOW ==========
+async function startBancada2Flow() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma foto disponível para mockup de bancada #2', 'error');
+        return;
+    }
+
+    try {
+        elements.uploadProgress.classList.remove('hidden');
+
+        // Converte originalPhoto para Blob
+        const blob = await fetch(state.originalPhoto).then(r => r.blob());
+
+        const formData = new FormData();
+        formData.append('imagem', blob, 'foto.jpg');
+        formData.append('flip', false);
+
+        const response = await fetch(`${API_URL}/api/mockup/bancada2`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.mensagem || 'Erro ao gerar mockup de bancada #2');
+        }
+
+        // Exibe resultado
+        if (data.mockups && data.mockups.length > 0) {
+            displayMockupGallery(data.mockups);
+            showScreen(elements.mockupResultScreen);
+            showMockupMessage(data.mensagem, 'success');
+        } else {
+            throw new Error('Nenhum mockup foi gerado');
+        }
+
+    } catch (error) {
+        console.error('Erro ao gerar bancada #2:', error);
+        showMockupMessage(error.message, 'error');
+        showMainScreen();
+    } finally {
+        elements.uploadProgress.classList.add('hidden');
+    }
 }
 
 // ========== GERENCIAMENTO DE USUÁRIOS ==========
