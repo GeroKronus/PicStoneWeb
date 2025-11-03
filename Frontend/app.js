@@ -46,6 +46,11 @@ const elements = {
     uploadProgress: document.getElementById('uploadProgress'),
     uploadMessage: document.getElementById('uploadMessage'),
     userDisplay: document.getElementById('userDisplay'),
+    userInitials: document.getElementById('userInitials'),
+    userMenuBtn: document.getElementById('userMenuBtn'),
+    userMenuDropdown: document.getElementById('userMenuDropdown'),
+    dropdownUsername: document.getElementById('dropdownUsername'),
+    dropdownEmail: document.getElementById('dropdownEmail'),
     logoutBtn: document.getElementById('logoutBtn'),
     historyBtn: document.getElementById('historyBtn'),
     backBtn: document.getElementById('backBtn'),
@@ -241,9 +246,25 @@ function setupEventListeners() {
         }
     });
 
+    // User menu dropdown
+    elements.userMenuBtn.addEventListener('click', toggleUserMenu);
+
+    // Fecha dropdown ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.user-menu')) {
+            elements.userMenuDropdown.classList.add('hidden');
+        }
+    });
+
     // Gerenciamento de usuários
-    elements.changePasswordBtn.addEventListener('click', showChangePasswordScreen);
-    elements.manageUsersBtn.addEventListener('click', showUsersScreen);
+    elements.changePasswordBtn.addEventListener('click', () => {
+        elements.userMenuDropdown.classList.add('hidden');
+        showChangePasswordScreen();
+    });
+    elements.manageUsersBtn.addEventListener('click', () => {
+        elements.userMenuDropdown.classList.add('hidden');
+        showUsersScreen();
+    });
     elements.backFromPasswordBtn.addEventListener('click', showMainScreen);
     elements.backFromUsersBtn.addEventListener('click', showMainScreen);
     elements.backFromAddUserBtn.addEventListener('click', showUsersScreen);
@@ -322,7 +343,15 @@ function showLoginScreen() {
 
 async function showMainScreen() {
     showScreen(elements.mainScreen);
-    elements.userDisplay.textContent = `Olá, ${state.username}`;
+
+    // Atualiza informações do usuário
+    elements.userDisplay.textContent = state.username;
+    elements.dropdownUsername.textContent = state.username;
+    elements.dropdownEmail.textContent = `@${state.username}`;
+
+    // Gera iniciais do usuário
+    const initials = state.username.substring(0, 2).toUpperCase();
+    elements.userInitials.textContent = initials;
 
     // Mostra botão de gerenciar usuários apenas para admin
     if (state.username === 'admin') {
@@ -332,6 +361,14 @@ async function showMainScreen() {
     }
 
     await loadMaterials();
+}
+
+/**
+ * Toggle do menu dropdown do usuário
+ */
+function toggleUserMenu(e) {
+    e.stopPropagation();
+    elements.userMenuDropdown.classList.toggle('hidden');
 }
 
 async function showHistoryScreen() {
