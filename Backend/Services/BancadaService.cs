@@ -118,11 +118,11 @@ namespace PicStoneFotoAPI.Services
 
                     // Desenha parte bancada e parte pé
                     // VB.NET original: (-161, 474) e (-161, 777)
-                    // Ajuste parteBancada: Y de 474 → 500 → 507 → 497 (+23px baixo total)
+                    // Ajuste parteBancada: Y de 474 → 500 → 507 → 497 → 487 (+13px baixo total)
                     // Ajuste parteBancada: X de -161 → -141 → -121 → -131 (+30px direita total)
-                    // Ajuste partePe: Y de 777 → 756 → 763 (-14px, sincronizado)
+                    // Ajuste partePe: Y de 777 → 756 → 763 (-14px)
                     // Ajuste partePe: X de -161 → -168 (-7px esquerda)
-                    canvas.DrawBitmap(parteBancada, -131, 497, paint);
+                    canvas.DrawBitmap(parteBancada, -131, 487, paint);
                     canvas.DrawBitmap(partePe, -168, 763, paint);
                 }
 
