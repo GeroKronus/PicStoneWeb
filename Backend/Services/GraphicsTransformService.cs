@@ -264,11 +264,10 @@ namespace PicStoneFotoAPI.Services
                 // SKCanvas DrawPoints não suporta transformação com 3 pontos diretamente
                 // Precisamos calcular a matriz de transformação manualmente
                 // Para simplificar, usamos uma matriz de skew
-                var matrix = new SKMatrix();
 
                 // Calcula skew X baseado no deslocamento
                 float skewX = (float)fatorSkew / altura;
-                matrix.SetSkew(skewX, 0);
+                var matrix = SKMatrix.CreateSkew(skewX, 0);
 
                 canvas.SetMatrix(matrix);
 
