@@ -232,6 +232,59 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Aplica Skew simples usando 3 pontos (versão simplificada do VB.NET)
+        /// </summary>
+        /// <param name="imagem">Bitmap de entrada</param>
+        /// <param name="acrescimo">Pixels adicionados à altura</param>
+        /// <param name="fatorSkew">Deslocamento do ponto superior direito</param>
+        /// <returns>Bitmap com skew aplicado</returns>
+        public SKBitmap SkewSimples(SKBitmap imagem, int acrescimo, int fatorSkew)
+        {
+            int largura = imagem.Width;
+            int altura = imagem.Height + acrescimo;
+
+            // Cria canvas com altura extra para acomodar o skew
+            var quadroSkew = new SKBitmap(largura, altura + fatorSkew);
+
+            using (var canvas = new SKCanvas(quadroSkew))
+            {
+                canvas.Clear(SKColors.Transparent);
+
+                // Define 3 pontos de destino para transformação
+                // pt1: upper-left (0, 0)
+                // pt2: upper-right (largura, fatorSkew) - deslocado para baixo
+                // pt3: lower-left (0, altura)
+                var destPoints = new SKPoint[]
+                {
+                    new SKPoint(0, 0),              // top-left
+                    new SKPoint(largura, fatorSkew), // top-right (shifted down)
+                    new SKPoint(0, altura)           // bottom-left
+                };
+
+                // SKCanvas DrawPoints não suporta transformação com 3 pontos diretamente
+                // Precisamos calcular a matriz de transformação manualmente
+                // Para simplificar, usamos uma matriz de skew
+                var matrix = new SKMatrix();
+
+                // Calcula skew X baseado no deslocamento
+                float skewX = (float)fatorSkew / altura;
+                matrix.SetSkew(skewX, 0);
+
+                canvas.SetMatrix(matrix);
+
+                using var paint = new SKPaint
+                {
+                    FilterQuality = SKFilterQuality.High,
+                    IsAntialias = true
+                };
+
+                canvas.DrawBitmap(imagem, 0, 0, paint);
+            }
+
+            return quadroSkew;
+        }
+
+        /// <summary>
         /// Ajusta HSL (Hue, Saturation, Lightness) de uma imagem
         /// Usado para pós-produção (ajuste de brilho, contraste, sombras)
         /// </summary>

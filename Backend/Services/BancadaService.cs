@@ -71,8 +71,9 @@ namespace PicStoneFotoAPI.Services
                 SalvarDebug(bitmapORI2, $"DEBUG_Bancada1_P{contaProcesso}_03_LateralResized.png");
 
                 // Aplica distorção no topo (2/3)
+                // Parâmetros VB.NET: DistortionInclina(ImagemDoisTercos, 1180, 450, 450, 1180, 700)
                 // Parâmetros: imagem, ladoMaior, ladoMenor, novaLargura, novaAltura, inclinacao
-                var bmp2 = _transformService.DistortionInclina(imagemDoisTercos, 1180, 450, 1180, 450, 700);
+                var bmp2 = _transformService.DistortionInclina(imagemDoisTercos, 1180, 450, 450, 1180, 700);
                 SalvarDebug(bmp2, $"DEBUG_Bancada1_P{contaProcesso}_04_TopoDistorcido.png");
 
                 // Cria canvas para parte da bancada
@@ -94,7 +95,8 @@ namespace PicStoneFotoAPI.Services
                     canvas.DrawBitmap(bitmapORI2, 100, 100);
                 }
                 SalvarDebug(partePe, $"DEBUG_Bancada1_P{contaProcesso}_07_PartePeAntes.png");
-                partePe = _transformService.Skew(partePe, 7f, 200);
+                // VB.NET: partePe = Skew(partePe, 0, 200)
+                partePe = _transformService.SkewSimples(partePe, 0, 200);
                 SalvarDebug(partePe, $"DEBUG_Bancada1_P{contaProcesso}_08_PartePeSkew.png");
                 partePe = _transformService.RotateImage(partePe, 83.25f);
                 SalvarDebug(partePe, $"DEBUG_Bancada1_P{contaProcesso}_09_PartePeRotacionada.png");
