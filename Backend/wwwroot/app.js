@@ -54,6 +54,7 @@ const elements = {
     cancelCropBtn: document.getElementById('cancelCropBtn'),
     resetCropBtn: document.getElementById('resetCropBtn'),
     mockupBtn: document.getElementById('mockupBtn'),
+    countertopBtn: document.getElementById('countertopBtn'),
     photoIndicator: document.getElementById('photoIndicator'),
     cancelMockupBtn: document.getElementById('cancelMockupBtn'),
     continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
@@ -61,7 +62,10 @@ const elements = {
     downloadMockupBtn: document.getElementById('downloadMockupBtn'),
     newMockupBtn: document.getElementById('newMockupBtn'),
     mockupImage: document.getElementById('mockupImage'),
-    mockupMessage: document.getElementById('mockupMessage')
+    mockupMessage: document.getElementById('mockupMessage'),
+    countertopConfigScreen: document.getElementById('countertopConfigScreen'),
+    cancelCountertopBtn: document.getElementById('cancelCountertopBtn'),
+    gerarCountertopBtn: document.getElementById('gerarCountertopBtn')
 };
 
 // ========== INICIALIZAÇÃO ==========
@@ -111,6 +115,11 @@ function setupEventListeners() {
     elements.backToMainBtn.addEventListener('click', () => showMainScreen());
     elements.newMockupBtn.addEventListener('click', startMockupFlow);
     elements.downloadMockupBtn.addEventListener('click', downloadMockup);
+
+    // Countertop event listeners
+    elements.countertopBtn.addEventListener('click', openCountertopConfig);
+    elements.cancelCountertopBtn.addEventListener('click', () => showMainScreen());
+    elements.gerarCountertopBtn.addEventListener('click', gerarCountertop);
 }
 
 // ========== AUTENTICAÇÃO ==========
@@ -298,6 +307,7 @@ function clearPhoto() {
     elements.fileInput.value = '';
     elements.submitBtn.disabled = true;
     elements.mockupBtn.classList.add('hidden');
+    elements.countertopBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -308,6 +318,7 @@ function clearPhotoState() {
     elements.photoPreview.classList.add('hidden');
     elements.submitBtn.disabled = true;
     elements.mockupBtn.classList.add('hidden');
+    elements.countertopBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -351,8 +362,9 @@ async function handleUpload(e) {
 
         showMessage(data.mensagem, 'success');
 
-        // Mostra botão de mockup (permanece visível)
+        // Mostra botões de mockup e countertop (permanecem visíveis)
         elements.mockupBtn.classList.remove('hidden');
+        elements.countertopBtn.classList.remove('hidden');
 
         // Limpa apenas o preview e formulário (mantém imagem original)
         setTimeout(() => {
@@ -692,8 +704,9 @@ function confirmCrop() {
             gerarMockup(file);
         } else {
             compressAndPreviewImage(file);
-            // Mostra botão mockup pois já tem imagem disponível
+            // Mostra botões mockup e countertop pois já tem imagem disponível
             elements.mockupBtn.classList.remove('hidden');
+            elements.countertopBtn.classList.remove('hidden');
             // Mostra botão de reset pois a imagem foi modificada
             elements.resetImageBtn.classList.remove('hidden');
             showMainScreen();
@@ -843,6 +856,81 @@ function showMockupMessage(message, type) {
     setTimeout(() => {
         elements.mockupMessage.classList.add('hidden');
     }, 5000);
+}
+
+// ========== COUNTERTOP FUNCTIONS ==========
+function openCountertopConfig() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma foto disponível para countertop', 'error');
+        return;
+    }
+
+    // Mostra tela de configuração de countertop
+    showScreen(elements.countertopConfigScreen);
+}
+
+async function gerarCountertop() {
+    try {
+        // Captura configuração selecionada
+        const tipoBancadaSelecionado = document.querySelector('input[name="tipoBancada"]:checked');
+        const flipSelecionado = document.querySelector('input[name="flipBancada"]:checked');
+
+        const tipoBancada = tipoBancadaSelecionado ? tipoBancadaSelecionado.value : 'bancada1';
+        const flip = flipSelecionado ? flipSelecionado.value === 'true' : false;
+
+        console.log('=== GERANDO COUNTERTOP ===');
+        console.log('Tipo:', tipoBancada);
+        console.log('Flip:', flip);
+
+        elements.uploadProgress.classList.remove('hidden');
+
+        // Converte originalPhoto para Blob
+        const blob = await fetch(state.originalPhoto).then(r => r.blob());
+
+        const formData = new FormData();
+        formData.append('imagem', blob, 'foto.jpg');
+        formData.append('flip', flip);
+
+        // Define endpoint baseado no tipo
+        const endpoint = tipoBancada === 'bancada1' ? 'bancada1' : 'bancada2';
+
+        const response = await fetch(`${API_URL}/api/mockup/${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        console.log('=== COUNTERTOP RESPONSE ===');
+        console.log('Response OK:', response.ok);
+        console.log('Data:', data);
+
+        if (!response.ok) {
+            throw new Error(data.mensagem || 'Erro ao gerar countertop');
+        }
+
+        // Exibe resultado
+        if (data.mockups && data.mockups.length > 0) {
+            const mockupUrl = `${API_URL}${data.mockups[0]}`;
+            console.log('Countertop URL:', mockupUrl);
+
+            elements.mockupImage.src = mockupUrl;
+            showScreen(elements.mockupResultScreen);
+            showMockupMessage(data.mensagem, 'success');
+        } else {
+            throw new Error('Nenhum countertop foi gerado');
+        }
+
+    } catch (error) {
+        console.error('Erro ao gerar countertop:', error);
+        showMockupMessage(error.message, 'error');
+        showMainScreen();
+    } finally {
+        elements.uploadProgress.classList.add('hidden');
+    }
 }
 
 // ========== SERVICE WORKER (para PWA futuro) ==========

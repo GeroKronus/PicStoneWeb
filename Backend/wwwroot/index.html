@@ -112,6 +112,9 @@
             <!-- Botão Simular Cavalete -->
             <button id="mockupBtn" class="btn btn-mockup hidden">📐 Simular Cavalete</button>
 
+            <!-- Botão Countertops -->
+            <button id="countertopBtn" class="btn btn-mockup hidden">🏠 Countertops</button>
+
             <!-- Botão de Histórico -->
             <button id="historyBtn" class="btn btn-secondary">Ver Histórico</button>
         </div>
@@ -178,6 +181,48 @@
                 </div>
 
                 <button id="continuarCropMockupBtn" class="btn btn-primary">Continuar para Crop</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Configuração de Countertop -->
+    <div id="countertopConfigScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelCountertopBtn" class="btn-icon">← Voltar</button>
+                <h1>Countertops</h1>
+            </div>
+
+            <div class="mockup-config-card">
+                <div class="form-group">
+                    <label>Escolha o tipo de Bancada</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="tipoBancada" value="bancada1" checked>
+                            <span>🏠 Bancada #1 (Vertical)</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="tipoBancada" value="bancada2">
+                            <span>🏠 Bancada #2 (Horizontal)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Opções</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="flipBancada" value="false" checked>
+                            <span>➡️ Normal</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="flipBancada" value="true">
+                            <span>⬅️ Espelhado (Flip)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="gerarCountertopBtn" class="btn btn-primary">Gerar Countertop</button>
             </div>
         </div>
     </div>
