@@ -118,9 +118,10 @@ namespace PicStoneFotoAPI.Services
 
                     // Desenha parte bancada e parte pé
                     // VB.NET original: (-161, 474) e (-161, 777)
-                    // Ajuste: partePe mais para cima para fechar gap causado por offset no RotateImage
+                    // Ajuste Y: partePe mais para cima (730 ao invés de 777)
+                    // Ajuste X: partePe mais para esquerda (-168 ao invés de -161) para fechar gap lateral
                     canvas.DrawBitmap(parteBancada, -161, 474, paint);
-                    canvas.DrawBitmap(partePe, -161, 730, paint); // Era 777, ajustado para fechar gap
+                    canvas.DrawBitmap(partePe, -168, 730, paint);
                 }
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_10_MosaicoAntesMoldura.png");
