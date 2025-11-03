@@ -70,6 +70,7 @@ namespace PicStoneFotoAPI.Controllers
         /// <summary>
         /// GET /api/fotos/historico
         /// Retorna histórico das últimas fotos (requer autenticação)
+        /// Admin vê todas as fotos, usuário comum vê apenas suas próprias
         /// </summary>
         [HttpGet("historico")]
         public async Task<IActionResult> Historico([FromQuery] int limite = 50)
@@ -79,7 +80,27 @@ namespace PicStoneFotoAPI.Controllers
                 _logger.LogInformation("=== HISTÓRICO INICIADO ===");
                 _logger.LogInformation("Limite solicitado: {Limite}", limite);
 
-                var fotos = await _fotoService.ObterHistoricoAsync(limite);
+                // Extrai username do token
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(username))
+                {
+                    return Unauthorized(new { mensagem = "Token inválido" });
+                }
+
+                List<FotoMobile> fotos;
+
+                // Admin vê todas as fotos, outros usuários veem apenas as suas
+                if (username == "admin")
+                {
+                    _logger.LogInformation("Usuário admin - mostrando todas as fotos");
+                    fotos = await _fotoService.ObterHistoricoAsync(limite);
+                }
+                else
+                {
+                    _logger.LogInformation("Usuário comum: {Username} - filtrando fotos", username);
+                    fotos = await _fotoService.ObterHistoricoAsync(limite, username);
+                }
 
                 _logger.LogInformation("Fotos retornadas: {Count}", fotos?.Count ?? 0);
 

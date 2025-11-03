@@ -180,5 +180,167 @@ namespace PicStoneFotoAPI.Controllers
                 });
             }
         }
+
+        // ========== GERENCIAMENTO DE USUÁRIOS ==========
+
+        /// <summary>
+        /// POST /api/auth/change-password
+        /// Troca senha do usuário logado
+        /// </summary>
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            try
+            {
+                // Extrai username do token
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+
+                if (string.IsNullOrEmpty(username))
+                {
+                    return Unauthorized(new { mensagem = "Token inválido" });
+                }
+
+                var sucesso = await _authService.ChangePasswordAsync(username, request.SenhaAtual, request.NovaSenha);
+
+                if (!sucesso)
+                {
+                    return BadRequest(new { mensagem = "Senha atual incorreta" });
+                }
+
+                return Ok(new { mensagem = "Senha alterada com sucesso" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao trocar senha");
+                return StatusCode(500, new { mensagem = "Erro ao trocar senha" });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/auth/users
+        /// Cria novo usuário (apenas admin)
+        /// Senha padrão: 123456
+        /// </summary>
+        [HttpPost("users")]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
+        {
+            try
+            {
+                // Verifica se é admin
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != "admin")
+                {
+                    return Forbid();
+                }
+
+                var novoUsuario = await _authService.CreateUserAsync(request.Username, request.NomeCompleto);
+
+                if (novoUsuario == null)
+                {
+                    return BadRequest(new { mensagem = "Username já existe" });
+                }
+
+                return Ok(new
+                {
+                    mensagem = "Usuário criado com sucesso. Senha padrão: 123456",
+                    usuario = novoUsuario
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao criar usuário");
+                return StatusCode(500, new { mensagem = "Erro ao criar usuário" });
+            }
+        }
+
+        /// <summary>
+        /// GET /api/auth/users
+        /// Lista todos os usuários (apenas admin)
+        /// </summary>
+        [HttpGet("users")]
+        public async Task<IActionResult> ListUsers()
+        {
+            try
+            {
+                // Verifica se é admin
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != "admin")
+                {
+                    return Forbid();
+                }
+
+                var usuarios = await _authService.ListUsersAsync();
+                return Ok(usuarios);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao listar usuários");
+                return StatusCode(500, new { mensagem = "Erro ao listar usuários" });
+            }
+        }
+
+        /// <summary>
+        /// DELETE /api/auth/users/{id}
+        /// Desativa usuário (apenas admin)
+        /// </summary>
+        [HttpDelete("users/{id}")]
+        public async Task<IActionResult> DeactivateUser(int id)
+        {
+            try
+            {
+                // Verifica se é admin
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != "admin")
+                {
+                    return Forbid();
+                }
+
+                var sucesso = await _authService.DeactivateUserAsync(id);
+
+                if (!sucesso)
+                {
+                    return BadRequest(new { mensagem = "Não foi possível desativar usuário" });
+                }
+
+                return Ok(new { mensagem = "Usuário desativado com sucesso" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao desativar usuário");
+                return StatusCode(500, new { mensagem = "Erro ao desativar usuário" });
+            }
+        }
+
+        /// <summary>
+        /// PUT /api/auth/users/{id}/reactivate
+        /// Reativa usuário (apenas admin)
+        /// </summary>
+        [HttpPut("users/{id}/reactivate")]
+        public async Task<IActionResult> ReactivateUser(int id)
+        {
+            try
+            {
+                // Verifica se é admin
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != "admin")
+                {
+                    return Forbid();
+                }
+
+                var sucesso = await _authService.ReactivateUserAsync(id);
+
+                if (!sucesso)
+                {
+                    return BadRequest(new { mensagem = "Não foi possível reativar usuário" });
+                }
+
+                return Ok(new { mensagem = "Usuário reativado com sucesso" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao reativar usuário");
+                return StatusCode(500, new { mensagem = "Erro ao reativar usuário" });
+            }
+        }
     }
 }

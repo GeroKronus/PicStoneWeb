@@ -45,6 +45,8 @@
                 <h1>Captura de Fotos</h1>
                 <div class="user-info">
                     <span id="userDisplay"></span>
+                    <button id="changePasswordBtn" class="btn-icon" title="Trocar Senha">🔑</button>
+                    <button id="manageUsersBtn" class="btn-icon hidden" title="Gerenciar Usuários">👥</button>
                     <button id="logoutBtn" class="btn-icon" title="Sair">🚪</button>
                 </div>
             </div>
@@ -300,6 +302,84 @@
             <div id="historyList" class="history-list">
                 <p class="loading">Carregando...</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Tela de Troca de Senha -->
+    <div id="changePasswordScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backFromPasswordBtn" class="btn-icon">← Voltar</button>
+                <h1>Trocar Senha</h1>
+            </div>
+
+            <form id="changePasswordForm" class="form-card">
+                <div class="form-group">
+                    <label for="senhaAtual">Senha Atual</label>
+                    <input type="password" id="senhaAtual" name="senhaAtual" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="novaSenha">Nova Senha (mínimo 6 caracteres)</label>
+                    <input type="password" id="novaSenha" name="novaSenha" required minlength="6">
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmarSenha">Confirmar Nova Senha</label>
+                    <input type="password" id="confirmarSenha" name="confirmarSenha" required minlength="6">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Alterar Senha</button>
+
+                <div id="changePasswordMessage" class="message hidden"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tela de Gerenciamento de Usuários (Apenas Admin) -->
+    <div id="usersScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backFromUsersBtn" class="btn-icon">← Voltar</button>
+                <h1>Gerenciar Usuários</h1>
+            </div>
+
+            <button id="addUserBtn" class="btn btn-primary">+ Adicionar Usuário</button>
+
+            <div id="usersList" class="users-list">
+                <p class="loading">Carregando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Adicionar Usuário (Apenas Admin) -->
+    <div id="addUserScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backFromAddUserBtn" class="btn-icon">← Voltar</button>
+                <h1>Adicionar Usuário</h1>
+            </div>
+
+            <form id="addUserForm" class="form-card">
+                <div class="info-box">
+                    <p>A senha padrão será: <strong>123456</strong></p>
+                    <p>O usuário poderá alterá-la após o primeiro login.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="newUsername">Nome de Usuário</label>
+                    <input type="text" id="newUsername" name="newUsername" required minlength="3" placeholder="Ex: joao">
+                </div>
+
+                <div class="form-group">
+                    <label for="newNomeCompleto">Nome Completo</label>
+                    <input type="text" id="newNomeCompleto" name="newNomeCompleto" required placeholder="Ex: João Silva">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Criar Usuário</button>
+
+                <div id="addUserMessage" class="message hidden"></div>
+            </form>
         </div>
     </div>
 

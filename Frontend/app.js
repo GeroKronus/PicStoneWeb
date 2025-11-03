@@ -74,7 +74,21 @@ const elements = {
     cropInfo: document.getElementById('cropInfo'),
     cropInfoArea: document.getElementById('cropInfoArea'),
     cropInfoMP: document.getElementById('cropInfoMP'),
-    cropInfoSize: document.getElementById('cropInfoSize')
+    cropInfoSize: document.getElementById('cropInfoSize'),
+    changePasswordBtn: document.getElementById('changePasswordBtn'),
+    manageUsersBtn: document.getElementById('manageUsersBtn'),
+    changePasswordScreen: document.getElementById('changePasswordScreen'),
+    changePasswordForm: document.getElementById('changePasswordForm'),
+    changePasswordMessage: document.getElementById('changePasswordMessage'),
+    backFromPasswordBtn: document.getElementById('backFromPasswordBtn'),
+    usersScreen: document.getElementById('usersScreen'),
+    usersList: document.getElementById('usersList'),
+    backFromUsersBtn: document.getElementById('backFromUsersBtn'),
+    addUserBtn: document.getElementById('addUserBtn'),
+    addUserScreen: document.getElementById('addUserScreen'),
+    addUserForm: document.getElementById('addUserForm'),
+    addUserMessage: document.getElementById('addUserMessage'),
+    backFromAddUserBtn: document.getElementById('backFromAddUserBtn')
 };
 
 // ========== AUTO-RENOVAÇÃO DE TOKEN ==========
@@ -226,6 +240,27 @@ function setupEventListeners() {
             downloadMockup(url, nome);
         }
     });
+
+    // Gerenciamento de usuários
+    elements.changePasswordBtn.addEventListener('click', showChangePasswordScreen);
+    elements.manageUsersBtn.addEventListener('click', showUsersScreen);
+    elements.backFromPasswordBtn.addEventListener('click', showMainScreen);
+    elements.backFromUsersBtn.addEventListener('click', showMainScreen);
+    elements.backFromAddUserBtn.addEventListener('click', showUsersScreen);
+    elements.changePasswordForm.addEventListener('submit', handleChangePassword);
+    elements.addUserBtn.addEventListener('click', showAddUserScreen);
+    elements.addUserForm.addEventListener('submit', handleAddUser);
+
+    // Event delegation para botões de gerenciar usuários
+    elements.usersList.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('btn-deactivate-user')) {
+            const userId = e.target.dataset.userId;
+            await deactivateUser(userId);
+        } else if (e.target.classList.contains('btn-reactivate-user')) {
+            const userId = e.target.dataset.userId;
+            await reactivateUser(userId);
+        }
+    });
 }
 
 // ========== AUTENTICAÇÃO ==========
@@ -288,12 +323,41 @@ function showLoginScreen() {
 async function showMainScreen() {
     showScreen(elements.mainScreen);
     elements.userDisplay.textContent = `Olá, ${state.username}`;
+
+    // Mostra botão de gerenciar usuários apenas para admin
+    if (state.username === 'admin') {
+        elements.manageUsersBtn.classList.remove('hidden');
+    } else {
+        elements.manageUsersBtn.classList.add('hidden');
+    }
+
     await loadMaterials();
 }
 
 async function showHistoryScreen() {
     showScreen(elements.historyScreen);
     await loadHistory();
+}
+
+function showChangePasswordScreen() {
+    showScreen(elements.changePasswordScreen);
+    elements.changePasswordForm.reset();
+    elements.changePasswordMessage.classList.add('hidden');
+}
+
+async function showUsersScreen() {
+    if (state.username !== 'admin') {
+        alert('Acesso negado. Apenas admin pode gerenciar usuários.');
+        return;
+    }
+    showScreen(elements.usersScreen);
+    await loadUsers();
+}
+
+function showAddUserScreen() {
+    showScreen(elements.addUserScreen);
+    elements.addUserForm.reset();
+    elements.addUserMessage.classList.add('hidden');
 }
 
 // ========== MATERIAIS ==========
@@ -1127,6 +1191,219 @@ function abrirCropParaBancada1() {
 
     // Mostra tela de crop
     showScreen(elements.cropScreen);
+}
+
+// ========== GERENCIAMENTO DE USUÁRIOS ==========
+
+/**
+ * Troca senha do usuário logado
+ */
+async function handleChangePassword(e) {
+    e.preventDefault();
+
+    const senhaAtual = document.getElementById('senhaAtual').value;
+    const novaSenha = document.getElementById('novaSenha').value;
+    const confirmarSenha = document.getElementById('confirmarSenha').value;
+
+    // Valida se senhas coincidem
+    if (novaSenha !== confirmarSenha) {
+        elements.changePasswordMessage.textContent = 'As senhas não coincidem';
+        elements.changePasswordMessage.className = 'message error';
+        elements.changePasswordMessage.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/change-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({
+                senhaAtual,
+                novaSenha
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            elements.changePasswordMessage.textContent = data.mensagem || 'Senha alterada com sucesso!';
+            elements.changePasswordMessage.className = 'message success';
+            elements.changePasswordForm.reset();
+
+            // Volta para tela principal após 2 segundos
+            setTimeout(() => {
+                showMainScreen();
+            }, 2000);
+        } else {
+            elements.changePasswordMessage.textContent = data.mensagem || 'Erro ao trocar senha';
+            elements.changePasswordMessage.className = 'message error';
+        }
+
+        elements.changePasswordMessage.classList.remove('hidden');
+    } catch (error) {
+        console.error('Erro ao trocar senha:', error);
+        elements.changePasswordMessage.textContent = 'Erro ao trocar senha';
+        elements.changePasswordMessage.className = 'message error';
+        elements.changePasswordMessage.classList.remove('hidden');
+    }
+}
+
+/**
+ * Carrega lista de usuários (apenas admin)
+ */
+async function loadUsers() {
+    elements.usersList.innerHTML = '<p class="loading">Carregando...</p>';
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/users`, {
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar usuários');
+        }
+
+        const usuarios = await response.json();
+
+        if (usuarios.length === 0) {
+            elements.usersList.innerHTML = '<p class="empty">Nenhum usuário encontrado</p>';
+            return;
+        }
+
+        // Renderiza lista de usuários
+        elements.usersList.innerHTML = usuarios.map(user => `
+            <div class="user-card ${!user.ativo ? 'inactive' : ''}">
+                <div class="user-info">
+                    <strong>${user.nomeCompleto}</strong>
+                    <span class="user-username">@${user.username}</span>
+                    <small>Criado em: ${new Date(user.dataCriacao).toLocaleDateString('pt-BR')}</small>
+                    <span class="user-status ${user.ativo ? 'active' : 'inactive'}">
+                        ${user.ativo ? '● Ativo' : '○ Inativo'}
+                    </span>
+                </div>
+                <div class="user-actions">
+                    ${user.username !== 'admin' ? `
+                        ${user.ativo ? `
+                            <button class="btn btn-secondary btn-deactivate-user" data-user-id="${user.id}">
+                                Desativar
+                            </button>
+                        ` : `
+                            <button class="btn btn-primary btn-reactivate-user" data-user-id="${user.id}">
+                                Reativar
+                            </button>
+                        `}
+                    ` : '<span class="admin-badge">Administrador</span>'}
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+        elements.usersList.innerHTML = '<p class="error">Erro ao carregar usuários</p>';
+    }
+}
+
+/**
+ * Cria novo usuário (apenas admin)
+ */
+async function handleAddUser(e) {
+    e.preventDefault();
+
+    const username = document.getElementById('newUsername').value.trim();
+    const nomeCompleto = document.getElementById('newNomeCompleto').value.trim();
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/users`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({
+                username,
+                nomeCompleto
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            elements.addUserMessage.textContent = data.mensagem || 'Usuário criado com sucesso!';
+            elements.addUserMessage.className = 'message success';
+            elements.addUserForm.reset();
+
+            // Volta para tela de usuários após 2 segundos
+            setTimeout(() => {
+                showUsersScreen();
+            }, 2000);
+        } else {
+            elements.addUserMessage.textContent = data.mensagem || 'Erro ao criar usuário';
+            elements.addUserMessage.className = 'message error';
+        }
+
+        elements.addUserMessage.classList.remove('hidden');
+    } catch (error) {
+        console.error('Erro ao criar usuário:', error);
+        elements.addUserMessage.textContent = 'Erro ao criar usuário';
+        elements.addUserMessage.className = 'message error';
+        elements.addUserMessage.classList.remove('hidden');
+    }
+}
+
+/**
+ * Desativa usuário (apenas admin)
+ */
+async function deactivateUser(userId) {
+    if (!confirm('Tem certeza que deseja desativar este usuário?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            }
+        });
+
+        if (response.ok) {
+            await loadUsers(); // Recarrega lista
+        } else {
+            const data = await response.json();
+            alert(data.mensagem || 'Erro ao desativar usuário');
+        }
+    } catch (error) {
+        console.error('Erro ao desativar usuário:', error);
+        alert('Erro ao desativar usuário');
+    }
+}
+
+/**
+ * Reativa usuário (apenas admin)
+ */
+async function reactivateUser(userId) {
+    try {
+        const response = await fetch(`${API_URL}/api/auth/users/${userId}/reactivate`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            }
+        });
+
+        if (response.ok) {
+            await loadUsers(); // Recarrega lista
+        } else {
+            const data = await response.json();
+            alert(data.mensagem || 'Erro ao reativar usuário');
+        }
+    } catch (error) {
+        console.error('Erro ao reativar usuário:', error);
+        alert('Erro ao reativar usuário');
+    }
 }
 
 // ========== SERVICE WORKER (para PWA futuro) ==========

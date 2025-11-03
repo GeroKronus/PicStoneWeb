@@ -164,13 +164,26 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
-        /// Retorna histórico das últimas 50 fotos
+        /// Retorna histórico das últimas fotos (filtrado por usuário se não for admin)
         /// </summary>
-        public async Task<List<FotoMobile>> ObterHistoricoAsync(int limite = 50)
+        public async Task<List<FotoMobile>> ObterHistoricoAsync(int limite = 50, string? username = null)
         {
             try
             {
-                var fotos = await _context.FotosMobile
+                var query = _context.FotosMobile.AsQueryable();
+
+                // Filtra por usuário se fornecido
+                if (!string.IsNullOrEmpty(username))
+                {
+                    query = query.Where(f => f.Usuario == username);
+                    _logger.LogInformation("Filtrando histórico para usuário: {Username}", username);
+                }
+                else
+                {
+                    _logger.LogInformation("Buscando histórico de todos os usuários (admin)");
+                }
+
+                var fotos = await query
                     .OrderByDescending(f => f.DataUpload)
                     .Take(limite)
                     .ToListAsync();

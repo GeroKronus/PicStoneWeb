@@ -759,3 +759,113 @@ body {
     font-size: 13px;
     display: block;
 }
+
+/* ========== GERENCIAMENTO DE USUÁRIOS ========== */
+
+.users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.user-card {
+    background: var(--card-background);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.user-card.inactive {
+    opacity: 0.6;
+    background: var(--background);
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.user-info strong {
+    color: var(--text-primary);
+    font-size: 16px;
+}
+
+.user-username {
+    color: var(--primary-color);
+    font-size: 14px;
+}
+
+.user-info small {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.user-status {
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.user-status.active {
+    color: var(--success-color);
+}
+
+.user-status.inactive {
+    color: var(--text-secondary);
+}
+
+.user-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.admin-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.info-box {
+    background: var(--background);
+    border-left: 4px solid var(--primary-color);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.info-box p {
+    margin: 8px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.info-box strong {
+    color: var(--primary-color);
+}
+
+/* Responsividade para cards de usuário */
+@media (max-width: 600px) {
+    .user-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .user-actions {
+        width: 100%;
+    }
+
+    .user-actions .btn {
+        flex: 1;
+    }
+}
