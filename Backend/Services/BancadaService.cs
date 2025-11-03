@@ -118,11 +118,12 @@ namespace PicStoneFotoAPI.Services
 
                     // Desenha parte bancada e parte pé
                     // VB.NET original: (-161, 474) e (-161, 777)
-                    // Ajuste: parteBancada mais para baixo (500 ao invés de 474) - fechar gap superior
-                    // Ajuste Y: partePe mais para cima (730 ao invés de 777)
-                    // Ajuste X: partePe mais para esquerda (-168 ao invés de -161)
-                    canvas.DrawBitmap(parteBancada, -161, 500, paint); // Era 474, descendo para fechar gap
-                    canvas.DrawBitmap(partePe, -168, 730, paint);
+                    // Ajuste parteBancada: Y de 474 → 500 (+26px para baixo)
+                    // Ajuste partePe: Y de 777 → 756 (-21px = +26 do movimento da bancada -47 do gap original)
+                    // Ajuste partePe: X de -161 → -168 (-7px para esquerda, fechar gap lateral)
+                    // Ambas descem juntas para manter alinhamento dos veios!
+                    canvas.DrawBitmap(parteBancada, -161, 500, paint);
+                    canvas.DrawBitmap(partePe, -168, 756, paint);
                 }
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_10_MosaicoAntesMoldura.png");
