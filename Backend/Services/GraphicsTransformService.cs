@@ -197,42 +197,41 @@ namespace PicStoneFotoAPI.Services
 
         /// <summary>
         /// Rotaciona uma imagem com alta qualidade
+        /// Replica exatamente o comportamento do VB.NET RotateImage
         /// </summary>
         public SKBitmap RotateImage(SKBitmap img, float angle)
         {
-            var radians = (float)(angle * Math.PI / 180);
+            // VB.NET mantém o tamanho original (não expande)
+            int larg = img.Width;
+            int altu = img.Height;
 
-            // Calcula novo tamanho após rotação
-            double cos = Math.Abs(Math.Cos(radians));
-            double sin = Math.Abs(Math.Sin(radians));
-            int newWidth = (int)(img.Width * cos + img.Height * sin);
-            int newHeight = (int)(img.Width * sin + img.Height * cos);
-
-            var surface = SKSurface.Create(new SKImageInfo(newWidth, newHeight));
-            var canvas = surface.Canvas;
-
-            canvas.Clear(SKColors.Transparent);
-            canvas.Translate(newWidth / 2f, newHeight / 2f);
-            canvas.RotateDegrees(angle);
-            canvas.Translate(-img.Width / 2f, -img.Height / 2f);
-
-            using var paint = new SKPaint
+            var retBMP = new SKBitmap(larg, altu);
+            using (var canvas = new SKCanvas(retBMP))
             {
-                FilterQuality = SKFilterQuality.High,
-                IsAntialias = true
-            };
+                canvas.Clear(SKColors.Transparent);
 
-            canvas.DrawBitmap(img, 0, 0, paint);
+                // Rotaciona em torno do centro
+                canvas.Translate(img.Width / 2f, img.Height / 2f);
+                canvas.RotateDegrees(angle);
+                canvas.Translate(-img.Width / 2f, -img.Height / 2f);
 
-            var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                using var paint = new SKPaint
+                {
+                    FilterQuality = SKFilterQuality.High,
+                    IsAntialias = true
+                };
 
-            using var mStream = new MemoryStream(data.ToArray());
-            return SKBitmap.Decode(mStream);
+                // VB.NET: g.DrawImage(img, New PointF(-30, -30))
+                // Desenha com offset -30, -30
+                canvas.DrawBitmap(img, -30, -30, paint);
+            }
+
+            return retBMP;
         }
 
         /// <summary>
-        /// Aplica Skew simples usando 3 pontos (versão simplificada do VB.NET)
+        /// Aplica Skew usando 3 pontos (replica VB.NET Skew)
+        /// VB.NET: DrawImage(imagem, destinationPoints)
         /// </summary>
         /// <param name="imagem">Bitmap de entrada</param>
         /// <param name="acrescimo">Pixels adicionados à altura</param>
@@ -250,24 +249,36 @@ namespace PicStoneFotoAPI.Services
             {
                 canvas.Clear(SKColors.Transparent);
 
-                // Define 3 pontos de destino para transformação
-                // pt1: upper-left (0, 0)
-                // pt2: upper-right (largura, fatorSkew) - deslocado para baixo
-                // pt3: lower-left (0, altura)
-                var destPoints = new SKPoint[]
+                // VB.NET usa 3 pontos de destino:
+                // pt1 = (0, 0)              upper-left
+                // pt2 = (largura, fatorSkew) upper-right deslocado
+                // pt3 = (0, altura)         lower-left
+
+                // Pontos de origem (da imagem original)
+                float srcW = imagem.Width;
+                float srcH = imagem.Height;
+
+                // Pontos de destino (onde queremos mapear)
+                float[] t = Transform2d(
+                    srcW, srcH,
+                    0, 0,                    // pt1: (0, 0)
+                    largura, fatorSkew,      // pt2: (largura, fatorSkew)
+                    0, altura,               // pt3: (0, altura)
+                    srcW, altura             // pt4: calculado automaticamente
+                );
+
+                var matrix = new SKMatrix
                 {
-                    new SKPoint(0, 0),              // top-left
-                    new SKPoint(largura, fatorSkew), // top-right (shifted down)
-                    new SKPoint(0, altura)           // bottom-left
+                    ScaleX = t[0],
+                    SkewX = t[3],
+                    TransX = t[6],
+                    SkewY = t[1],
+                    ScaleY = t[4],
+                    TransY = t[7],
+                    Persp0 = t[2],
+                    Persp1 = t[5],
+                    Persp2 = t[8]
                 };
-
-                // SKCanvas DrawPoints não suporta transformação com 3 pontos diretamente
-                // Precisamos calcular a matriz de transformação manualmente
-                // Para simplificar, usamos uma matriz de skew
-
-                // Calcula skew X baseado no deslocamento
-                float skewX = (float)fatorSkew / altura;
-                var matrix = SKMatrix.CreateSkew(skewX, 0);
 
                 canvas.SetMatrix(matrix);
 
