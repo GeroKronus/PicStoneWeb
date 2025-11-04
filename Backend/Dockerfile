@@ -29,4 +29,7 @@ COPY --from=publish /app/publish .
 # Copiar Frontend para wwwroot (já foi copiado antes do build)
 COPY Backend/wwwroot ./wwwroot
 
+# Copiar recursos de mockup (molduras, etc)
+COPY Backend/MockupResources ./MockupResources
+
 ENTRYPOINT ["dotnet", "PicStoneFotoAPI.dll"]
