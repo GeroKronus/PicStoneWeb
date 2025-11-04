@@ -754,7 +754,7 @@ namespace PicStoneFotoAPI.Services
                 var frente = imagemFrente.Resize(new SKImageInfo(390, imagemFrente.Height), SKFilterQuality.High);
                 frente = RotateFlip180(frente);  // Rotate180FlipNone
                 frente = _transformService.DistortionInclina(frente, 390, 280, 776, 398, 0);
-                frente = _transformService.Skew2Simples(frente, 0, 220);  // Skew2
+                frente = _transformService.SkewSimples(frente, 0, 220);  // Skew2
                 frente = RotateFlip180(frente);  // Rotate180FlipNone novamente
 
                 // Aplica transformações LATERAL (VB.NET: Distortion → Skew)
