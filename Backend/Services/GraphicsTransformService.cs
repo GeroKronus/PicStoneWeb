@@ -534,18 +534,54 @@ namespace PicStoneFotoAPI.Services
         /// <returns>Bitmap com distorção aplicada</returns>
         public SKBitmap Distortion(SKBitmap imagem, int ladoMaior, int ladoMenor, int novaLargura, int novaAltura)
         {
-            _logger.LogInformation($"Distortion ENTRADA: imagem={imagem.Width}x{imagem.Height}, ladoMaior={ladoMaior}, ladoMenor={ladoMenor}, novaLargura={novaLargura}, novaAltura={novaAltura}");
+            _logger.LogInformation($"Distortion ENTRADA: imagem={imagem?.Width ?? 0}x{imagem?.Height ?? 0}, ladoMaior={ladoMaior}, ladoMenor={ladoMenor}, novaLargura={novaLargura}, novaAltura={novaAltura}");
 
-            // Validação de entrada
+            // VALIDAÇÃO #1: Imagem de entrada
+            if (imagem == null || imagem.Width <= 0 || imagem.Height <= 0)
+            {
+                _logger.LogError($"Distortion: Imagem de entrada inválida! Width={imagem?.Width}, Height={imagem?.Height}");
+                throw new ArgumentException($"Imagem de entrada inválida para Distortion");
+            }
+
+            // VALIDAÇÃO #2: Parâmetros de entrada
+            if (ladoMaior <= 0 || ladoMenor <= 0)
+            {
+                _logger.LogError($"Distortion: Parâmetros ladoMaior/ladoMenor inválidos! ladoMaior={ladoMaior}, ladoMenor={ladoMenor}");
+                throw new ArgumentException($"Parâmetros inválidos: ladoMaior={ladoMaior}, ladoMenor={ladoMenor}");
+            }
+
+            // VALIDAÇÃO #3: Dimensões de saída
             if (novaLargura <= 0 || novaAltura <= 0)
             {
                 _logger.LogError($"Distortion: Dimensões inválidas! novaLargura={novaLargura}, novaAltura={novaAltura}");
                 throw new ArgumentException($"Dimensões inválidas para Distortion: {novaLargura}x{novaAltura}");
             }
 
+            // VALIDAÇÃO #4: Limites máximos razoáveis
+            const int MAX_DIMENSION = 10000;
+            if (novaLargura > MAX_DIMENSION || novaAltura > MAX_DIMENSION)
+            {
+                _logger.LogError($"Distortion: Dimensões excederam limite máximo! novaLargura={novaLargura}, novaAltura={novaAltura}, max={MAX_DIMENSION}");
+                throw new ArgumentException($"Dimensões excedem limite máximo de {MAX_DIMENSION}px");
+            }
+
             // Redimensiona para o tamanho desejado
-            var bmpImage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
-            _logger.LogInformation($"Distortion: Após resize -> {bmpImage.Width}x{bmpImage.Height}");
+            SKBitmap bmpImage;
+            try
+            {
+                bmpImage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
+                if (bmpImage == null || bmpImage.Width <= 0 || bmpImage.Height <= 0)
+                {
+                    _logger.LogError($"Distortion: Resize retornou bitmap inválido!");
+                    throw new InvalidOperationException("Resize falhou ao criar bitmap válido");
+                }
+                _logger.LogInformation($"Distortion: Após resize -> {bmpImage.Width}x{bmpImage.Height}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Distortion: Erro no resize: {ex.Message}");
+                throw;
+            }
 
             int largura = bmpImage.Width;
             int altura = bmpImage.Height;
@@ -557,17 +593,41 @@ namespace PicStoneFotoAPI.Services
             int loopEixoY = (int)primeiroY;
             _logger.LogInformation($"Distortion: fatorDeDistortion={fatorDeDistortion}, primeiroY={primeiroY}, loopEixoY={loopEixoY}");
 
-            // Validação: garante que loopEixoY seja válido
-            if (loopEixoY <= 0) loopEixoY = 1;
-            if (loopEixoY > altura) loopEixoY = altura;
+            // VALIDAÇÃO #5: Garantir loopEixoY válido (MELHORADA)
+            if (loopEixoY <= 0)
+            {
+                _logger.LogWarning($"Distortion: loopEixoY calculado como {loopEixoY}, ajustando para 1");
+                loopEixoY = 1;
+            }
+            if (loopEixoY > altura)
+            {
+                _logger.LogWarning($"Distortion: loopEixoY calculado como {loopEixoY} (maior que altura {altura}), ajustando para {altura}");
+                loopEixoY = altura;
+            }
 
             decimal pixelVertical = altura / primeiroY;
 
             _logger.LogInformation($"Distortion: Criando bitmap de saída {largura}x{loopEixoY}");
 
-            // Cria bitmap com altura comprimida (loopEixoY)
-            var bmp2 = new SKBitmap(largura, loopEixoY);
-            _logger.LogInformation($"Distortion: Bitmap criado com sucesso!");
+            // VALIDAÇÃO #6: Criar bitmap com try-catch
+            SKBitmap bmp2;
+            try
+            {
+                bmp2 = new SKBitmap(largura, loopEixoY);
+                if (bmp2 == null)
+                {
+                    _logger.LogError($"Distortion: SKBitmap retornou null para dimensões {largura}x{loopEixoY}");
+                    throw new OutOfMemoryException($"Falha ao alocar bitmap {largura}x{loopEixoY}");
+                }
+                _logger.LogInformation($"Distortion: Bitmap criado com sucesso! {bmp2.Width}x{bmp2.Height}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Distortion: ERRO ao criar bitmap {largura}x{loopEixoY}: {ex.Message}");
+                _logger.LogError($"Distortion: Stack trace: {ex.StackTrace}");
+                bmpImage.Dispose();
+                throw new InvalidOperationException($"Falha ao alocar bitmap {largura}x{loopEixoY}: {ex.Message}", ex);
+            }
 
             for (int horizontal = 0; horizontal < largura; horizontal++)
             {

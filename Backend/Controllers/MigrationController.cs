@@ -319,15 +319,9 @@ namespace PicStoneFotoAPI.Controllers
             {
                 _logger.LogInformation("=== POPULANDO TABELA DE MATERIAIS ===");
 
-                // Garante que a tabela existe
-                await _context.Database.ExecuteSqlRawAsync(@"
-                    CREATE TABLE IF NOT EXISTS ""Materiais"" (
-                        ""Id"" SERIAL PRIMARY KEY,
-                        ""Nome"" VARCHAR(100) NOT NULL UNIQUE,
-                        ""Ativo"" BOOLEAN NOT NULL DEFAULT TRUE,
-                        ""Ordem"" INTEGER NOT NULL DEFAULT 0
-                    )
-                ");
+                // Garante que a tabela existe usando Entity Framework (compatível com SQLite e PostgreSQL)
+                await _context.Database.EnsureCreatedAsync();
+                _logger.LogInformation("Tabela Materiais verificada/criada com sucesso");
 
                 var materiais = new[]
                 {
@@ -377,11 +371,17 @@ namespace PicStoneFotoAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao popular materiais");
+
+                // Log detalhado da inner exception
+                var innerMsg = ex.InnerException?.Message ?? "Nenhuma inner exception";
+                _logger.LogError("Inner Exception: {InnerMsg}", innerMsg);
+
                 return StatusCode(500, new
                 {
                     sucesso = false,
                     mensagem = "Erro ao popular materiais",
                     erro = ex.Message,
+                    innerException = innerMsg,
                     stackTrace = ex.StackTrace
                 });
             }

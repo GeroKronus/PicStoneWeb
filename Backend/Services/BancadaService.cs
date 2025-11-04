@@ -740,7 +740,8 @@ namespace PicStoneFotoAPI.Services
                 int umTerco = imagemBookMatch.Width - doisTercos;
 
                 var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
-                var rectUmTerco = new SKRectI(doisTercos - 10, 0, umTerco + 10, imagemBookMatch.Height);
+                // SKRectI(left, top, right, bottom) - right = left + width
+                var rectUmTerco = new SKRectI(doisTercos - 10, 0, doisTercos - 10 + umTerco + 10, imagemBookMatch.Height);
 
                 var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
                 var imagemUmTerco = CropBitmap(imagemBookMatch, rectUmTerco);
@@ -757,7 +758,8 @@ namespace PicStoneFotoAPI.Services
 
                 // ============ EXTRAÇÃO DA FAIXA DECORATIVA (será processada depois) ============
                 // VB.NET: rect = Rectangle(0, height - 80, width, 40)
-                var rectFaixa = new SKRectI(0, bmp2.Height - 80, bmp2.Width, 40);
+                // SKRectI(left, top, right, bottom) - bottom = top + height
+                var rectFaixa = new SKRectI(0, bmp2.Height - 80, bmp2.Width, bmp2.Height - 80 + 40);
                 var faixa1 = CropBitmap(bmp2, rectFaixa);
                 _logger.LogInformation($"Faixa1 extraída: {faixa1.Width}x{faixa1.Height}");
 
@@ -782,9 +784,26 @@ namespace PicStoneFotoAPI.Services
                 var bmp5 = RotateFlip270(bmp4);
                 _logger.LogInformation($"T4: Rotate270 -> {bmp5.Width}x{bmp5.Height}");
 
+                // VALIDAÇÃO EXTRA: Verificar bmp5 antes de usar
+                if (bmp5 == null || bmp5.Width <= 0 || bmp5.Height <= 0)
+                {
+                    _logger.LogError($"T4: bmp5 está inválido após Rotate270! Width={bmp5?.Width}, Height={bmp5?.Height}");
+                    throw new InvalidOperationException("bmp5 inválido após Rotate270");
+                }
+
                 // Transformação 5: Distortion(187, 110, width*1.1, height*1.4)
                 int novaLarg = (int)(bmp5.Width * 1.1);
                 int novaAlt = (int)(bmp5.Height * 1.4);
+
+                _logger.LogInformation($"T5: Calculado novaLarg={novaLarg}, novaAlt={novaAlt} a partir de bmp5 {bmp5.Width}x{bmp5.Height}");
+
+                // VALIDAÇÃO EXTRA: Verificar dimensões calculadas
+                if (novaLarg <= 0 || novaAlt <= 0)
+                {
+                    _logger.LogError($"T5: Dimensões calculadas inválidas! novaLarg={novaLarg}, novaAlt={novaAlt}");
+                    throw new InvalidOperationException($"Dimensões calculadas inválidas: {novaLarg}x{novaAlt}");
+                }
+
                 SKBitmap bmp6;
                 try
                 {
@@ -794,6 +813,7 @@ namespace PicStoneFotoAPI.Services
                 catch (Exception ex)
                 {
                     _logger.LogError($"ERRO em T5 Distortion: {ex.Message}");
+                    _logger.LogError($"T5: Parâmetros - bmp5: {bmp5.Width}x{bmp5.Height}, novaLarg={novaLarg}, novaAlt={novaAlt}");
                     throw;
                 }
 

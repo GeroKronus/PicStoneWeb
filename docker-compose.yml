@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - Idêntico ao Railway
+  postgres:
+    image: postgres:15-alpine
+    container_name: picstone-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: railway
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: picstone123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - picstone-network
+
+  # Backend ASP.NET Core
+  backend:
+    build:
+      context: .
+      dockerfile: ./Backend/Dockerfile
+    container_name: picstone-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - DATABASE_URL=postgres://postgres:picstone123@postgres:5432/railway
+      - JWT_SECRET=ChaveSecretaPadraoParaDesenvolvimento123!@#
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./Backend/wwwroot:/app/wwwroot
+      - ./Backend/uploads:/app/uploads
+      - ./Backend/debug:/app/debug
+    networks:
+      - picstone-network
+
+volumes:
+  postgres_data:
+
+networks:
+  picstone-network:
+    driver: bridge
