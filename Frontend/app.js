@@ -242,12 +242,16 @@ function setupEventListeners() {
     elements.newMockupBtn.addEventListener('click', startMockupFlow);
     elements.downloadAllMockupsBtn.addEventListener('click', downloadAllMockups);
 
-    // Event delegation para botões de download individual
+    // Event delegation para botões de download e compartilhar
     elements.mockupsGallery.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-download-single')) {
             const url = e.target.dataset.url;
             const nome = e.target.dataset.nome;
             downloadMockup(url, nome);
+        } else if (e.target.classList.contains('btn-share-single')) {
+            const url = e.target.dataset.url;
+            const nome = e.target.dataset.nome;
+            shareMockup(url, nome);
         }
     });
 
@@ -1173,6 +1177,48 @@ function downloadMockup(url, nome) {
     link.click();
 }
 
+/**
+ * Compartilha mockup via Web Share API ou WhatsApp Web
+ */
+async function shareMockup(url, nome) {
+    try {
+        // Tenta usar Web Share API (funciona em mobile e alguns browsers desktop)
+        if (navigator.share) {
+            // Faz fetch da imagem e converte para blob para compartilhar
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const file = new File([blob], `${nome}.jpg`, { type: 'image/jpeg' });
+
+            await navigator.share({
+                title: 'Mockup PicStone',
+                text: `Confira este mockup de ${nome}`,
+                files: [file]
+            });
+
+            showMockupMessage('Compartilhado com sucesso!', 'success');
+        } else {
+            // Fallback: Compartilhar via WhatsApp Web com link da imagem
+            const texto = encodeURIComponent(`Confira este mockup: ${url}`);
+            const whatsappUrl = `https://wa.me/?text=${texto}`;
+            window.open(whatsappUrl, '_blank');
+            showMockupMessage('Abrindo WhatsApp...', 'success');
+        }
+    } catch (error) {
+        // Se usuário cancelar ou der erro
+        if (error.name !== 'AbortError') {
+            console.error('Erro ao compartilhar:', error);
+
+            // Último fallback: copiar link para clipboard
+            try {
+                await navigator.clipboard.writeText(url);
+                showMockupMessage('Link copiado! Cole no WhatsApp', 'success');
+            } catch (clipError) {
+                showMockupMessage('Erro ao compartilhar', 'error');
+            }
+        }
+    }
+}
+
 function downloadAllMockups() {
     if (!state.mockupUrls || state.mockupUrls.length === 0) {
         showMockupMessage('Nenhum mockup disponível para download', 'error');
@@ -1366,9 +1412,14 @@ function displayCountertopResults(data) {
         mockupItem.innerHTML = `
             <h3>${labels[index]}</h3>
             <img src="${mockupUrl}" alt="${labels[index]}">
-            <button class="btn btn-secondary btn-download-single" data-url="${mockupUrl}" data-nome="${caminho}">
-                ⬇️ Baixar
-            </button>
+            <div class="mockup-actions">
+                <button class="btn btn-secondary btn-download-single" data-url="${mockupUrl}" data-nome="${caminho}">
+                    ⬇️ Baixar
+                </button>
+                <button class="btn btn-primary btn-share-single" data-url="${mockupUrl}" data-nome="${labels[index]}">
+                    📤 Compartilhar
+                </button>
+            </div>
         `;
         gallery.appendChild(mockupItem);
     });

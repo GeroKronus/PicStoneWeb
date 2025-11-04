@@ -860,14 +860,16 @@ body {
     object-fit: contain;
 }
 
-.mockup-item .btn-download-single {
-    width: 100%;
-}
-
 .mockup-actions {
     display: flex;
     gap: 12px;
-    margin-top: 20px;
+    margin-top: 8px;
+}
+
+.mockup-actions .btn {
+    flex: 1;
+    font-size: 14px;
+    padding: 10px;
 }
 
 .mockup-actions .btn {
