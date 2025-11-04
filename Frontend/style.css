@@ -709,15 +709,18 @@ body {
     box-shadow: 0 8px 15px -3px rgba(17, 153, 142, 0.4);
 }
 
-.btn-bancada1 {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+.btn-countertops {
+    background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
     color: white;
+    font-size: 18px;
+    padding: 14px;
     margin-top: 10px;
 }
 
-.btn-bancada1:hover {
+.btn-countertops:hover {
+    background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%);
     transform: translateY(-2px);
-    box-shadow: 0 8px 15px -3px rgba(245, 87, 108, 0.4);
+    box-shadow: 0 8px 15px -3px rgba(160, 82, 45, 0.4);
 }
 
 .mockup-config-card {
@@ -1014,5 +1017,81 @@ body {
 
     .user-actions .btn {
         flex: 1;
+    }
+}
+
+/* Countertop Selection Styles */
+.countertop-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.countertop-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.countertop-card:hover {
+    border-color: #8B4513;
+    box-shadow: 0 4px 12px rgba(139, 69, 19, 0.2);
+    transform: translateY(-2px);
+}
+
+.countertop-preview {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-placeholder {
+    font-size: 48px;
+    font-weight: bold;
+    color: #9ca3af;
+}
+
+.countertop-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.countertop-card h4 {
+    margin: 12px 0 8px 0;
+    font-size: 18px;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.countertop-card p {
+    color: #6b7280;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.btn-select-countertop {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+}
+
+@media (max-width: 600px) {
+    .countertop-options {
+        grid-template-columns: 1fr;
+    }
+
+    .countertop-preview {
+        height: 150px;
     }
 }

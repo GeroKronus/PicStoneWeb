@@ -21,6 +21,12 @@ const state = {
     mockupConfig: {
         tipo: 'simples',
         fundo: 'claro'
+    },
+    // Estado específico para bancadas (countertops)
+    countertopState: {
+        croppedImage: null,    // Imagem cortada (reutilizável)
+        selectedType: null,     // 'bancada1' ou 'bancada2'
+        flip: false            // Opção global de flip
     }
 };
 
@@ -66,12 +72,10 @@ const elements = {
     cancelNichoBtn: document.getElementById('cancelNichoBtn'),
     continuarCropNichoBtn: document.getElementById('continuarCropNichoBtn'),
     continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
-    bancada1Btn: document.getElementById('bancada1Btn'),
-    bancada1ConfigScreen: document.getElementById('bancada1ConfigScreen'),
-    cancelBancada1Btn: document.getElementById('cancelBancada1Btn'),
-    continuarCropBancada1Btn: document.getElementById('continuarCropBancada1Btn'),
-    flipBancada1: document.getElementById('flipBancada1'),
-    bancada2Btn: document.getElementById('bancada2Btn'),
+    countertopsBtn: document.getElementById('countertopsBtn'),
+    countertopSelectionScreen: document.getElementById('countertopSelectionScreen'),
+    cancelCountertopSelectionBtn: document.getElementById('cancelCountertopSelectionBtn'),
+    flipCountertop: document.getElementById('flipCountertop'),
     backToMainBtn: document.getElementById('backToMainBtn'),
     downloadAllMockupsBtn: document.getElementById('downloadAllMockupsBtn'),
     newMockupBtn: document.getElementById('newMockupBtn'),
@@ -227,14 +231,12 @@ function setupEventListeners() {
     // Mockup event listeners
     elements.mockupBtn.addEventListener('click', startMockupFlow);
     elements.nichoBtn.addEventListener('click', startNichoFlow);
-    elements.bancada1Btn.addEventListener('click', startBancada1Flow);
-    elements.bancada2Btn.addEventListener('click', startBancada2Flow);
+    elements.countertopsBtn.addEventListener('click', startCountertopFlow);
     elements.cancelMockupBtn.addEventListener('click', () => showMainScreen());
     elements.cancelNichoBtn.addEventListener('click', () => showMainScreen());
-    elements.cancelBancada1Btn.addEventListener('click', () => showMainScreen());
+    elements.cancelCountertopSelectionBtn.addEventListener('click', () => showMainScreen());
     elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
     elements.continuarCropNichoBtn.addEventListener('click', abrirCropParaNicho);
-    elements.continuarCropBancada1Btn.addEventListener('click', abrirCropParaBancada1);
     elements.backToMainBtn.addEventListener('click', () => showMainScreen());
     elements.newMockupBtn.addEventListener('click', startMockupFlow);
     elements.downloadAllMockupsBtn.addEventListener('click', downloadAllMockups);
@@ -246,6 +248,15 @@ function setupEventListeners() {
             const nome = e.target.dataset.nome;
             downloadMockup(url, nome);
         }
+    });
+
+    // Event delegation para seleção de countertop
+    document.querySelectorAll('.btn-select-countertop').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const card = e.target.closest('.countertop-card');
+            const type = card.dataset.type;
+            selectCountertopAndGenerate(type);
+        });
     });
 
     // User menu dropdown
@@ -512,8 +523,7 @@ function clearPhoto() {
     elements.submitBtn.disabled = true;
     elements.mockupBtn.classList.add('hidden');
     elements.nichoBtn.classList.add('hidden');
-    elements.bancada1Btn.classList.add('hidden');
-    elements.bancada2Btn.classList.add('hidden');
+    elements.countertopsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -525,8 +535,7 @@ function clearPhotoState() {
     elements.submitBtn.disabled = true;
     elements.mockupBtn.classList.add('hidden');
     elements.nichoBtn.classList.add('hidden');
-    elements.bancada1Btn.classList.add('hidden');
-    elements.bancada2Btn.classList.add('hidden');
+    elements.countertopsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -573,8 +582,7 @@ async function handleUpload(e) {
         // Mostra botões de mockup (permanecem visíveis)
         elements.mockupBtn.classList.remove('hidden');
         elements.nichoBtn.classList.remove('hidden');
-        elements.bancada1Btn.classList.remove('hidden');
-        elements.bancada2Btn.classList.remove('hidden');
+        elements.countertopsBtn.classList.remove('hidden');
 
         // Limpa apenas o preview e formulário (mantém imagem original)
         setTimeout(() => {
@@ -947,15 +955,20 @@ function confirmCrop() {
     tempCanvas.toBlob((blob) => {
         const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
 
-        // Se for modo mockup, gera o mockup
-        if (state.mockupMode) {
+        // Verifica se é flow de countertop (crop primeiro, depois escolha)
+        if (state.countertopState.croppedImage !== null || state.mockupConfig.tipo === 'countertop') {
+            // Flow de countertop: salva crop e mostra tela de seleção
+            showCountertopSelection(file);
+        } else if (state.mockupMode) {
+            // Outros mockups (cavalete, nicho): gera diretamente
             gerarMockup(file);
         } else {
+            // Modo ajuste normal
             compressAndPreviewImage(file);
             // Mostra botões mockup pois já tem imagem disponível
             elements.mockupBtn.classList.remove('hidden');
             elements.nichoBtn.classList.remove('hidden');
-            elements.bancada1Btn.classList.remove('hidden');
+            elements.countertopsBtn.classList.remove('hidden');
             // Mostra botão de reset pois a imagem foi modificada
             elements.resetImageBtn.classList.remove('hidden');
             showMainScreen();
@@ -1206,120 +1219,155 @@ function abrirCropParaNicho() {
 }
 
 // ========== BANCADA1 MOCKUP FLOW ==========
-function startBancada1Flow() {
+// ========== UNIFIED COUNTERTOP FLOW ==========
+
+/**
+ * Passo 1: Inicia o flow de countertop - vai direto para o crop
+ */
+function startCountertopFlow() {
     if (!state.originalPhoto) {
         showMessage('Nenhuma foto disponível para mockup de bancada', 'error');
         return;
     }
 
-    // Mostra tela de configuração
-    showScreen(elements.bancada1ConfigScreen);
-}
+    // Limpa estado anterior de countertop
+    state.countertopState.croppedImage = null;
+    state.countertopState.selectedType = null;
+    state.countertopState.flip = false;
 
-function abrirCropParaBancada1() {
-    // Captura configuração do flip
-    const flipCheckbox = elements.flipBancada1;
-    const flip = flipCheckbox ? flipCheckbox.checked : false;
-
-    state.mockupConfig.tipo = 'bancada1'; // Identifica que é bancada1
-    state.mockupConfig.flip = flip;
-
-    // Ativa modo mockup
-    state.mockupMode = true;
+    // Marca que estamos no flow de countertop (para confirmCrop saber)
+    state.mockupConfig.tipo = 'countertop';
+    state.mockupMode = false; // Não queremos gerar ainda, só fazer crop
 
     // Carrega imagem original no crop
     state.cropData.image = state.originalPhoto;
     initializeCropCanvas();
 
-    // Mostra tela de crop
+    // Vai direto para crop
     showScreen(elements.cropScreen);
 }
 
-// ========== BANCADA2 MOCKUP FLOW ==========
-async function startBancada2Flow() {
-    if (!state.originalPhoto) {
-        showMessage('Nenhuma foto disponível para mockup de bancada #2', 'error');
+/**
+ * Passo 2: Após crop, salva imagem cortada e mostra tela de seleção
+ */
+function showCountertopSelection(croppedImageBlob) {
+    // Salva crop para reutilização
+    state.countertopState.croppedImage = croppedImageBlob;
+
+    // Mostra tela de seleção
+    showScreen(elements.countertopSelectionScreen);
+
+    // Reset checkbox de flip
+    if (elements.flipCountertop) {
+        elements.flipCountertop.checked = false;
+    }
+}
+
+/**
+ * Passo 3: Usuário selecionou tipo de bancada e clicou em gerar
+ */
+async function selectCountertopAndGenerate(type) {
+    if (!state.countertopState.croppedImage) {
+        showMessage('Erro: Imagem cortada não encontrada', 'error');
         return;
     }
 
+    // Salva seleção
+    state.countertopState.selectedType = type;
+    state.countertopState.flip = elements.flipCountertop ? elements.flipCountertop.checked : false;
+
+    // Gera mockup
+    await generateCountertopMockup();
+}
+
+/**
+ * Passo 4: Gera o mockup da bancada selecionada
+ */
+async function generateCountertopMockup() {
     try {
         elements.uploadProgress.classList.remove('hidden');
 
-        // Converte originalPhoto (Image) para Blob usando canvas
-        const img = state.originalPhoto;
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+        const formData = new FormData();
+        formData.append('imagem', state.countertopState.croppedImage, 'cropped.jpg');
+        formData.append('flip', state.countertopState.flip);
 
-        canvas.toBlob(async (blob) => {
-            try {
-                const formData = new FormData();
-                formData.append('imagem', blob, 'foto.jpg');
-                formData.append('flip', false);
+        const endpoint = state.countertopState.selectedType === 'bancada1'
+            ? '/api/mockup/bancada1'
+            : '/api/mockup/bancada2';
 
-                const response = await fetch(`${API_URL}/api/mockup/bancada2`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${state.token}`
-                    },
-                    body: formData
-                });
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: formData
+        });
 
-                const data = await response.json();
+        const data = await response.json();
 
-                if (!response.ok) {
-                    throw new Error(data.mensagem || 'Erro ao gerar mockup de bancada #2');
-                }
+        if (!response.ok) {
+            throw new Error(data.mensagem || 'Erro ao gerar mockup de bancada');
+        }
 
-                // Exibe resultado
-                const caminhos = data.mockups;
-                if (caminhos && caminhos.length > 0) {
-                    const gallery = document.getElementById('mockupsGallery');
-                    gallery.innerHTML = ''; // Limpa galeria
-
-                    const labels = ['Bancada #2 - Normal', 'Bancada #2 - Rotacionado 180°'];
-
-                    caminhos.forEach((caminho, index) => {
-                        const mockupUrl = `${API_URL}${caminho}`;
-                        const imgContainer = document.createElement('div');
-                        imgContainer.className = 'mockup-item';
-
-                        const label = document.createElement('p');
-                        label.className = 'mockup-label';
-                        label.textContent = labels[index] || `Mockup ${index + 1}`;
-
-                        const img = document.createElement('img');
-                        img.src = mockupUrl;
-                        img.alt = labels[index];
-                        img.className = 'mockup-image';
-
-                        imgContainer.appendChild(label);
-                        imgContainer.appendChild(img);
-                        gallery.appendChild(imgContainer);
-                    });
-
-                    showScreen(elements.mockupResultScreen);
-                    showMockupMessage(data.mensagem, 'success');
-                } else {
-                    throw new Error('Nenhum mockup foi gerado');
-                }
-
-            } catch (error) {
-                console.error('Erro ao gerar bancada #2:', error);
-                showMockupMessage(error.message, 'error');
-                showMainScreen();
-            } finally {
-                elements.uploadProgress.classList.add('hidden');
-            }
-        }, 'image/jpeg', 0.95);
+        // Exibe resultado
+        displayCountertopResults(data);
 
     } catch (error) {
-        console.error('Erro ao preparar imagem:', error);
-        showMockupMessage('Erro ao preparar imagem: ' + error.message, 'error');
+        console.error('Erro ao gerar bancada:', error);
+        showMockupMessage(error.message, 'error');
+        showMainScreen();
+    } finally {
         elements.uploadProgress.classList.add('hidden');
+        // Limpa flag de countertop
+        state.mockupConfig.tipo = 'simples';
     }
+}
+
+/**
+ * Passo 5: Exibe resultados com opção de tentar outra bancada
+ */
+function displayCountertopResults(data) {
+    const caminhos = data.mockups;
+
+    if (!caminhos || caminhos.length === 0) {
+        showMessage('Nenhum mockup foi gerado', 'error');
+        return;
+    }
+
+    const gallery = elements.mockupsGallery;
+    gallery.innerHTML = '';
+
+    const labels = state.countertopState.selectedType === 'bancada1'
+        ? ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°']
+        : ['Bancada #2 - Normal', 'Bancada #2 - Rotacionado 180°'];
+
+    caminhos.forEach((caminho, index) => {
+        const mockupUrl = `${API_URL}${caminho}`;
+        const mockupItem = document.createElement('div');
+        mockupItem.className = 'mockup-item';
+        mockupItem.innerHTML = `
+            <h3>${labels[index]}</h3>
+            <img src="${mockupUrl}" alt="${labels[index]}">
+            <button class="btn btn-secondary btn-download-single" data-url="${mockupUrl}" data-nome="${caminho}">
+                ⬇️ Baixar
+            </button>
+        `;
+        gallery.appendChild(mockupItem);
+    });
+
+    // Salva URLs para download em lote
+    state.mockupUrls = caminhos.map(c => `${API_URL}${c}`);
+
+    // Modifica botão "Novo Mockup" para permitir tentar outra bancada
+    elements.newMockupBtn.textContent = '🔄 Tentar Outra Bancada (Mesmo Recorte)';
+    elements.newMockupBtn.onclick = () => {
+        // Retorna para seleção com o mesmo crop
+        showScreen(elements.countertopSelectionScreen);
+    };
+
+    // Mostra tela de resultado
+    showScreen(elements.mockupResultScreen);
+    showMockupMessage(data.mensagem, 'success');
 }
 
 // ========== GERENCIAMENTO DE USUÁRIOS ==========
