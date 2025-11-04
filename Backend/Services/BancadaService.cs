@@ -735,9 +735,36 @@ namespace PicStoneFotoAPI.Services
             {
                 var imagemBookMatch = imagemOriginal.Copy();
 
+                // ============ CORREÇÃO CRÍTICA: VALIDAR ORIENTAÇÃO ============
+                // Bancada 3 DEVE processar imagem em PAISAGEM (largura > altura)
+                // VB.NET original trabalha com TamanhoDoQuadro=1200 assumindo imagem 2000x1200
+                if (imagemBookMatch.Height > imagemBookMatch.Width)
+                {
+                    _logger.LogWarning($"⚠️ CORREÇÃO AUTOMÁTICA: Imagem em RETRATO ({imagemBookMatch.Width}x{imagemBookMatch.Height})");
+                    _logger.LogWarning($"⚠️ Rotacionando 90° para PAISAGEM conforme esperado pelo VB.NET original");
+                    imagemBookMatch = RotateFlip90(imagemBookMatch);
+                    _logger.LogWarning($"✓ CORRIGIDO: {imagemBookMatch.Width}x{imagemBookMatch.Height} (paisagem)");
+                }
+                else
+                {
+                    _logger.LogInformation($"✓ Orientação correta: {imagemBookMatch.Width}x{imagemBookMatch.Height} (paisagem)");
+                }
+
                 // ============ DIVISÃO EM 2/3 E 1/3 COM OVERLAP ============
+                // VALIDAÇÃO: Garantir que estamos processando imagem em paisagem
+                if (imagemBookMatch.Width < imagemBookMatch.Height)
+                {
+                    throw new InvalidOperationException(
+                        $"ERRO CRÍTICO: Orientação inválida após validação! " +
+                        $"Width={imagemBookMatch.Width}, Height={imagemBookMatch.Height}. " +
+                        $"Bancada 3 requer paisagem (Width > Height)."
+                    );
+                }
+
                 int doisTercos = (int)(imagemBookMatch.Width / 1.5);
                 int umTerco = imagemBookMatch.Width - doisTercos;
+
+                _logger.LogInformation($"✓ Divisão validada: 2/3={doisTercos}px, 1/3={umTerco}px (paisagem)");
 
                 var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
                 // SKRectI(left, top, right, bottom) - right = left + width
@@ -746,15 +773,23 @@ namespace PicStoneFotoAPI.Services
                 var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
                 var imagemUmTerco = CropBitmap(imagemBookMatch, rectUmTerco);
 
-                _logger.LogInformation($"Divisão: 2/3={doisTercos}x{imagemBookMatch.Height}, 1/3={umTerco + 10}x{imagemBookMatch.Height}");
+                _logger.LogInformation($"✓ Divisão: 2/3={imagemDoisTercos.Width}x{imagemDoisTercos.Height}, 1/3={imagemUmTerco.Width}x{imagemUmTerco.Height}");
+                _logger.LogInformation($"✓ Razão 2/3: {(float)imagemDoisTercos.Width / imagemDoisTercos.Height:F2} (esperado ~1.1 para paisagem)");
 
                 // ============ PARTE 1: bmp7 (COMPONENTE PRINCIPAL) - 12 TRANSFORMAÇÕES ============
                 _logger.LogInformation("=== Iniciando PARTE 1: bmp7 (12 transformações) ===");
 
                 // Transformação 1: Rotate90
                 var bmp2 = imagemDoisTercos.Copy();
+                _logger.LogInformation($"T1 PRÉ: bmp2 = {bmp2.Width}x{bmp2.Height} (paisagem esperada)");
                 bmp2 = RotateFlip90(bmp2);
-                _logger.LogInformation($"T1: Rotate90 -> {bmp2.Width}x{bmp2.Height}");
+                _logger.LogInformation($"T1 PÓS: Rotate90 -> {bmp2.Width}x{bmp2.Height} (retrato esperado)");
+
+                // VALIDAÇÃO: Após Rotate90, altura deve ser > largura (retrato)
+                if (bmp2.Width > bmp2.Height)
+                {
+                    _logger.LogError($"❌ ALERTA: Após Rotate90, bmp2 ainda em paisagem ({bmp2.Width}x{bmp2.Height})! Deveria estar em retrato.");
+                }
 
                 // ============ EXTRAÇÃO DA FAIXA DECORATIVA (será processada depois) ============
                 // VB.NET: rect = Rectangle(0, height - 80, width, 40)
