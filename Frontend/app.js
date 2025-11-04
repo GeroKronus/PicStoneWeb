@@ -98,7 +98,8 @@ const elements = {
     addUserScreen: document.getElementById('addUserScreen'),
     addUserForm: document.getElementById('addUserForm'),
     addUserMessage: document.getElementById('addUserMessage'),
-    backFromAddUserBtn: document.getElementById('backFromAddUserBtn')
+    backFromAddUserBtn: document.getElementById('backFromAddUserBtn'),
+    loadingOverlay: document.getElementById('loadingOverlay')
 };
 
 // ========== AUTO-RENOVAÇÃO DE TOKEN ==========
@@ -1300,7 +1301,8 @@ async function selectCountertopAndGenerate(type) {
  */
 async function generateCountertopMockup() {
     try {
-        elements.uploadProgress.classList.remove('hidden');
+        // Mostra loading overlay global
+        elements.loadingOverlay.classList.remove('hidden');
 
         const formData = new FormData();
         formData.append('imagem', state.countertopState.croppedImage, 'cropped.jpg');
@@ -1332,7 +1334,8 @@ async function generateCountertopMockup() {
         showMockupMessage(error.message, 'error');
         showMainScreen();
     } finally {
-        elements.uploadProgress.classList.add('hidden');
+        // Esconde loading overlay
+        elements.loadingOverlay.classList.add('hidden');
         // Limpa flag de countertop
         state.mockupConfig.tipo = 'simples';
     }
