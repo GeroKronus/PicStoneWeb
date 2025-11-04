@@ -751,15 +751,15 @@ namespace PicStoneFotoAPI.Services
                 var imagemLateral = CropBitmap(imagemBookMatch, rectLateral);
 
                 // Aplica transformações FRENTE (VB.NET: Rotate180 → Distortion → Skew2 → Rotate180)
-                var frente = imagemFrente.Resize(new SKImageInfo(390, imagemFrente.Height), SKFilterQuality.High);
-                frente = RotateFlip180(frente);  // Rotate180FlipNone
+                // Mantém dimensões originais do crop - DistortionInclina faz o resize internamente
+                var frente = RotateFlip180(imagemFrente);  // Rotate180FlipNone
                 frente = _transformService.DistortionInclina(frente, 390, 280, 776, 398, 0);
                 frente = _transformService.Skew2(frente, 0, 220);  // Skew2 (inclinação invertida)
                 frente = RotateFlip180(frente);  // Rotate180FlipNone novamente
 
                 // Aplica transformações LATERAL (VB.NET: Distortion → Skew)
-                var lateral = imagemLateral.Resize(new SKImageInfo(390, imagemLateral.Height), SKFilterQuality.High);
-                lateral = _transformService.DistortionInclina(lateral, 390, 280, 182, 399, 0);
+                // Mantém dimensões originais do crop - DistortionInclina faz o resize internamente
+                var lateral = _transformService.DistortionInclina(imagemLateral, 390, 280, 182, 399, 0);
                 lateral = _transformService.SkewSimples(lateral, 0, 90);  // Skew
 
                 // Monta mosaico 1523x1238
