@@ -1053,12 +1053,36 @@ body {
     }
 }
 
-/* Countertop Selection Styles */
+/* Countertop Selection Styles - 8 Bancadas Responsivas */
 .countertop-options {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
     margin: 20px 0;
+}
+
+/* Desktop: força 4 colunas quando há espaço */
+@media (min-width: 900px) {
+    .countertop-options {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+    }
+}
+
+/* Tablet: 3 colunas */
+@media (min-width: 600px) and (max-width: 899px) {
+    .countertop-options {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+}
+
+/* Mobile: 1 coluna */
+@media (max-width: 599px) {
+    .countertop-options {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
 }
 
 .countertop-card {
@@ -1072,7 +1096,7 @@ body {
 
 .countertop-preview {
     width: 100%;
-    height: 200px;
+    height: 180px; /* Reduzido de 200px para caber melhor em 4 colunas */
     background: #a8a8a8;
     border-radius: 8px;
     overflow: hidden;
@@ -1083,6 +1107,13 @@ body {
     border: 2px solid #ffffff;
     cursor: pointer;
     transition: all 0.15s ease;
+}
+
+/* Mobile: altura maior para melhor visualização */
+@media (max-width: 599px) {
+    .countertop-preview {
+        height: 220px;
+    }
 }
 
 .countertop-preview:hover {
@@ -1127,13 +1158,15 @@ body {
     font-size: 14px;
 }
 
-@media (max-width: 600px) {
-    .countertop-options {
-        grid-template-columns: 1fr;
-    }
+/* Aumenta largura do container da tela de seleção para acomodar 8 cards */
+#countertopSelectionScreen .container {
+    max-width: 1200px;
+}
 
-    .countertop-preview {
-        height: 150px;
+/* Garante scroll suave em mobile */
+@media (max-width: 599px) {
+    #countertopSelectionScreen .container {
+        padding-bottom: 40px;
     }
 }
 

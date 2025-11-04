@@ -673,5 +673,354 @@ namespace PicStoneFotoAPI.Services
             // [m11, m12, m13, m21, m22, m23, m31, m32, m33]
             return new float[] { a, b, 0, c, d, 0, tx, ty, 1 };
         }
+
+        /// <summary>
+        /// Gera mockup de Bancada tipo 3 (Countertop #3)
+        /// Design complexo com múltiplas faixas - versão simplificada
+        /// </summary>
+        public List<SKBitmap> GerarBancada3(SKBitmap imagemOriginal, bool flip = false)
+        {
+            _logger.LogWarning($"========== INICIANDO GerarBancada3 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            var resultado = new List<SKBitmap>();
+
+            // Bancada 3 do VB.NET processa apenas 1 versão
+            for (int contaProcesso = 1; contaProcesso <= 1; contaProcesso++)
+            {
+                var imagemBookMatch = imagemOriginal.Copy();
+
+                // Divide em 2/3 e 1/3
+                int doisTercos = (int)(imagemBookMatch.Width / 1.5);
+                var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
+                var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
+
+                // Redimensiona e aplica transformação
+                var bmp = imagemDoisTercos.Resize(new SKImageInfo(730, 1051), SKFilterQuality.High);
+                bmp = _transformService.DistortionInclina(bmp, 1051, 400, 400, 1051, 730);
+
+                // Monta o mosaico 1051x1191 (dimensões da moldura bancada3)
+                var mosaicoEmBranco = new SKBitmap(2000, 1863);
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    canvas.DrawBitmap(bmp, -35, 169, paint);
+                }
+
+                // Adiciona moldura
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    var moldura = CarregarRecurso("bancada3.png");
+                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+                }
+
+                if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                resultado.Add(mosaicoEmBranco);
+
+                imagemBookMatch.Dispose();
+                imagemDoisTercos.Dispose();
+                bmp.Dispose();
+            }
+
+            // Adiciona segunda versão rotacionada para consistência com outras bancadas
+            resultado.Add(RotateFlip180(resultado[0]));
+            return resultado;
+        }
+
+        /// <summary>
+        /// Gera mockup de Bancada tipo 4 (Countertop #4)
+        /// Divide em frente e lateral
+        /// </summary>
+        public List<SKBitmap> GerarBancada4(SKBitmap imagemOriginal, bool flip = false)
+        {
+            _logger.LogWarning($"========== INICIANDO GerarBancada4 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            var resultado = new List<SKBitmap>();
+
+            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
+            {
+                SKBitmap imagemBookMatch = contaProcesso == 1 ? imagemOriginal.Copy() : RotateFlip180(imagemOriginal);
+
+                // Divide em frente (1600px) e lateral (500px) - Total 2100px
+                int larguraFrente = (int)(imagemBookMatch.Width * 0.76); // ~76% para frente
+                int larguraLateral = imagemBookMatch.Width - larguraFrente;
+
+                var rectFrente = new SKRectI(larguraLateral, 0, imagemBookMatch.Width, imagemBookMatch.Height);
+                var rectLateral = new SKRectI(0, 0, larguraLateral, imagemBookMatch.Height);
+
+                var imagemFrente = CropBitmap(imagemBookMatch, rectFrente);
+                var imagemLateral = CropBitmap(imagemBookMatch, rectLateral);
+
+                // Aplica transformações
+                var frente = imagemFrente.Resize(new SKImageInfo(390, 776), SKFilterQuality.High);
+                frente = _transformService.DistortionInclina(frente, 390, 280, 776, 398, 0);
+
+                var lateral = imagemLateral.Resize(new SKImageInfo(390, 182), SKFilterQuality.High);
+                lateral = _transformService.DistortionInclina(lateral, 390, 280, 182, 399, 0);
+
+                // Monta mosaico 1523x1238
+                var mosaicoEmBranco = new SKBitmap(1523, 1238);
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    canvas.DrawBitmap(lateral, 209, 676, paint);
+                    canvas.DrawBitmap(frente, 391, 545, paint);
+                }
+
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    var moldura = CarregarRecurso("bancada4.png");
+                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+                }
+
+                if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                resultado.Add(mosaicoEmBranco);
+
+                imagemBookMatch.Dispose();
+                imagemFrente.Dispose();
+                imagemLateral.Dispose();
+                frente.Dispose();
+                lateral.Dispose();
+            }
+
+            return resultado;
+        }
+
+        /// <summary>
+        /// Gera mockup de Bancada tipo 5 (Countertop #5)
+        /// Três componentes com frente espelhada - 4 variações
+        /// </summary>
+        public List<SKBitmap> GerarBancada5(SKBitmap imagemOriginal, bool flip = false)
+        {
+            _logger.LogWarning($"========== INICIANDO GerarBancada5 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            var resultado = new List<SKBitmap>();
+
+            // Bancada5 gera 4 variações (normal, 180°, FlipX, 180° novamente)
+            for (int contaProcesso = 1; contaProcesso <= 4; contaProcesso++)
+            {
+                SKBitmap imagemBookMatch;
+                if (contaProcesso == 1) imagemBookMatch = imagemOriginal.Copy();
+                else if (contaProcesso == 2) imagemBookMatch = RotateFlip180(imagemOriginal);
+                else if (contaProcesso == 3) imagemBookMatch = FlipHorizontal(imagemOriginal);
+                else imagemBookMatch = RotateFlip180(FlipHorizontal(imagemOriginal));
+
+                // Divide em frente (1400px) e lateral (700px)
+                int larguraFrente = (int)(imagemBookMatch.Width * 0.67);
+                int larguraLateral = imagemBookMatch.Width - larguraFrente;
+
+                var rectFrente = new SKRectI(larguraLateral, 0, imagemBookMatch.Width, imagemBookMatch.Height);
+                var rectLateral = new SKRectI(0, 0, larguraLateral, imagemBookMatch.Height);
+
+                var imagemFrente = CropBitmap(imagemBookMatch, rectFrente);
+                var imagemLateral = CropBitmap(imagemBookMatch, rectLateral);
+
+                // Processa frente
+                var frente = imagemFrente.Resize(new SKImageInfo(420, 360), SKFilterQuality.High);
+                frente = _transformService.DistortionInclina(frente, 420, 340, 360, 420, 0);
+
+                // Processa frente espelhada
+                var frenteEsp = imagemFrente.Resize(new SKImageInfo(340, 304), SKFilterQuality.High);
+                frenteEsp = FlipHorizontal(frenteEsp);
+
+                // Processa lateral
+                var lateral = imagemLateral.Resize(new SKImageInfo(420, 125), SKFilterQuality.High);
+                lateral = _transformService.DistortionInclina(lateral, 420, 324, 125, 420, 0);
+
+                // Monta mosaico 1500x1068
+                var mosaicoEmBranco = new SKBitmap(1500, 1068);
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    canvas.DrawBitmap(lateral, 185, 589, paint);
+                    canvas.DrawBitmap(frente, 310, 518, paint);
+                    canvas.DrawBitmap(frenteEsp, 670, 575, paint);
+                }
+
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    var moldura = CarregarRecurso("bancada5.png");
+                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+                }
+
+                if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                resultado.Add(mosaicoEmBranco);
+
+                imagemBookMatch.Dispose();
+                imagemFrente.Dispose();
+                imagemLateral.Dispose();
+                frente.Dispose();
+                frenteEsp.Dispose();
+                lateral.Dispose();
+            }
+
+            return resultado;
+        }
+
+        /// <summary>
+        /// Gera mockup de Bancada tipo 6 (Countertop #6)
+        /// Sistema de faixas com divisão 3/4
+        /// </summary>
+        public List<SKBitmap> GerarBancada6(SKBitmap imagemOriginal, bool flip = false)
+        {
+            _logger.LogWarning($"========== INICIANDO GerarBancada6 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            var resultado = new List<SKBitmap>();
+
+            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
+            {
+                SKBitmap imagemBookMatch = contaProcesso == 1 ? imagemOriginal.Copy() : RotateFlip180(imagemOriginal);
+
+                // Divide em 3/4 (bancada) e 1/4 (pé)
+                int tresQuartos = (int)(imagemBookMatch.Width / 1.3333);
+                var rectBancada = new SKRectI(0, 0, tresQuartos, imagemBookMatch.Height);
+                var imagemBancada = CropBitmap(imagemBookMatch, rectBancada);
+
+                // Usa 90% da altura para bancada, 10% para faixa
+                int alturaBancada = (int)(imagemBancada.Height * 0.9);
+                var rect90 = new SKRectI(0, 0, imagemBancada.Width, alturaBancada);
+                var bmp90 = CropBitmap(imagemBancada, rect90);
+
+                // Redimensiona e aplica transformação
+                var bmp = bmp90.Resize(new SKImageInfo(290, 686), SKFilterQuality.High);
+                bmp = _transformService.DistortionInclina(bmp, 290, 114, 686, 290, 176);
+
+                // Monta mosaico 2500x1632
+                var mosaicoEmBranco = new SKBitmap(2500, 1632);
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    canvas.DrawBitmap(bmp, -269, 825, paint);
+                }
+
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    var moldura = CarregarRecurso("bancada6.png");
+                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+                }
+
+                if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                resultado.Add(mosaicoEmBranco);
+
+                imagemBookMatch.Dispose();
+                imagemBancada.Dispose();
+                bmp90.Dispose();
+                bmp.Dispose();
+            }
+
+            return resultado;
+        }
+
+        /// <summary>
+        /// Gera mockup de Bancada tipo 7 (Countertop #7)
+        /// Com rotação de -21.5 graus e faixa decorativa
+        /// </summary>
+        public List<SKBitmap> GerarBancada7(SKBitmap imagemOriginal, bool flip = false)
+        {
+            _logger.LogWarning($"========== INICIANDO GerarBancada7 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            var resultado = new List<SKBitmap>();
+
+            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
+            {
+                SKBitmap imagemBookMatch = contaProcesso == 1 ? imagemOriginal.Copy() : RotateFlip180(imagemOriginal);
+
+                // Divide em 2/3 e 1/3
+                int doisTercos = (int)(imagemBookMatch.Width / 1.5);
+                var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
+                var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
+
+                // Redimensiona para grande canvas 4000x4000
+                var bmp = imagemDoisTercos.Resize(new SKImageInfo(2864, 993), SKFilterQuality.High);
+                bmp = _transformService.DistortionInclina(bmp, 2864, 1000, 993, 2864, 1864);
+
+                // Rotaciona -21.5 graus
+                var bancadaRotacionada = _transformService.RotateImage(bmp, -21.5f);
+
+                // Monta mosaico 2500x1667
+                var mosaicoEmBranco = new SKBitmap(2500, 1667);
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    canvas.DrawBitmap(bancadaRotacionada, -211, 279, paint);
+                }
+
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    var moldura = CarregarRecurso("bancada7.png");
+                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+                }
+
+                if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                resultado.Add(mosaicoEmBranco);
+
+                imagemBookMatch.Dispose();
+                imagemDoisTercos.Dispose();
+                bmp.Dispose();
+                bancadaRotacionada.Dispose();
+            }
+
+            return resultado;
+        }
+
+        /// <summary>
+        /// Gera mockup de Bancada tipo 8 (Countertop #8)
+        /// Com rotação de -57.2 graus e faixa vertical
+        /// </summary>
+        public List<SKBitmap> GerarBancada8(SKBitmap imagemOriginal, bool flip = false)
+        {
+            _logger.LogWarning($"========== INICIANDO GerarBancada8 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            var resultado = new List<SKBitmap>();
+
+            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
+            {
+                SKBitmap imagemBookMatch = contaProcesso == 1 ? imagemOriginal.Copy() : RotateFlip180(imagemOriginal);
+
+                // Divide em 2/3 e 1/3
+                int doisTercos = (int)(imagemBookMatch.Width / 1.5);
+                var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
+                var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
+
+                // Redimensiona
+                var bmp = imagemDoisTercos.Resize(new SKImageInfo(1816, 1206), SKFilterQuality.High);
+                bmp = _transformService.DistortionInclina(bmp, 1816, 1077, 1206, 1816, 0);
+
+                // Aplica Skew com valor 950
+                bmp = _transformService.SkewSimples(bmp, 0, 950);
+
+                // Rotaciona -57.2 graus
+                var bancadaRotacionada = _transformService.RotateImage(bmp, -57.2f);
+
+                // Monta mosaico 2500x1554
+                var mosaicoEmBranco = new SKBitmap(2500, 1554);
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    canvas.DrawBitmap(bancadaRotacionada, -89, -432, paint);
+                }
+
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    var moldura = CarregarRecurso("bancada8.png");
+                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+                }
+
+                if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                resultado.Add(mosaicoEmBranco);
+
+                imagemBookMatch.Dispose();
+                imagemDoisTercos.Dispose();
+                bmp.Dispose();
+                bancadaRotacionada.Dispose();
+            }
+
+            return resultado;
+        }
     }
 }

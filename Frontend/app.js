@@ -1354,9 +1354,8 @@ async function generateCountertopAmbiente() {
         formData.append('imagem', state.countertopState.croppedImage, 'cropped.jpg');
         formData.append('flip', state.countertopState.flip);
 
-        const endpoint = state.countertopState.selectedType === 'bancada1'
-            ? '/api/ambiente/bancada1'
-            : '/api/ambiente/bancada2';
+        // Suporta bancada1 até bancada8
+        const endpoint = `/api/mockup/${state.countertopState.selectedType}`;
 
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
