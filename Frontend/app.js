@@ -237,7 +237,7 @@ function setupEventListeners() {
     elements.cancelCountertopSelectionBtn.addEventListener('click', () => showMainScreen());
     elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
     elements.continuarCropNichoBtn.addEventListener('click', abrirCropParaNicho);
-    elements.backToMainBtn.addEventListener('click', () => showMainScreen());
+    elements.backToMainBtn.addEventListener('click', handleBackFromResults);
     elements.newMockupBtn.addEventListener('click', startMockupFlow);
     elements.downloadAllMockupsBtn.addEventListener('click', downloadAllMockups);
 
@@ -352,6 +352,21 @@ function showScreen(screen) {
 
 function showLoginScreen() {
     showScreen(elements.loginScreen);
+}
+
+/**
+ * Gerencia o botão "Voltar" da tela de resultados
+ * Se há crop de countertop salvo, volta para seleção
+ * Caso contrário, volta para tela principal
+ */
+function handleBackFromResults() {
+    if (state.countertopState.croppedImage) {
+        // Está no flow de countertop: volta para seleção
+        showScreen(elements.countertopSelectionScreen);
+    } else {
+        // Flow normal: volta para tela principal
+        showMainScreen();
+    }
 }
 
 async function showMainScreen() {

@@ -25,6 +25,7 @@ uploads/
 # Exceções: permitir imagens das pastas de recursos
 !Backend/Molduras/*.png
 !Cavaletes/*.png
+!Backend/MockupResources/Bancadas/*.png
 
 # Environment variables
 .env
