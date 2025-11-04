@@ -487,39 +487,6 @@ namespace PicStoneFotoAPI.Services
             return SKBitmap.Decode(mStream);
         }
 
-        private SKBitmap RotateImage(SKBitmap source, float degrees)
-        {
-            // Calcula novas dimensões após rotação
-            var radians = degrees * Math.PI / 180;
-            var cos = Math.Abs(Math.Cos(radians));
-            var sin = Math.Abs(Math.Sin(radians));
-            var newWidth = (int)(source.Width * cos + source.Height * sin);
-            var newHeight = (int)(source.Width * sin + source.Height * cos);
-
-            var surface = SKSurface.Create(new SKImageInfo(newWidth, newHeight));
-            var canvas = surface.Canvas;
-            canvas.Clear(SKColors.Transparent);
-
-            // Rotaciona em torno do centro
-            canvas.Translate(newWidth / 2f, newHeight / 2f);
-            canvas.RotateDegrees(degrees);
-            canvas.Translate(-source.Width / 2f, -source.Height / 2f);
-
-            using var paint = new SKPaint
-            {
-                FilterQuality = SKFilterQuality.High,
-                IsAntialias = true
-            };
-
-            canvas.DrawBitmap(source, 0, 0, paint);
-
-            var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Png, 100);
-
-            using var mStream = new MemoryStream(data.ToArray());
-            return SKBitmap.Decode(mStream);
-        }
-
         private SKBitmap FlipHorizontal(SKBitmap source)
         {
             var surface = SKSurface.Create(new SKImageInfo(source.Width, source.Height));
@@ -794,9 +761,6 @@ namespace PicStoneFotoAPI.Services
                 // Mantém dimensões originais do crop - DistortionInclina faz o resize internamente
                 var lateral = _transformService.DistortionInclina(imagemLateral, 390, 280, 182, 399, 0);
                 lateral = _transformService.SkewSimples(lateral, 0, 90);  // Skew
-
-                // TESTE: Rotaciona 20° horário para corrigir inclinação
-                lateral = RotateImage(lateral, 20);
 
                 // Monta mosaico 1523x1238
                 var mosaicoEmBranco = new SKBitmap(1523, 1238);
