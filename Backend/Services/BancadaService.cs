@@ -733,38 +733,15 @@ namespace PicStoneFotoAPI.Services
             // Bancada 3 do VB.NET processa apenas 1 versão
             for (int contaProcesso = 1; contaProcesso <= 1; contaProcesso++)
             {
+                // imagemOriginal já é o resultado do BookMatch (2000x1200)
                 var imagemBookMatch = imagemOriginal.Copy();
-
-                // ============ CORREÇÃO CRÍTICA: VALIDAR ORIENTAÇÃO ============
-                // Bancada 3 DEVE processar imagem em PAISAGEM (largura > altura)
-                // VB.NET original trabalha com TamanhoDoQuadro=1200 assumindo imagem 2000x1200
-                if (imagemBookMatch.Height > imagemBookMatch.Width)
-                {
-                    _logger.LogWarning($"⚠️ CORREÇÃO AUTOMÁTICA: Imagem em RETRATO ({imagemBookMatch.Width}x{imagemBookMatch.Height})");
-                    _logger.LogWarning($"⚠️ Rotacionando 90° para PAISAGEM conforme esperado pelo VB.NET original");
-                    imagemBookMatch = RotateFlip90(imagemBookMatch);
-                    _logger.LogWarning($"✓ CORRIGIDO: {imagemBookMatch.Width}x{imagemBookMatch.Height} (paisagem)");
-                }
-                else
-                {
-                    _logger.LogInformation($"✓ Orientação correta: {imagemBookMatch.Width}x{imagemBookMatch.Height} (paisagem)");
-                }
+                _logger.LogInformation($"BookMatch entrada: {imagemBookMatch.Width}x{imagemBookMatch.Height}");
 
                 // ============ DIVISÃO EM 2/3 E 1/3 COM OVERLAP ============
-                // VALIDAÇÃO: Garantir que estamos processando imagem em paisagem
-                if (imagemBookMatch.Width < imagemBookMatch.Height)
-                {
-                    throw new InvalidOperationException(
-                        $"ERRO CRÍTICO: Orientação inválida após validação! " +
-                        $"Width={imagemBookMatch.Width}, Height={imagemBookMatch.Height}. " +
-                        $"Bancada 3 requer paisagem (Width > Height)."
-                    );
-                }
-
                 int doisTercos = (int)(imagemBookMatch.Width / 1.5);
                 int umTerco = imagemBookMatch.Width - doisTercos;
 
-                _logger.LogInformation($"✓ Divisão validada: 2/3={doisTercos}px, 1/3={umTerco}px (paisagem)");
+                _logger.LogInformation($"Divisão: 2/3={doisTercos}px, 1/3={umTerco}px");
 
                 var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
                 // SKRectI(left, top, right, bottom) - right = left + width
