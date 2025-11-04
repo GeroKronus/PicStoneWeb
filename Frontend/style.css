@@ -723,7 +723,7 @@ body {
     box-shadow: 0 8px 15px -3px rgba(160, 82, 45, 0.4);
 }
 
-.mockup-config-card {
+.ambiente-config-card {
     background: var(--card-background);
     border-radius: 16px;
     padding: 24px;
@@ -829,14 +829,14 @@ body {
 }
 
 /* Mockups Gallery */
-.mockups-gallery {
+.ambientes-gallery {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem;
     margin: 2rem 0;
 }
 
-.mockup-item {
+.ambiente-item {
     background: white;
     border-radius: 12px;
     padding: 1.5rem;
@@ -846,28 +846,28 @@ body {
     gap: 1rem;
 }
 
-.mockup-item h3 {
+.ambiente-item h3 {
     margin: 0;
     font-size: 1rem;
     color: #333;
     text-align: center;
 }
 
-.mockup-item img {
+.ambiente-item img {
     width: 100%;
     height: auto;
     border-radius: 8px;
     object-fit: contain;
 }
 
-.mockup-actions {
+.ambiente-actions {
     display: flex !important;
     gap: 12px;
     margin-top: 8px;
     width: 100%;
 }
 
-.mockup-actions .btn {
+.ambiente-actions .btn {
     flex: 1;
     font-size: 14px;
     padding: 12px 16px;
@@ -880,12 +880,12 @@ body {
 
 /* Mobile específico */
 @media (max-width: 768px) {
-    .mockup-actions {
+    .ambiente-actions {
         flex-direction: column;
         gap: 10px;
     }
 
-    .mockup-actions .btn {
+    .ambiente-actions .btn {
         width: 100%;
         font-size: 16px;
         padding: 14px;
@@ -1073,7 +1073,7 @@ body {
 .countertop-preview {
     width: 100%;
     height: 200px;
-    background: #d5d5d5;
+    background: #909090;
     border-radius: 8px;
     overflow: hidden;
     margin-bottom: 12px;

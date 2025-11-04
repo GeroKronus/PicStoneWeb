@@ -7,8 +7,8 @@ const state = {
     username: localStorage.getItem('username') || null,
     currentPhoto: null,
     currentPhotoFile: null,
-    originalPhoto: null, // Foto original para mockup
-    mockupMode: false, // Indica se está em modo mockup
+    originalPhoto: null, // Foto original para ambiente
+    ambienteMode: false, // Indica se está em modo ambiente
     cropData: {
         image: null,
         startX: 0,
@@ -18,7 +18,7 @@ const state = {
         isDragging: false,
         scale: 1
     },
-    mockupConfig: {
+    ambienteConfig: {
         tipo: 'simples',
         fundo: 'claro'
     },
@@ -36,8 +36,8 @@ const elements = {
     mainScreen: document.getElementById('mainScreen'),
     cropScreen: document.getElementById('cropScreen'),
     historyScreen: document.getElementById('historyScreen'),
-    mockupConfigScreen: document.getElementById('mockupConfigScreen'),
-    mockupResultScreen: document.getElementById('mockupResultScreen'),
+    ambienteConfigScreen: document.getElementById('ambienteConfigScreen'),
+    ambienteResultScreen: document.getElementById('ambienteResultScreen'),
     loginForm: document.getElementById('loginForm'),
     loginError: document.getElementById('loginError'),
     captureBtn: document.getElementById('captureBtn'),
@@ -64,23 +64,23 @@ const elements = {
     cropCanvas: document.getElementById('cropCanvas'),
     cancelCropBtn: document.getElementById('cancelCropBtn'),
     resetCropBtn: document.getElementById('resetCropBtn'),
-    mockupBtn: document.getElementById('mockupBtn'),
+    ambienteBtn: document.getElementById('ambienteBtn'),
     nichoBtn: document.getElementById('nichoBtn'),
     photoIndicator: document.getElementById('photoIndicator'),
-    cancelMockupBtn: document.getElementById('cancelMockupBtn'),
+    cancelAmbienteBtn: document.getElementById('cancelAmbienteBtn'),
     nichoConfigScreen: document.getElementById('nichoConfigScreen'),
     cancelNichoBtn: document.getElementById('cancelNichoBtn'),
     continuarCropNichoBtn: document.getElementById('continuarCropNichoBtn'),
-    continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
+    continuarCropAmbienteBtn: document.getElementById('continuarCropAmbienteBtn'),
     countertopsBtn: document.getElementById('countertopsBtn'),
     countertopSelectionScreen: document.getElementById('countertopSelectionScreen'),
     cancelCountertopSelectionBtn: document.getElementById('cancelCountertopSelectionBtn'),
     flipCountertop: document.getElementById('flipCountertop'),
     backToMainBtn: document.getElementById('backToMainBtn'),
-    downloadAllMockupsBtn: document.getElementById('downloadAllMockupsBtn'),
-    newMockupBtn: document.getElementById('newMockupBtn'),
-    mockupsGallery: document.getElementById('mockupsGallery'),
-    mockupMessage: document.getElementById('mockupMessage'),
+    downloadAllAmbientesBtn: document.getElementById('downloadAllAmbientesBtn'),
+    newAmbienteBtn: document.getElementById('newAmbienteBtn'),
+    ambientesGallery: document.getElementById('ambientesGallery'),
+    ambienteMessage: document.getElementById('ambienteMessage'),
     cropInfo: document.getElementById('cropInfo'),
     cropInfoArea: document.getElementById('cropInfoArea'),
     cropInfoMP: document.getElementById('cropInfoMP'),
@@ -229,29 +229,29 @@ function setupEventListeners() {
     elements.cropCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     elements.cropCanvas.addEventListener('touchend', endCrop);
 
-    // Mockup event listeners
-    elements.mockupBtn.addEventListener('click', startMockupFlow);
+    // Ambiente event listeners
+    elements.ambienteBtn.addEventListener('click', startAmbienteFlow);
     elements.nichoBtn.addEventListener('click', startNichoFlow);
     elements.countertopsBtn.addEventListener('click', startCountertopFlow);
-    elements.cancelMockupBtn.addEventListener('click', () => showMainScreen());
+    elements.cancelAmbienteBtn.addEventListener('click', () => showMainScreen());
     elements.cancelNichoBtn.addEventListener('click', () => showMainScreen());
     elements.cancelCountertopSelectionBtn.addEventListener('click', () => showMainScreen());
-    elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
+    elements.continuarCropAmbienteBtn.addEventListener('click', abrirCropParaAmbiente);
     elements.continuarCropNichoBtn.addEventListener('click', abrirCropParaNicho);
     elements.backToMainBtn.addEventListener('click', handleBackFromResults);
-    elements.newMockupBtn.addEventListener('click', startMockupFlow);
-    elements.downloadAllMockupsBtn.addEventListener('click', downloadAllMockups);
+    elements.newAmbienteBtn.addEventListener('click', startAmbienteFlow);
+    elements.downloadAllAmbientesBtn.addEventListener('click', downloadAllAmbientes);
 
     // Event delegation para botões de download e compartilhar
-    elements.mockupsGallery.addEventListener('click', (e) => {
+    elements.ambientesGallery.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-download-single')) {
             const url = e.target.dataset.url;
             const nome = e.target.dataset.nome;
-            downloadMockup(url, nome);
+            downloadAmbiente(url, nome);
         } else if (e.target.classList.contains('btn-share-single')) {
             const url = e.target.dataset.url;
             const nome = e.target.dataset.nome;
-            shareMockup(url, nome);
+            shareAmbiente(url, nome);
         }
     });
 
@@ -541,7 +541,7 @@ function clearPhoto() {
     elements.photoPreview.classList.add('hidden');
     elements.fileInput.value = '';
     elements.submitBtn.disabled = true;
-    elements.mockupBtn.classList.add('hidden');
+    elements.ambienteBtn.classList.add('hidden');
     elements.nichoBtn.classList.add('hidden');
     elements.countertopsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
@@ -553,7 +553,7 @@ function clearPhotoState() {
     elements.previewImage.src = '';
     elements.photoPreview.classList.add('hidden');
     elements.submitBtn.disabled = true;
-    elements.mockupBtn.classList.add('hidden');
+    elements.ambienteBtn.classList.add('hidden');
     elements.nichoBtn.classList.add('hidden');
     elements.countertopsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
@@ -599,8 +599,8 @@ async function handleUpload(e) {
 
         showMessage(data.mensagem, 'success');
 
-        // Mostra botões de mockup (permanecem visíveis)
-        elements.mockupBtn.classList.remove('hidden');
+        // Mostra botões de ambiente (permanecem visíveis)
+        elements.ambienteBtn.classList.remove('hidden');
         elements.nichoBtn.classList.remove('hidden');
         elements.countertopsBtn.classList.remove('hidden');
 
@@ -614,8 +614,8 @@ async function handleUpload(e) {
             elements.uploadForm.reset();
             // Mostra indicador de foto disponível
             elements.photoIndicator.classList.remove('hidden');
-            // NÃO limpa state.originalPhoto - fica disponível para mockup/ajuste
-            // NÃO oculta mockupBtn - fica acessível
+            // NÃO limpa state.originalPhoto - fica disponível para ambiente/ajuste
+            // NÃO oculta ambienteBtn - fica acessível
         }, 2000);
 
     } catch (error) {
@@ -976,17 +976,17 @@ function confirmCrop() {
         const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
 
         // Verifica se é flow de countertop (crop primeiro, depois escolha)
-        if (state.countertopState.croppedImage !== null || state.mockupConfig.tipo === 'countertop') {
+        if (state.countertopState.croppedImage !== null || state.ambienteConfig.tipo === 'countertop') {
             // Flow de countertop: salva crop e mostra tela de seleção
             showCountertopSelection(file);
-        } else if (state.mockupMode) {
-            // Outros mockups (cavalete, nicho): gera diretamente
-            gerarMockup(file);
+        } else if (state.ambienteMode) {
+            // Outros ambientes (cavalete, nicho): gera diretamente
+            gerarAmbiente(file);
         } else {
             // Modo ajuste normal
             compressAndPreviewImage(file);
-            // Mostra botões mockup pois já tem imagem disponível
-            elements.mockupBtn.classList.remove('hidden');
+            // Mostra botões ambiente pois já tem imagem disponível
+            elements.ambienteBtn.classList.remove('hidden');
             elements.nichoBtn.classList.remove('hidden');
             elements.countertopsBtn.classList.remove('hidden');
             // Mostra botão de reset pois a imagem foi modificada
@@ -999,7 +999,7 @@ function confirmCrop() {
 function cancelCrop() {
     // Limpa input file para permitir selecionar a mesma imagem novamente
     elements.fileInput.value = '';
-    state.mockupMode = false;
+    state.ambienteMode = false;
     elements.cropInfo.classList.add('hidden');
     showMainScreen();
 }
@@ -1011,7 +1011,7 @@ function abrirCropParaAjuste() {
     }
 
     // Carrega imagem original no crop (modo ajuste normal)
-    state.mockupMode = false;
+    state.ambienteMode = false;
     state.cropData.image = state.originalPhoto;
     initializeCropCanvas();
     showCropScreen();
@@ -1040,24 +1040,24 @@ function resetToOriginalImage() {
 }
 
 // ========== MOCKUP DE CAVALETES ==========
-function startMockupFlow() {
+function startAmbienteFlow() {
     if (!state.originalPhoto) {
-        showMessage('Nenhuma foto disponível para mockup', 'error');
+        showMessage('Nenhuma foto disponível para ambiente', 'error');
         return;
     }
 
     // Mostra tela de configuração
-    showScreen(elements.mockupConfigScreen);
+    showScreen(elements.ambienteConfigScreen);
 }
 
-function abrirCropParaMockup() {
+function abrirCropParaAmbiente() {
     // Captura configuração de fundo
     const fundoSelecionado = document.querySelector('input[name="fundoCavalete"]:checked');
-    state.mockupConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
-    state.mockupConfig.tipo = 'cavalete'; // Define tipo como cavalete
+    state.ambienteConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
+    state.ambienteConfig.tipo = 'cavalete'; // Define tipo como cavalete
 
-    // Ativa modo mockup
-    state.mockupMode = true;
+    // Ativa modo ambiente
+    state.ambienteMode = true;
 
     // Carrega imagem original no crop
     state.cropData.image = state.originalPhoto;
@@ -1065,32 +1065,32 @@ function abrirCropParaMockup() {
     showCropScreen();
 }
 
-async function gerarMockup(imagemCropada) {
+async function gerarAmbiente(imagemCropada) {
     try {
         elements.uploadProgress.classList.remove('hidden');
 
-        // Verifica o tipo de mockup
-        const isNicho = state.mockupConfig.tipo === 'nicho1';
-        const isBancada1 = state.mockupConfig.tipo === 'bancada1';
+        // Verifica o tipo de ambiente
+        const isNicho = state.ambienteConfig.tipo === 'nicho1';
+        const isBancada1 = state.ambienteConfig.tipo === 'bancada1';
 
         const formData = new FormData();
         formData.append((isNicho || isBancada1) ? 'imagem' : 'ImagemCropada', imagemCropada);
 
         if (isNicho) {
             // Parâmetros específicos do nicho
-            formData.append('fundoEscuro', state.mockupConfig.fundo === 'escuro');
-            formData.append('incluirShampoo', state.mockupConfig.incluirShampoo || false);
-            formData.append('incluirSabonete', state.mockupConfig.incluirSabonete || false);
+            formData.append('fundoEscuro', state.ambienteConfig.fundo === 'escuro');
+            formData.append('incluirShampoo', state.ambienteConfig.incluirShampoo || false);
+            formData.append('incluirSabonete', state.ambienteConfig.incluirSabonete || false);
         } else if (isBancada1) {
             // Parâmetros específicos da bancada1
-            formData.append('flip', state.mockupConfig.flip || false);
+            formData.append('flip', state.ambienteConfig.flip || false);
         } else {
             // Parâmetros do cavalete (simples)
             formData.append('TipoCavalete', 'simples'); // Sempre simples por enquanto
-            formData.append('Fundo', state.mockupConfig.fundo);
+            formData.append('Fundo', state.ambienteConfig.fundo);
         }
 
-        const endpoint = isNicho ? '/api/mockup/nicho1' : (isBancada1 ? '/api/mockup/bancada1' : '/api/mockup/gerar');
+        const endpoint = isNicho ? '/api/ambiente/nicho1' : (isBancada1 ? '/api/ambiente/bancada1' : '/api/ambiente/gerar');
 
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
@@ -1107,14 +1107,14 @@ async function gerarMockup(imagemCropada) {
         console.log('Data:', data);
 
         if (!response.ok) {
-            throw new Error(data.mensagem || 'Erro ao gerar mockup');
+            throw new Error(data.mensagem || 'Erro ao gerar ambiente');
         }
 
         // Exibe resultado (backend retorna diferente para nicho, bancada1 e cavalete)
-        const caminhos = data.caminhosGerados || data.mockups;
+        const caminhos = data.caminhosGerados || data.ambientes;
 
         if (caminhos && caminhos.length > 0) {
-            const gallery = document.getElementById('mockupsGallery');
+            const gallery = document.getElementById('ambientesGallery');
             gallery.innerHTML = ''; // Limpa galeria
 
             // Labels diferentes para cada tipo
@@ -1133,54 +1133,54 @@ async function gerarMockup(imagemCropada) {
 
             caminhos.forEach((caminho, index) => {
                 // Para nicho e bancada1, caminho já vem completo; para cavalete, precisa montar
-                const mockupUrl = (isNicho || isBancada1) ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
+                const ambienteUrl = (isNicho || isBancada1) ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
 
-                const mockupItem = document.createElement('div');
-                mockupItem.className = 'mockup-item';
-                mockupItem.innerHTML = `
-                    <h3>${labels[index] || `Mockup ${index + 1}`}</h3>
-                    <img src="${mockupUrl}" alt="${labels[index]}">
-                    <button class="btn btn-secondary btn-download-single" data-url="${mockupUrl}" data-nome="${caminho}">
+                const ambienteItem = document.createElement('div');
+                ambienteItem.className = 'ambiente-item';
+                ambienteItem.innerHTML = `
+                    <h3>${labels[index] || `Ambiente ${index + 1}`}</h3>
+                    <img src="${ambienteUrl}" alt="${labels[index]}">
+                    <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${caminho}">
                         ⬇️ Baixar
                     </button>
                 `;
-                gallery.appendChild(mockupItem);
+                gallery.appendChild(ambienteItem);
             });
 
             // Salva URLs para download em massa
-            state.mockupUrls = (isNicho || isBancada1)
+            state.ambienteUrls = (isNicho || isBancada1)
                 ? caminhos.map(c => `${API_URL}${c}`)
                 : caminhos.map(c => `${API_URL}/uploads/${c}`);
 
-            showScreen(elements.mockupResultScreen);
-            showMockupMessage(data.mensagem, 'success');
+            showScreen(elements.ambienteResultScreen);
+            showAmbienteMessage(data.mensagem, 'success');
         } else {
-            throw new Error('Nenhum mockup foi gerado');
+            throw new Error('Nenhum ambiente foi gerado');
         }
 
-        // Reseta modo mockup
-        state.mockupMode = false;
+        // Reseta modo ambiente
+        state.ambienteMode = false;
 
     } catch (error) {
-        showMockupMessage(error.message, 'error');
-        state.mockupMode = false;
+        showAmbienteMessage(error.message, 'error');
+        state.ambienteMode = false;
         showMainScreen();
     } finally {
         elements.uploadProgress.classList.add('hidden');
     }
 }
 
-function downloadMockup(url, nome) {
+function downloadAmbiente(url, nome) {
     const link = document.createElement('a');
     link.href = url;
-    link.download = nome || `mockup_${Date.now()}.jpg`;
+    link.download = nome || `ambiente_${Date.now()}.jpg`;
     link.click();
 }
 
 /**
- * Compartilha mockup via Web Share API ou WhatsApp Web
+ * Compartilha ambiente via Web Share API ou WhatsApp Web
  */
-async function shareMockup(url, nome) {
+async function shareAmbiente(url, nome) {
     try {
         // Tenta usar Web Share API (funciona em mobile e alguns browsers desktop)
         if (navigator.share) {
@@ -1190,18 +1190,18 @@ async function shareMockup(url, nome) {
             const file = new File([blob], `${nome}.jpg`, { type: 'image/jpeg' });
 
             await navigator.share({
-                title: 'Mockup PicStone',
-                text: `Confira este mockup de ${nome}`,
+                title: 'Ambiente PicStone',
+                text: `Confira este ambiente de ${nome}`,
                 files: [file]
             });
 
-            showMockupMessage('Compartilhado com sucesso!', 'success');
+            showAmbienteMessage('Compartilhado com sucesso!', 'success');
         } else {
             // Fallback: Compartilhar via WhatsApp Web com link da imagem
-            const texto = encodeURIComponent(`Confira este mockup: ${url}`);
+            const texto = encodeURIComponent(`Confira este ambiente: ${url}`);
             const whatsappUrl = `https://wa.me/?text=${texto}`;
             window.open(whatsappUrl, '_blank');
-            showMockupMessage('Abrindo WhatsApp...', 'success');
+            showAmbienteMessage('Abrindo WhatsApp...', 'success');
         }
     } catch (error) {
         // Se usuário cancelar ou der erro
@@ -1211,46 +1211,46 @@ async function shareMockup(url, nome) {
             // Último fallback: copiar link para clipboard
             try {
                 await navigator.clipboard.writeText(url);
-                showMockupMessage('Link copiado! Cole no WhatsApp', 'success');
+                showAmbienteMessage('Link copiado! Cole no WhatsApp', 'success');
             } catch (clipError) {
-                showMockupMessage('Erro ao compartilhar', 'error');
+                showAmbienteMessage('Erro ao compartilhar', 'error');
             }
         }
     }
 }
 
-function downloadAllMockups() {
-    if (!state.mockupUrls || state.mockupUrls.length === 0) {
-        showMockupMessage('Nenhum mockup disponível para download', 'error');
+function downloadAllAmbientes() {
+    if (!state.ambienteUrls || state.ambienteUrls.length === 0) {
+        showAmbienteMessage('Nenhum ambiente disponível para download', 'error');
         return;
     }
 
-    state.mockupUrls.forEach((url, index) => {
+    state.ambienteUrls.forEach((url, index) => {
         setTimeout(() => {
             const link = document.createElement('a');
             link.href = url;
-            link.download = `mockup_${index + 1}_${Date.now()}.jpg`;
+            link.download = `ambiente_${index + 1}_${Date.now()}.jpg`;
             link.click();
         }, index * 500); // Delay de 500ms entre cada download
     });
 
-    showMockupMessage('Baixando todos os mockups...', 'success');
+    showAmbienteMessage('Baixando todos os ambientes...', 'success');
 }
 
-function showMockupMessage(message, type) {
-    elements.mockupMessage.textContent = message;
-    elements.mockupMessage.className = `message ${type}`;
-    elements.mockupMessage.classList.remove('hidden');
+function showAmbienteMessage(message, type) {
+    elements.ambienteMessage.textContent = message;
+    elements.ambienteMessage.className = `message ${type}`;
+    elements.ambienteMessage.classList.remove('hidden');
 
     setTimeout(() => {
-        elements.mockupMessage.classList.add('hidden');
+        elements.ambienteMessage.classList.add('hidden');
     }, 5000);
 }
 
 // ========== NICHO MOCKUP FLOW ==========
 function startNichoFlow() {
     if (!state.originalPhoto) {
-        showMessage('Nenhuma foto disponível para mockup de nicho', 'error');
+        showMessage('Nenhuma foto disponível para ambiente de nicho', 'error');
         return;
     }
 
@@ -1264,13 +1264,13 @@ function abrirCropParaNicho() {
     const incluirShampoo = document.getElementById('incluirShampoo').checked;
     const incluirSabonete = document.getElementById('incluirSabonete').checked;
 
-    state.mockupConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
-    state.mockupConfig.tipo = 'nicho1'; // Identifica que é nicho
-    state.mockupConfig.incluirShampoo = incluirShampoo;
-    state.mockupConfig.incluirSabonete = incluirSabonete;
+    state.ambienteConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
+    state.ambienteConfig.tipo = 'nicho1'; // Identifica que é nicho
+    state.ambienteConfig.incluirShampoo = incluirShampoo;
+    state.ambienteConfig.incluirSabonete = incluirSabonete;
 
-    // Ativa modo mockup
-    state.mockupMode = true;
+    // Ativa modo ambiente
+    state.ambienteMode = true;
 
     // Carrega imagem original no crop
     state.cropData.image = state.originalPhoto;
@@ -1288,7 +1288,7 @@ function abrirCropParaNicho() {
  */
 function startCountertopFlow() {
     if (!state.originalPhoto) {
-        showMessage('Nenhuma foto disponível para mockup de bancada', 'error');
+        showMessage('Nenhuma foto disponível para ambiente de bancada', 'error');
         return;
     }
 
@@ -1298,8 +1298,8 @@ function startCountertopFlow() {
     state.countertopState.flip = false;
 
     // Marca que estamos no flow de countertop (para confirmCrop saber)
-    state.mockupConfig.tipo = 'countertop';
-    state.mockupMode = false; // Não queremos gerar ainda, só fazer crop
+    state.ambienteConfig.tipo = 'countertop';
+    state.ambienteMode = false; // Não queremos gerar ainda, só fazer crop
 
     // Carrega imagem original no crop
     state.cropData.image = state.originalPhoto;
@@ -1338,14 +1338,14 @@ async function selectCountertopAndGenerate(type) {
     state.countertopState.selectedType = type;
     state.countertopState.flip = elements.flipCountertop ? elements.flipCountertop.checked : false;
 
-    // Gera mockup
-    await generateCountertopMockup();
+    // Gera ambiente
+    await generateCountertopAmbiente();
 }
 
 /**
- * Passo 4: Gera o mockup da bancada selecionada
+ * Passo 4: Gera o ambiente da bancada selecionada
  */
-async function generateCountertopMockup() {
+async function generateCountertopAmbiente() {
     try {
         // Mostra loading overlay global
         elements.loadingOverlay.classList.remove('hidden');
@@ -1355,8 +1355,8 @@ async function generateCountertopMockup() {
         formData.append('flip', state.countertopState.flip);
 
         const endpoint = state.countertopState.selectedType === 'bancada1'
-            ? '/api/mockup/bancada1'
-            : '/api/mockup/bancada2';
+            ? '/api/ambiente/bancada1'
+            : '/api/ambiente/bancada2';
 
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
@@ -1369,7 +1369,7 @@ async function generateCountertopMockup() {
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.mensagem || 'Erro ao gerar mockup de bancada');
+            throw new Error(data.mensagem || 'Erro ao gerar ambiente de bancada');
         }
 
         // Exibe resultado
@@ -1377,13 +1377,13 @@ async function generateCountertopMockup() {
 
     } catch (error) {
         console.error('Erro ao gerar bancada:', error);
-        showMockupMessage(error.message, 'error');
+        showAmbienteMessage(error.message, 'error');
         showMainScreen();
     } finally {
         // Esconde loading overlay
         elements.loadingOverlay.classList.add('hidden');
         // Limpa flag de countertop
-        state.mockupConfig.tipo = 'simples';
+        state.ambienteConfig.tipo = 'simples';
     }
 }
 
@@ -1391,14 +1391,14 @@ async function generateCountertopMockup() {
  * Passo 5: Exibe resultados com opção de tentar outra bancada
  */
 function displayCountertopResults(data) {
-    const caminhos = data.mockups;
+    const caminhos = data.ambientes;
 
     if (!caminhos || caminhos.length === 0) {
-        showMessage('Nenhum mockup foi gerado', 'error');
+        showMessage('Nenhum ambiente foi gerado', 'error');
         return;
     }
 
-    const gallery = elements.mockupsGallery;
+    const gallery = elements.ambientesGallery;
     gallery.innerHTML = '';
 
     const labels = state.countertopState.selectedType === 'bancada1'
@@ -1406,37 +1406,37 @@ function displayCountertopResults(data) {
         : ['Bancada #2 - Normal', 'Bancada #2 - Rotacionado 180°'];
 
     caminhos.forEach((caminho, index) => {
-        const mockupUrl = `${API_URL}${caminho}`;
-        const mockupItem = document.createElement('div');
-        mockupItem.className = 'mockup-item';
-        mockupItem.innerHTML = `
+        const ambienteUrl = `${API_URL}${caminho}`;
+        const ambienteItem = document.createElement('div');
+        ambienteItem.className = 'ambiente-item';
+        ambienteItem.innerHTML = `
             <h3>${labels[index]}</h3>
-            <img src="${mockupUrl}" alt="${labels[index]}">
-            <div class="mockup-actions">
-                <button class="btn btn-secondary btn-download-single" data-url="${mockupUrl}" data-nome="${caminho}">
+            <img src="${ambienteUrl}" alt="${labels[index]}">
+            <div class="ambiente-actions">
+                <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${caminho}">
                     ⬇️ Baixar
                 </button>
-                <button class="btn btn-primary btn-share-single" data-url="${mockupUrl}" data-nome="${labels[index]}">
+                <button class="btn btn-primary btn-share-single" data-url="${ambienteUrl}" data-nome="${labels[index]}">
                     📤 Compartilhar
                 </button>
             </div>
         `;
-        gallery.appendChild(mockupItem);
+        gallery.appendChild(ambienteItem);
     });
 
     // Salva URLs para download em lote
-    state.mockupUrls = caminhos.map(c => `${API_URL}${c}`);
+    state.ambienteUrls = caminhos.map(c => `${API_URL}${c}`);
 
-    // Modifica botão "Novo Mockup" para permitir tentar outra bancada
-    elements.newMockupBtn.textContent = '🔄 Tentar Outra Bancada (Mesmo Recorte)';
-    elements.newMockupBtn.onclick = () => {
+    // Modifica botão "Novo Ambiente" para permitir tentar outra bancada
+    elements.newAmbienteBtn.textContent = '🔄 Tentar Outra Bancada (Mesmo Recorte)';
+    elements.newAmbienteBtn.onclick = () => {
         // Retorna para seleção com o mesmo crop
         showScreen(elements.countertopSelectionScreen);
     };
 
     // Mostra tela de resultado
-    showScreen(elements.mockupResultScreen);
-    showMockupMessage(data.mensagem, 'success');
+    showScreen(elements.ambienteResultScreen);
+    showAmbienteMessage(data.mensagem, 'success');
 }
 
 // ========== GERENCIAMENTO DE USUÁRIOS ==========

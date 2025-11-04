@@ -160,7 +160,7 @@
             </div>
 
             <!-- Botões de Simulação -->
-            <button id="mockupBtn" class="btn btn-mockup hidden">📐 Simular Cavalete</button>
+            <button id="ambienteBtn" class="btn btn-ambiente hidden">📐 Simular Cavalete</button>
             <button id="nichoBtn" class="btn btn-nicho hidden">🚿 Simular Nicho</button>
             <button id="countertopsBtn" class="btn btn-countertops hidden">🪑 Simular Bancadas</button>
 
@@ -207,15 +207,15 @@
         </div>
     </div>
 
-    <!-- Tela de Configuração de Mockup -->
-    <div id="mockupConfigScreen" class="screen">
+    <!-- Tela de Configuração de Ambiente -->
+    <div id="ambienteConfigScreen" class="screen">
         <div class="container">
             <div class="header">
-                <button id="cancelMockupBtn" class="btn-icon">← Voltar</button>
+                <button id="cancelAmbienteBtn" class="btn-icon">← Voltar</button>
                 <h1>Simular Cavalete</h1>
             </div>
 
-            <div class="mockup-config-card">
+            <div class="ambiente-config-card">
                 <div class="form-group">
                     <label>Selecione o Fundo</label>
                     <div class="radio-group">
@@ -230,7 +230,7 @@
                     </div>
                 </div>
 
-                <button id="continuarCropMockupBtn" class="btn btn-primary">Continuar para Crop</button>
+                <button id="continuarCropAmbienteBtn" class="btn btn-primary">Continuar para Crop</button>
             </div>
         </div>
     </div>
@@ -243,9 +243,9 @@
                 <h1>Configurar Nicho</h1>
             </div>
 
-            <div class="mockup-config-card">
+            <div class="ambiente-config-card">
                 <div class="info-box">
-                    <p><strong>🚿 Mockup de Nicho de Banheiro</strong></p>
+                    <p><strong>🚿 Ambiente de Nicho de Banheiro</strong></p>
                     <p>Crie visualizações realistas de nichos com sua pedra natural.</p>
                     <p>Serão geradas 2 versões (normal e rotacionada 180°).</p>
                 </div>
@@ -291,7 +291,7 @@
                 <h1>Escolha o Tipo de Bancada</h1>
             </div>
 
-            <div class="mockup-config-card">
+            <div class="ambiente-config-card">
                 <div class="config-section">
                     <h3>Escolha o Design</h3>
                     <div class="countertop-options">
@@ -327,24 +327,24 @@
         </div>
     </div>
 
-    <!-- Tela de Resultado do Mockup -->
-    <div id="mockupResultScreen" class="screen">
+    <!-- Tela de Resultado do Ambiente -->
+    <div id="ambienteResultScreen" class="screen">
         <div class="container">
             <div class="header">
                 <button id="backToMainBtn" class="btn-icon">← Voltar</button>
-                <h1>Mockups Gerados</h1>
+                <h1>Ambientes Gerados</h1>
             </div>
 
-            <div id="mockupsGallery" class="mockups-gallery">
-                <!-- Os mockups serão inseridos aqui dinamicamente -->
+            <div id="ambientesGallery" class="ambientes-gallery">
+                <!-- Os ambientes serão inseridos aqui dinamicamente -->
             </div>
 
-            <div class="mockup-actions">
-                <button id="downloadAllMockupsBtn" class="btn btn-primary">⬇️ Baixar Todos</button>
-                <button id="newMockupBtn" class="btn btn-secondary">🔄 Gerar Novos</button>
+            <div class="ambiente-actions">
+                <button id="downloadAllAmbientesBtn" class="btn btn-primary">⬇️ Baixar Todos</button>
+                <button id="newAmbienteBtn" class="btn btn-secondary">🔄 Gerar Novos</button>
             </div>
 
-            <div id="mockupMessage" class="message hidden"></div>
+            <div id="ambienteMessage" class="message hidden"></div>
         </div>
     </div>
 
@@ -444,7 +444,7 @@
     <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="loading-content">
             <div class="spinner"></div>
-            <p class="loading-message">Gerando mockup...</p>
+            <p class="loading-message">Gerando ambiente...</p>
             <p class="loading-submessage">Isso pode levar alguns segundos</p>
         </div>
     </div>
