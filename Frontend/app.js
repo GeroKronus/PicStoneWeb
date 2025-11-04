@@ -1366,10 +1366,21 @@ async function generateCountertopAmbiente() {
             body: formData
         });
 
-        const data = await response.json();
+        // Verifica se há conteúdo antes de parsear JSON
+        const contentType = response.headers.get('content-type');
+        let data = null;
+
+        if (contentType && contentType.includes('application/json')) {
+            const text = await response.text();
+            if (text) {
+                data = JSON.parse(text);
+            }
+        }
 
         if (!response.ok) {
-            throw new Error(data.mensagem || 'Erro ao gerar ambiente de bancada');
+            const errorMsg = data?.mensagem ||
+                           `Erro ${response.status}: ${response.statusText || 'Falha ao gerar ambiente'}`;
+            throw new Error(errorMsg);
         }
 
         // Exibe resultado
