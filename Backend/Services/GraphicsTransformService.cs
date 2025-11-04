@@ -295,6 +295,67 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Aplica transformação skew invertida (inclina da direita para esquerda)
+        /// Equivalente ao Skew2() do VB.NET - usado na parte FRENTE da Bancada #4
+        /// </summary>
+        public SKBitmap Skew2(SKBitmap imagem, int acrescimo, int fatorSkew)
+        {
+            int largura = imagem.Width;
+            int altura = imagem.Height + acrescimo;
+
+            // Cria canvas com altura extra para acomodar o skew
+            var quadroSkew = new SKBitmap(largura, altura + fatorSkew);
+
+            using (var canvas = new SKCanvas(quadroSkew))
+            {
+                canvas.Clear(SKColors.Transparent);
+
+                // VB.NET Skew2 usa 3 pontos de destino (inclinação INVERTIDA):
+                // pt1 = (0, fatorSkew)          upper-left DESLOCADO PARA BAIXO
+                // pt2 = (largura, 0)            upper-right NO TOPO
+                // pt3 = (0, altura + fatorSkew) lower-left
+
+                // Pontos de origem (da imagem original)
+                float srcW = imagem.Width;
+                float srcH = imagem.Height;
+
+                // Pontos de destino (onde queremos mapear)
+                float[] t = Transform2d(
+                    srcW, srcH,
+                    0, fatorSkew,            // pt1: (0, fatorSkew) - topo esquerdo DESCE
+                    largura, 0,              // pt2: (largura, 0) - topo direito no topo
+                    0, altura + fatorSkew,   // pt3: (0, altura + fatorSkew) - base esquerda desce mais
+                    largura, altura          // pt4: (largura, altura) - base direita mantém
+                );
+
+                var matrix = new SKMatrix
+                {
+                    ScaleX = t[0],
+                    SkewX = t[3],
+                    TransX = t[6],
+                    SkewY = t[1],
+                    ScaleY = t[4],
+                    TransY = t[7],
+                    Persp0 = t[2],
+                    Persp1 = t[5],
+                    Persp2 = t[8]
+                };
+
+                canvas.SetMatrix(matrix);
+
+                using var paint = new SKPaint
+                {
+                    FilterQuality = SKFilterQuality.High,
+                    IsAntialias = true
+                };
+
+                canvas.DrawBitmap(imagem, 0, 0, paint);
+            }
+
+            return quadroSkew;
+        }
+
+        /// <summary>
         /// Ajusta HSL (Hue, Saturation, Lightness) de uma imagem
         /// Usado para pós-produção (ajuste de brilho, contraste, sombras)
         /// </summary>
