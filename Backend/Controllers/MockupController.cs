@@ -156,7 +156,7 @@ namespace PicStoneFotoAPI.Controllers
                 return Ok(new
                 {
                     mensagem = "Mockups de nicho gerados com sucesso!",
-                    mockups = caminhos
+                    ambientes = caminhos
                 });
             }
             catch (Exception ex)
@@ -244,7 +244,7 @@ namespace PicStoneFotoAPI.Controllers
                 return Ok(new
                 {
                     mensagem = "Mockups de bancada gerados com sucesso!",
-                    mockups = caminhos
+                    ambientes = caminhos
                 });
             }
             catch (Exception ex)
@@ -332,7 +332,7 @@ namespace PicStoneFotoAPI.Controllers
                 return Ok(new
                 {
                     mensagem = "Mockups de bancada #2 gerados com sucesso!",
-                    mockups = caminhos
+                    ambientes = caminhos
                 });
             }
             catch (Exception ex)
@@ -477,7 +477,7 @@ namespace PicStoneFotoAPI.Controllers
                 return Ok(new
                 {
                     mensagem = $"Mockups de bancada #{numeroBancada} gerados com sucesso!",
-                    mockups = caminhos
+                    ambientes = caminhos  // Frontend espera "ambientes" não "mockups"
                 });
             }
             catch (Exception ex)
