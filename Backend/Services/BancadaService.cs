@@ -121,9 +121,9 @@ namespace PicStoneFotoAPI.Services
                     // Ajuste parteBancada: Y de 474 → 500 → 507 → 497 → 487 → 467 → 472 (-2px total)
                     // Ajuste parteBancada: X de -161 → -141 → -121 → -131 (+30px direita total)
                     // Ajuste partePe: Y de 777 → 756 → 763 (-14px)
-                    // Ajuste partePe: X de -161 → -168 → -158 → -151 → -158 (+3px direita total)
+                    // Ajuste partePe: X de -161 → -168 → -158 → -151 → -158 → -165 (-7px esquerda)
                     canvas.DrawBitmap(parteBancada, -131, 472, paint);
-                    canvas.DrawBitmap(partePe, -158, 763, paint);
+                    canvas.DrawBitmap(partePe, -165, 763, paint);
                 }
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_10_MosaicoAntesMoldura.png");
