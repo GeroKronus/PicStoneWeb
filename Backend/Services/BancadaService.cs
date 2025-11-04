@@ -795,9 +795,6 @@ namespace PicStoneFotoAPI.Services
                 var lateral = _transformService.DistortionInclina(imagemLateral, 390, 280, 182, 399, 0);
                 lateral = _transformService.SkewSimples(lateral, 0, 90);  // Skew
 
-                // TESTE: Rotaciona 20° horário para corrigir inclinação
-                lateral = RotateImage(lateral, 20);
-
                 // Monta mosaico 1523x1238
                 var mosaicoEmBranco = new SKBitmap(1523, 1238);
                 using (var canvas = new SKCanvas(mosaicoEmBranco))

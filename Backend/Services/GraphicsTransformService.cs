@@ -31,33 +31,19 @@ namespace PicStoneFotoAPI.Services
 
             _logger.LogInformation($"Skew: input={w}x{h}, ratio={ratio}, distanciaTopo={distanciaTopo}, h2={h2}");
 
-            // Calcula tamanho necessário para a surface considerando a transformação
-            int surfaceHeight = (int)Math.Max(h, h2 + distanciaTopo + 100);
-
-            var surface = SKSurface.Create(new SKImageInfo(w, surfaceHeight));
+            // VB.NET usa surface com tamanho original (sem margem extra)
+            var surface = SKSurface.Create(new SKImageInfo(w, h));
             var canvas = surface.Canvas;
             canvas.Clear(SKColors.Transparent);
 
-            // Calcula matriz de transformação 2D para perspectiva
-            float[] t = Transform2d(w, h, 0, distanciaTopo, w, 0, 0, h2 + distanciaTopo, w, h);
+            // Calcula matriz de transformação 2D para perspectiva (16 elementos)
+            float[] transformMatrix = Transform2d(w, h, 0, distanciaTopo, w, 0, 0, h2 + distanciaTopo, w, h);
 
-            _logger.LogInformation($"Transform2d result: [{t[0]}, {t[1]}, {t[2]}, {t[3]}, {t[4]}, {t[5]}, {t[6]}, {t[7]}, {t[8]}]");
+            _logger.LogInformation($"Transform2d result (16 elementos): [{string.Join(", ", transformMatrix)}]");
 
-            // SKMatrix expects column-major order!
-            // Transform2d returns: [m11, m12, m13, m21, m22, m23, m31, m32, m33]
-            // SKMatrix layout: ScaleX=m11, SkewX=m21, TransX=m31, SkewY=m12, ScaleY=m22, TransY=m32, Persp0=m13, Persp1=m23, Persp2=m33
-            var matrix = new SKMatrix
-            {
-                ScaleX = t[0],  // m11
-                SkewX = t[3],   // m21 (not t[1]!)
-                TransX = t[6],  // m31 (not t[2]!)
-                SkewY = t[1],   // m12 (not t[3]!)
-                ScaleY = t[4],  // m22
-                TransY = t[7],  // m32 (not t[5]!)
-                Persp0 = t[2],  // m13 (not t[6]!)
-                Persp1 = t[5],  // m23 (not t[7]!)
-                Persp2 = t[8]   // m33
-            };
+            // VB.NET usa SKMatrix44.FromColumnMajor() para aplicar a matriz corretamente
+            var matrix44 = SKMatrix44.FromColumnMajor(transformMatrix);
+            var matrix = matrix44.Matrix;
 
             _logger.LogInformation($"SKMatrix: ScaleX={matrix.ScaleX}, SkewX={matrix.SkewX}, TransX={matrix.TransX}");
             _logger.LogInformation($"SKMatrix: SkewY={matrix.SkewY}, ScaleY={matrix.ScaleY}, TransY={matrix.TransY}");
@@ -95,8 +81,14 @@ namespace PicStoneFotoAPI.Services
                 t[i] = t[i] / t[8];
             }
 
-            // Retorna matriz 3x3 em ordem row-major: [m11, m12, m13, m21, m22, m23, m31, m32, m33]
-            return new float[] { t[0], t[3], t[6], t[1], t[4], t[7], t[2], t[5], t[8] };
+            // Retorna matriz 4x4 (16 elementos) em column-major como VB.NET para usar com SKMatrix44.FromColumnMajor
+            // VB.NET: {t(0), t(3), 0, t(6), t(1), t(4), 0, t(7), 0, 0, 1, 0, t(2), t(5), 0, t(8)}
+            return new float[] {
+                t[0], t[3], 0, t[6],    // Coluna 1
+                t[1], t[4], 0, t[7],    // Coluna 2
+                0,    0,    1, 0,       // Coluna 3
+                t[2], t[5], 0, t[8]     // Coluna 4
+            };
         }
 
         /// <summary>
@@ -249,36 +241,28 @@ namespace PicStoneFotoAPI.Services
             {
                 canvas.Clear(SKColors.Transparent);
 
-                // VB.NET usa 3 pontos de destino:
+                // VB.NET usa 3 pontos GDI+ que calcula o 4º automaticamente para formar paralelogramo
                 // pt1 = (0, 0)              upper-left
                 // pt2 = (largura, fatorSkew) upper-right deslocado
                 // pt3 = (0, altura)         lower-left
+                // pt4 CALCULADO = pt2 + (pt3 - pt1) = (largura, fatorSkew) + (0, altura) = (largura, altura + fatorSkew)
 
                 // Pontos de origem (da imagem original)
                 float srcW = imagem.Width;
                 float srcH = imagem.Height;
 
-                // Pontos de destino (onde queremos mapear)
-                float[] t = Transform2d(
+                // Pontos de destino (onde queremos mapear) - Transform2d retorna 16 elementos
+                float[] transformMatrix = Transform2d(
                     srcW, srcH,
-                    0, 0,                    // pt1: (0, 0)
-                    largura, fatorSkew,      // pt2: (largura, fatorSkew)
-                    0, altura,               // pt3: (0, altura)
-                    srcW, altura             // pt4: calculado automaticamente
+                    0, 0,                           // pt1: (0, 0)
+                    largura, fatorSkew,             // pt2: (largura, fatorSkew)
+                    0, altura,                      // pt3: (0, altura)
+                    largura, altura + fatorSkew     // pt4: CALCULADO como paralelogramo (não srcW, altura!)
                 );
 
-                var matrix = new SKMatrix
-                {
-                    ScaleX = t[0],
-                    SkewX = t[3],
-                    TransX = t[6],
-                    SkewY = t[1],
-                    ScaleY = t[4],
-                    TransY = t[7],
-                    Persp0 = t[2],
-                    Persp1 = t[5],
-                    Persp2 = t[8]
-                };
+                // VB.NET usa SKMatrix44.FromColumnMajor() para aplicar a matriz corretamente
+                var matrix44 = SKMatrix44.FromColumnMajor(transformMatrix);
+                var matrix = matrix44.Matrix;
 
                 canvas.SetMatrix(matrix);
 
@@ -319,8 +303,8 @@ namespace PicStoneFotoAPI.Services
                 float srcW = imagem.Width;
                 float srcH = imagem.Height;
 
-                // Pontos de destino (onde queremos mapear)
-                float[] t = Transform2d(
+                // Pontos de destino (onde queremos mapear) - Transform2d retorna 16 elementos
+                float[] transformMatrix = Transform2d(
                     srcW, srcH,
                     0, fatorSkew,            // pt1: (0, fatorSkew) - topo esquerdo DESCE
                     largura, 0,              // pt2: (largura, 0) - topo direito no topo
@@ -328,18 +312,9 @@ namespace PicStoneFotoAPI.Services
                     largura, altura          // pt4: (largura, altura) - base direita mantém
                 );
 
-                var matrix = new SKMatrix
-                {
-                    ScaleX = t[0],
-                    SkewX = t[3],
-                    TransX = t[6],
-                    SkewY = t[1],
-                    ScaleY = t[4],
-                    TransY = t[7],
-                    Persp0 = t[2],
-                    Persp1 = t[5],
-                    Persp2 = t[8]
-                };
+                // VB.NET usa SKMatrix44.FromColumnMajor() para aplicar a matriz corretamente
+                var matrix44 = SKMatrix44.FromColumnMajor(transformMatrix);
+                var matrix = matrix44.Matrix;
 
                 canvas.SetMatrix(matrix);
 
