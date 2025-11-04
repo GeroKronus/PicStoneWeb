@@ -521,5 +521,92 @@ namespace PicStoneFotoAPI.Services
             else
                 return v1;
         }
+
+        /// <summary>
+        /// Aplica distorção de perspectiva sem inclinação (VB.NET: Distortion sem inclinação)
+        /// Redimensiona e aplica compressão vertical não-linear para efeito de perspectiva
+        /// </summary>
+        /// <param name="imagem">Bitmap de entrada</param>
+        /// <param name="ladoMaior">Lado maior para cálculo do fator de distorção</param>
+        /// <param name="ladoMenor">Lado menor para cálculo do fator de distorção</param>
+        /// <param name="novaLargura">Largura final desejada</param>
+        /// <param name="novaAltura">Altura final desejada</param>
+        /// <returns>Bitmap com distorção aplicada</returns>
+        public SKBitmap Distortion(SKBitmap imagem, int ladoMaior, int ladoMenor, int novaLargura, int novaAltura)
+        {
+            // Redimensiona para o tamanho desejado
+            var bmpImage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
+
+            var bmp2 = new SKBitmap(bmpImage.Width, bmpImage.Height);
+            int largura = bmpImage.Width;
+            int altura = bmpImage.Height;
+
+            // Cálculo do fator de distorção (perspectiva)
+            decimal fatorDeDistortion = (decimal)ladoMaior / ladoMenor;
+            decimal primeiroY = altura / fatorDeDistortion;
+            decimal primeiroDiv = altura / primeiroY;
+
+            int loopEixoY = (int)primeiroY;
+            decimal pixelVertical = altura / primeiroY;
+            decimal posicaoDosPixels = 0;
+
+            for (int horizontal = 0; horizontal < largura; horizontal++)
+            {
+                posicaoDosPixels = 0;
+
+                for (int vertical = 0; vertical < loopEixoY; vertical++)
+                {
+                    int pixelY = (int)posicaoDosPixels;
+                    if (pixelY >= altura) pixelY = altura - 1;
+                    if (pixelY < 0) pixelY = 0;
+
+                    var pixel = bmpImage.GetPixel(horizontal, pixelY);
+                    bmp2.SetPixel(horizontal, vertical, pixel);
+
+                    posicaoDosPixels += pixelVertical;
+                    if (posicaoDosPixels >= altura) posicaoDosPixels = altura - 1;
+                }
+            }
+
+            bmpImage.Dispose();
+            return bmp2;
+        }
+
+        /// <summary>
+        /// Rotaciona imagem com offset customizado (VB.NET: RotateImage2)
+        /// Rotaciona em torno do centro mas desenha a imagem com offset especificado
+        /// </summary>
+        /// <param name="img">Bitmap de entrada</param>
+        /// <param name="angle">Ângulo de rotação em graus</param>
+        /// <param name="offsetX">Offset horizontal para desenho</param>
+        /// <param name="offsetY">Offset vertical para desenho</param>
+        /// <returns>Bitmap rotacionado</returns>
+        public SKBitmap RotateImage2(SKBitmap img, float angle, int offsetX, int offsetY)
+        {
+            int larg = img.Width;
+            int altu = img.Height;
+
+            var retBMP = new SKBitmap(larg, altu);
+            using (var canvas = new SKCanvas(retBMP))
+            {
+                canvas.Clear(SKColors.Transparent);
+
+                // Rotaciona em torno do centro da imagem
+                canvas.Translate(img.Width / 2f, img.Height / 2f);
+                canvas.RotateDegrees(angle);
+                canvas.Translate(-img.Width / 2f, -img.Height / 2f);
+
+                using var paint = new SKPaint
+                {
+                    FilterQuality = SKFilterQuality.High,
+                    IsAntialias = true
+                };
+
+                // VB.NET: g.DrawImage(img, New PointF(Ponto1, Ponto2))
+                canvas.DrawBitmap(img, offsetX, offsetY, paint);
+            }
+
+            return retBMP;
+        }
     }
 }

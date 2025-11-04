@@ -1097,7 +1097,7 @@ body {
 .countertop-preview {
     width: 100%;
     height: 180px; /* Reduzido de 200px para caber melhor em 4 colunas */
-    background: #a8a8a8;
+    background: #DBDBEA;
     border-radius: 8px;
     overflow: hidden;
     margin-bottom: 12px;

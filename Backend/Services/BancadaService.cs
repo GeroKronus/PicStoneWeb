@@ -594,6 +594,22 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Rotaciona 90° no sentido horário (VB.NET: Rotate90FlipNone)
+        /// </summary>
+        private SKBitmap RotateFlip90(SKBitmap source)
+        {
+            return RotateImage90(source, 90);
+        }
+
+        /// <summary>
+        /// Rotaciona 270° no sentido horário (VB.NET: Rotate270FlipNone)
+        /// </summary>
+        private SKBitmap RotateFlip270(SKBitmap source)
+        {
+            return RotateImage90(source, 270);
+        }
+
+        /// <summary>
         /// Rotaciona 180° e faz flip horizontal
         /// Replica VB.NET RotateFlipType.Rotate180FlipX
         /// </summary>
@@ -611,6 +627,36 @@ namespace PicStoneFotoAPI.Services
             canvas.Translate(source.Width / 2f, 0);
             canvas.Scale(-1, 1);
             canvas.Translate(-source.Width / 2f, 0);
+
+            using var paint = new SKPaint
+            {
+                FilterQuality = SKFilterQuality.High,
+                IsAntialias = true
+            };
+
+            canvas.DrawBitmap(source, 0, 0, paint);
+
+            var image = surface.Snapshot();
+            var data = image.Encode(SKEncodedImageFormat.Png, 100);
+
+            using var mStream = new MemoryStream(data.ToArray());
+            return SKBitmap.Decode(mStream);
+        }
+
+        /// <summary>
+        /// Rotaciona 90° e aplica flip horizontal (VB.NET: Rotate90FlipX)
+        /// </summary>
+        private SKBitmap RotateFlip90FlipX(SKBitmap source)
+        {
+            // Rotaciona 90° no sentido horário: largura e altura trocam
+            var surface = SKSurface.Create(new SKImageInfo(source.Height, source.Width));
+            var canvas = surface.Canvas;
+
+            // Primeiro faz flip horizontal no espaço original
+            canvas.Translate(0, source.Width);
+            canvas.RotateDegrees(90);
+            canvas.Scale(-1, 1);
+            canvas.Translate(-source.Width, 0);
 
             using var paint = new SKPaint
             {
@@ -676,11 +722,12 @@ namespace PicStoneFotoAPI.Services
 
         /// <summary>
         /// Gera mockup de Bancada tipo 3 (Countertop #3)
-        /// Design complexo com múltiplas faixas - versão simplificada
+        /// IMPLEMENTAÇÃO COMPLETA: 3 componentes (bmp7, bmp9, FaixaRotacionada) com 22 transformações
+        /// Replica exatamente o VB.NET original (Form1.vb linhas 7290-7717)
         /// </summary>
         public List<SKBitmap> GerarBancada3(SKBitmap imagemOriginal, bool flip = false)
         {
-            _logger.LogWarning($"========== INICIANDO GerarBancada3 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            _logger.LogWarning($"========== INICIANDO GerarBancada3 COMPLETO - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
             var resultado = new List<SKBitmap>();
 
             // Bancada 3 do VB.NET processa apenas 1 versão
@@ -688,22 +735,184 @@ namespace PicStoneFotoAPI.Services
             {
                 var imagemBookMatch = imagemOriginal.Copy();
 
-                // Divide em 2/3 e 1/3
+                // ============ DIVISÃO EM 2/3 E 1/3 COM OVERLAP ============
                 int doisTercos = (int)(imagemBookMatch.Width / 1.5);
+                int umTerco = imagemBookMatch.Width - doisTercos;
+
                 var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
+                var rectUmTerco = new SKRectI(doisTercos - 10, 0, umTerco + 10, imagemBookMatch.Height);
+
                 var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
+                var imagemUmTerco = CropBitmap(imagemBookMatch, rectUmTerco);
 
-                // Redimensiona e aplica transformação
-                var bmp = imagemDoisTercos.Resize(new SKImageInfo(730, 1051), SKFilterQuality.High);
-                bmp = _transformService.DistortionInclina(bmp, 1051, 400, 400, 1051, 730);
+                _logger.LogInformation($"Divisão: 2/3={doisTercos}x{imagemBookMatch.Height}, 1/3={umTerco + 10}x{imagemBookMatch.Height}");
 
-                // Monta o mosaico 1051x1191 (dimensões da moldura bancada3)
+                // ============ PARTE 1: bmp7 (COMPONENTE PRINCIPAL) - 12 TRANSFORMAÇÕES ============
+                _logger.LogInformation("=== Iniciando PARTE 1: bmp7 (12 transformações) ===");
+
+                // Transformação 1: Rotate90
+                var bmp2 = imagemDoisTercos.Copy();
+                bmp2 = RotateFlip90(bmp2);
+                _logger.LogInformation($"T1: Rotate90 -> {bmp2.Width}x{bmp2.Height}");
+
+                // ============ EXTRAÇÃO DA FAIXA DECORATIVA (será processada depois) ============
+                // VB.NET: rect = Rectangle(0, height - 80, width, 40)
+                var rectFaixa = new SKRectI(0, bmp2.Height - 80, bmp2.Width, 40);
+                var faixa1 = CropBitmap(bmp2, rectFaixa);
+                _logger.LogInformation($"Faixa1 extraída: {faixa1.Width}x{faixa1.Height}");
+
+                // Transformação 2: Distortion(1060, 909, 187, 1060)
+                var bmp3 = _transformService.Distortion(bmp2, 1060, 909, 187, 1060);
+                _logger.LogInformation($"T2: Distortion(1060,909,187,1060) -> {bmp3.Width}x{bmp3.Height}");
+
+                // Transformação 3: Skew(0, 371)
+                var bmp4 = _transformService.SkewSimples(bmp3, 0, 371);
+                _logger.LogInformation($"T3: Skew(0,371) -> {bmp4.Width}x{bmp4.Height}");
+
+                // Transformação 4: Rotate270
+                var bmp5 = RotateFlip270(bmp4);
+                _logger.LogInformation($"T4: Rotate270 -> {bmp5.Width}x{bmp5.Height}");
+
+                // Transformação 5: Distortion(187, 110, width*1.1, height*1.4)
+                int novaLarg = (int)(bmp5.Width * 1.1);
+                int novaAlt = (int)(bmp5.Height * 1.4);
+                var bmp6 = _transformService.Distortion(bmp5, 187, 110, novaLarg, novaAlt);
+                _logger.LogInformation($"T5: Distortion(187,110,{novaLarg},{novaAlt}) -> {bmp6.Width}x{bmp6.Height}");
+
+                // Transformação 6: Canvas 2000x2000
+                var canvas2000 = new SKBitmap(2000, 2000);
+                using (var canvas = new SKCanvas(canvas2000))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    canvas.DrawBitmap(bmp6, 0, 0, paint);
+                }
+                _logger.LogInformation($"T6: Canvas 2000x2000 com bmp6 at (0,0)");
+
+                // Transformação 7: RotateImage2(13.2°, 50, 600)
+                var bmp7 = _transformService.RotateImage2(canvas2000, 13.2f, 50, 600);
+                _logger.LogInformation($"T7: RotateImage2(13.2°,50,600) -> bmp7 completo");
+
+                // DEBUG: Salva bmp7 para análise
+                if (contaProcesso == 1)
+                {
+                    var debugPath = Path.Combine("wwwroot", "debug");
+                    Directory.CreateDirectory(debugPath);
+
+                    using (var bmp7Data = bmp7.Encode(SKEncodedImageFormat.Png, 100))
+                    using (var bmp7Stream = File.OpenWrite(Path.Combine(debugPath, "bancada3_bmp7_principal.png")))
+                    {
+                        bmp7Data.SaveTo(bmp7Stream);
+                    }
+                    _logger.LogWarning($"DEBUG: bmp7 salvo em wwwroot/debug/bancada3_bmp7_principal.png");
+                }
+
+                // ============ PARTE 3: FaixaRotacionada (DECORATIVA) - 5 TRANSFORMAÇÕES ============
+                _logger.LogInformation("=== Iniciando PARTE 3: FaixaRotacionada (5 transformações) ===");
+
+                // Transformação 1: Resize(980, 40)
+                var faixa1Pronta = faixa1.Resize(new SKImageInfo(980, 40), SKFilterQuality.High);
+                _logger.LogInformation($"FT1: Resize(980,40) -> {faixa1Pronta.Width}x{faixa1Pronta.Height}");
+
+                // Transformação 2: Rotate90
+                faixa1Pronta = RotateFlip90(faixa1Pronta);
+                _logger.LogInformation($"FT2: Rotate90 -> {faixa1Pronta.Width}x{faixa1Pronta.Height}");
+
+                // Transformação 3: Skew(0, 15)
+                faixa1Pronta = _transformService.SkewSimples(faixa1Pronta, 0, 15);
+                _logger.LogInformation($"FT3: Skew(0,15) -> {faixa1Pronta.Width}x{faixa1Pronta.Height}");
+
+                // Transformação 4: Canvas 1500x1500
+                var canvas1500 = new SKBitmap(1500, 1500);
+                using (var canvas = new SKCanvas(canvas1500))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    canvas.DrawBitmap(faixa1Pronta, 0, 0, paint);
+                }
+                _logger.LogInformation($"FT4: Canvas 1500x1500 com faixa at (0,0)");
+
+                // Transformação 5: RotateImage2(-73°, 300, 200)
+                var faixaRotacionada = _transformService.RotateImage2(canvas1500, -73f, 300, 200);
+                _logger.LogInformation($"FT5: RotateImage2(-73°,300,200) -> FaixaRotacionada completa");
+
+                // DEBUG: Salva FaixaRotacionada para análise
+                if (contaProcesso == 1)
+                {
+                    var debugPath = Path.Combine("wwwroot", "debug");
+                    using (var faixaData = faixaRotacionada.Encode(SKEncodedImageFormat.Png, 100))
+                    using (var faixaStream = File.OpenWrite(Path.Combine(debugPath, "bancada3_faixa_decorativa.png")))
+                    {
+                        faixaData.SaveTo(faixaStream);
+                    }
+                    _logger.LogWarning($"DEBUG: FaixaRotacionada salva em wwwroot/debug/bancada3_faixa_decorativa.png");
+                }
+
+                // ============ PARTE 2: bmp9 (LATERAL) - 5 TRANSFORMAÇÕES ============
+                _logger.LogInformation("=== Iniciando PARTE 2: bmp9 (5 transformações) ===");
+
+                // Transformação 1: Resize(600, 720)
+                var bmp8 = imagemUmTerco.Resize(new SKImageInfo(600, 720), SKFilterQuality.High);
+                _logger.LogInformation($"LT1: Resize(600,720) -> {bmp8.Width}x{bmp8.Height}");
+
+                // Transformação 2: Rotate90FlipX
+                bmp8 = RotateFlip90FlipX(bmp8);
+                _logger.LogInformation($"LT2: Rotate90FlipX -> {bmp8.Width}x{bmp8.Height}");
+
+                // Transformação 3: Distortion(710, 600, 600, 720)
+                bmp8 = _transformService.Distortion(bmp8, 710, 600, 600, 720);
+                _logger.LogInformation($"LT3: Distortion(710,600,600,720) -> {bmp8.Width}x{bmp8.Height}");
+
+                // Transformação 4: FlipX
+                bmp8 = FlipHorizontal(bmp8);
+                _logger.LogInformation($"LT4: FlipX -> {bmp8.Width}x{bmp8.Height}");
+
+                // Transformação 5: Skew2(0, 83)
+                var bmp9 = _transformService.Skew2(bmp8, 0, 83);
+                _logger.LogInformation($"LT5: Skew2(0,83) -> bmp9 completo {bmp9.Width}x{bmp9.Height}");
+
+                // DEBUG: Salva bmp9 para análise
+                if (contaProcesso == 1)
+                {
+                    var debugPath = Path.Combine("wwwroot", "debug");
+                    using (var bmp9Data = bmp9.Encode(SKEncodedImageFormat.Png, 100))
+                    using (var bmp9Stream = File.OpenWrite(Path.Combine(debugPath, "bancada3_bmp9_lateral.png")))
+                    {
+                        bmp9Data.SaveTo(bmp9Stream);
+                    }
+                    _logger.LogWarning($"DEBUG: bmp9 salvo em wwwroot/debug/bancada3_bmp9_lateral.png");
+                }
+
+                // ============ MONTAGEM FINAL: Canvas 2000x1863 ============
+                _logger.LogInformation("=== Montagem final dos 3 componentes ===");
+
                 var mosaicoEmBranco = new SKBitmap(2000, 1863);
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     canvas.Clear(SKColors.Transparent);
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    canvas.DrawBitmap(bmp, -35, 169, paint);
+
+                    // VB.NET posições exatas:
+                    canvas.DrawBitmap(bmp7, -35, 169, paint);
+                    _logger.LogInformation("Desenhado bmp7 at (-35, 169)");
+
+                    canvas.DrawBitmap(bmp9, 1042, 926, paint);
+                    _logger.LogInformation("Desenhado bmp9 at (1042, 926)");
+
+                    canvas.DrawBitmap(faixaRotacionada, 20, -271, paint);
+                    _logger.LogInformation("Desenhado FaixaRotacionada at (20, -271)");
+                }
+
+                // DEBUG: Salva mosaico ANTES da moldura
+                if (contaProcesso == 1)
+                {
+                    var debugPath = Path.Combine("wwwroot", "debug");
+                    using (var mosaicoData = mosaicoEmBranco.Encode(SKEncodedImageFormat.Png, 100))
+                    using (var mosaicoStream = File.OpenWrite(Path.Combine(debugPath, "bancada3_mosaico_sem_moldura.png")))
+                    {
+                        mosaicoData.SaveTo(mosaicoStream);
+                    }
+                    _logger.LogWarning($"DEBUG: Mosaico sem moldura salvo em wwwroot/debug/bancada3_mosaico_sem_moldura.png");
                 }
 
                 // Adiciona moldura
@@ -711,19 +920,50 @@ namespace PicStoneFotoAPI.Services
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
                     var moldura = CarregarRecurso("bancada3.png");
-                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+                    if (moldura != null)
+                    {
+                        canvas.DrawBitmap(moldura, 0, 0, paint);
+                        _logger.LogInformation("Moldura aplicada");
+                    }
+                }
+
+                // DEBUG: Salva mosaico FINAL COM moldura
+                if (contaProcesso == 1)
+                {
+                    var debugPath = Path.Combine("wwwroot", "debug");
+                    using (var finalData = mosaicoEmBranco.Encode(SKEncodedImageFormat.Png, 100))
+                    using (var finalStream = File.OpenWrite(Path.Combine(debugPath, "bancada3_final_com_moldura.png")))
+                    {
+                        finalData.SaveTo(finalStream);
+                    }
+                    _logger.LogWarning($"DEBUG: Mosaico final salvo em wwwroot/debug/bancada3_final_com_moldura.png");
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
                 resultado.Add(mosaicoEmBranco);
 
+                // Dispose de todos os bitmaps intermediários
                 imagemBookMatch.Dispose();
                 imagemDoisTercos.Dispose();
-                bmp.Dispose();
+                imagemUmTerco.Dispose();
+                bmp2.Dispose();
+                faixa1.Dispose();
+                bmp3.Dispose();
+                bmp4.Dispose();
+                bmp5.Dispose();
+                bmp6.Dispose();
+                canvas2000.Dispose();
+                bmp7.Dispose();
+                faixa1Pronta.Dispose();
+                canvas1500.Dispose();
+                faixaRotacionada.Dispose();
+                bmp8.Dispose();
+                bmp9.Dispose();
             }
 
             // Adiciona segunda versão rotacionada para consistência com outras bancadas
             resultado.Add(RotateFlip180(resultado[0]));
+            _logger.LogWarning("========== GerarBancada3 COMPLETO FINALIZADO ==========");
             return resultado;
         }
 
