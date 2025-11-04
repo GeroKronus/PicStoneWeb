@@ -942,7 +942,7 @@ namespace PicStoneFotoAPI.Services
                 }
 
                 // ============ MONTAGEM FINAL: Canvas 2000x1863 ============
-                _logger.LogInformation("=== Montagem final dos 3 componentes ===");
+                _logger.LogInformation("=== Montagem final: MOLDURA primeiro, depois 3 componentes ===");
 
                 var mosaicoEmBranco = new SKBitmap(2000, 1863);
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
@@ -950,51 +950,37 @@ namespace PicStoneFotoAPI.Services
                     canvas.Clear(SKColors.Transparent);
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
 
-                    // VB.NET posições exatas:
-                    canvas.DrawBitmap(bmp7, -35, 169, paint);
-                    _logger.LogInformation("Desenhado bmp7 at (-35, 169)");
-
-                    canvas.DrawBitmap(bmp9, 1042, 926, paint);
-                    _logger.LogInformation("Desenhado bmp9 at (1042, 926)");
-
-                    canvas.DrawBitmap(faixaRotacionada, 20, -271, paint);
-                    _logger.LogInformation("Desenhado FaixaRotacionada at (20, -271)");
-                }
-
-                // DEBUG: Salva mosaico ANTES da moldura
-                if (contaProcesso == 1)
-                {
-                    var debugPath = Path.Combine("wwwroot", "debug");
-                    using (var mosaicoData = mosaicoEmBranco.Encode(SKEncodedImageFormat.Png, 100))
-                    using (var mosaicoStream = File.OpenWrite(Path.Combine(debugPath, "bancada3_mosaico_sem_moldura.png")))
-                    {
-                        mosaicoData.SaveTo(mosaicoStream);
-                    }
-                    _logger.LogWarning($"DEBUG: Mosaico sem moldura salvo em wwwroot/debug/bancada3_mosaico_sem_moldura.png");
-                }
-
-                // Adiciona moldura
-                using (var canvas = new SKCanvas(mosaicoEmBranco))
-                {
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    // ORDEM CORRETA: Moldura primeiro (fundo)
                     var moldura = CarregarRecurso("bancada3.png");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Moldura aplicada");
+                        _logger.LogInformation("1. Moldura desenhada (fundo)");
                     }
+
+                    // Depois as 3 partes do mármore (por cima da moldura)
+                    canvas.DrawBitmap(bmp7, -35, 169, paint);
+                    _logger.LogInformation("2. bmp7 desenhado at (-35, 169)");
+
+                    canvas.DrawBitmap(bmp9, 1042, 926, paint);
+                    _logger.LogInformation("3. bmp9 desenhado at (1042, 926)");
+
+                    canvas.DrawBitmap(faixaRotacionada, 20, -271, paint);
+                    _logger.LogInformation("4. FaixaRotacionada desenhada at (20, -271)");
                 }
 
-                // DEBUG: Salva mosaico FINAL COM moldura
+                // DEBUG: Salva mosaico final
                 if (contaProcesso == 1)
                 {
                     var debugPath = Path.Combine("wwwroot", "debug");
+                    Directory.CreateDirectory(debugPath);
+
                     using (var finalData = mosaicoEmBranco.Encode(SKEncodedImageFormat.Png, 100))
-                    using (var finalStream = File.OpenWrite(Path.Combine(debugPath, "bancada3_final_com_moldura.png")))
+                    using (var finalStream = File.OpenWrite(Path.Combine(debugPath, "bancada3_final_completo.png")))
                     {
                         finalData.SaveTo(finalStream);
                     }
-                    _logger.LogWarning($"DEBUG: Mosaico final salvo em wwwroot/debug/bancada3_final_com_moldura.png");
+                    _logger.LogWarning($"DEBUG: Final completo salvo em wwwroot/debug/bancada3_final_completo.png");
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
