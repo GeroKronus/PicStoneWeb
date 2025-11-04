@@ -27,6 +27,7 @@ uploads/
 !Cavaletes/*.png
 !Backend/MockupResources/Bancadas/*.png
 !Backend/wwwroot/images/*.png
+!Frontend/images/*.png
 
 # Environment variables
 .env
