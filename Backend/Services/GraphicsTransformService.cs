@@ -534,8 +534,18 @@ namespace PicStoneFotoAPI.Services
         /// <returns>Bitmap com distorção aplicada</returns>
         public SKBitmap Distortion(SKBitmap imagem, int ladoMaior, int ladoMenor, int novaLargura, int novaAltura)
         {
+            _logger.LogInformation($"Distortion ENTRADA: imagem={imagem.Width}x{imagem.Height}, ladoMaior={ladoMaior}, ladoMenor={ladoMenor}, novaLargura={novaLargura}, novaAltura={novaAltura}");
+
+            // Validação de entrada
+            if (novaLargura <= 0 || novaAltura <= 0)
+            {
+                _logger.LogError($"Distortion: Dimensões inválidas! novaLargura={novaLargura}, novaAltura={novaAltura}");
+                throw new ArgumentException($"Dimensões inválidas para Distortion: {novaLargura}x{novaAltura}");
+            }
+
             // Redimensiona para o tamanho desejado
             var bmpImage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
+            _logger.LogInformation($"Distortion: Após resize -> {bmpImage.Width}x{bmpImage.Height}");
 
             int largura = bmpImage.Width;
             int altura = bmpImage.Height;
@@ -545,6 +555,7 @@ namespace PicStoneFotoAPI.Services
             decimal primeiroY = altura / fatorDeDistortion;
 
             int loopEixoY = (int)primeiroY;
+            _logger.LogInformation($"Distortion: fatorDeDistortion={fatorDeDistortion}, primeiroY={primeiroY}, loopEixoY={loopEixoY}");
 
             // Validação: garante que loopEixoY seja válido
             if (loopEixoY <= 0) loopEixoY = 1;
@@ -552,8 +563,11 @@ namespace PicStoneFotoAPI.Services
 
             decimal pixelVertical = altura / primeiroY;
 
+            _logger.LogInformation($"Distortion: Criando bitmap de saída {largura}x{loopEixoY}");
+
             // Cria bitmap com altura comprimida (loopEixoY)
             var bmp2 = new SKBitmap(largura, loopEixoY);
+            _logger.LogInformation($"Distortion: Bitmap criado com sucesso!");
 
             for (int horizontal = 0; horizontal < largura; horizontal++)
             {
@@ -574,6 +588,7 @@ namespace PicStoneFotoAPI.Services
             }
 
             bmpImage.Dispose();
+            _logger.LogInformation($"Distortion SAÍDA: {bmp2.Width}x{bmp2.Height}");
             return bmp2;
         }
 

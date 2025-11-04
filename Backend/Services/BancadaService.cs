@@ -762,8 +762,17 @@ namespace PicStoneFotoAPI.Services
                 _logger.LogInformation($"Faixa1 extraída: {faixa1.Width}x{faixa1.Height}");
 
                 // Transformação 2: Distortion(1060, 909, 187, 1060)
-                var bmp3 = _transformService.Distortion(bmp2, 1060, 909, 187, 1060);
-                _logger.LogInformation($"T2: Distortion(1060,909,187,1060) -> {bmp3.Width}x{bmp3.Height}");
+                SKBitmap bmp3;
+                try
+                {
+                    bmp3 = _transformService.Distortion(bmp2, 1060, 909, 187, 1060);
+                    _logger.LogInformation($"T2: Distortion(1060,909,187,1060) -> {bmp3.Width}x{bmp3.Height}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"ERRO em T2 Distortion: {ex.Message}");
+                    throw;
+                }
 
                 // Transformação 3: Skew(0, 371)
                 var bmp4 = _transformService.SkewSimples(bmp3, 0, 371);
@@ -776,8 +785,17 @@ namespace PicStoneFotoAPI.Services
                 // Transformação 5: Distortion(187, 110, width*1.1, height*1.4)
                 int novaLarg = (int)(bmp5.Width * 1.1);
                 int novaAlt = (int)(bmp5.Height * 1.4);
-                var bmp6 = _transformService.Distortion(bmp5, 187, 110, novaLarg, novaAlt);
-                _logger.LogInformation($"T5: Distortion(187,110,{novaLarg},{novaAlt}) -> {bmp6.Width}x{bmp6.Height}");
+                SKBitmap bmp6;
+                try
+                {
+                    bmp6 = _transformService.Distortion(bmp5, 187, 110, novaLarg, novaAlt);
+                    _logger.LogInformation($"T5: Distortion(187,110,{novaLarg},{novaAlt}) -> {bmp6.Width}x{bmp6.Height}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"ERRO em T5 Distortion: {ex.Message}");
+                    throw;
+                }
 
                 // Transformação 6: Canvas 2000x2000
                 var canvas2000 = new SKBitmap(2000, 2000);
@@ -860,8 +878,16 @@ namespace PicStoneFotoAPI.Services
                 _logger.LogInformation($"LT2: Rotate90FlipX -> {bmp8.Width}x{bmp8.Height}");
 
                 // Transformação 3: Distortion(710, 600, 600, 720)
-                bmp8 = _transformService.Distortion(bmp8, 710, 600, 600, 720);
-                _logger.LogInformation($"LT3: Distortion(710,600,600,720) -> {bmp8.Width}x{bmp8.Height}");
+                try
+                {
+                    bmp8 = _transformService.Distortion(bmp8, 710, 600, 600, 720);
+                    _logger.LogInformation($"LT3: Distortion(710,600,600,720) -> {bmp8.Width}x{bmp8.Height}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"ERRO em LT3 Distortion: {ex.Message}");
+                    throw;
+                }
 
                 // Transformação 4: FlipX
                 bmp8 = FlipHorizontal(bmp8);
