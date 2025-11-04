@@ -537,22 +537,27 @@ namespace PicStoneFotoAPI.Services
             // Redimensiona para o tamanho desejado
             var bmpImage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
 
-            var bmp2 = new SKBitmap(bmpImage.Width, bmpImage.Height);
             int largura = bmpImage.Width;
             int altura = bmpImage.Height;
 
             // Cálculo do fator de distorção (perspectiva)
             decimal fatorDeDistortion = (decimal)ladoMaior / ladoMenor;
             decimal primeiroY = altura / fatorDeDistortion;
-            decimal primeiroDiv = altura / primeiroY;
 
             int loopEixoY = (int)primeiroY;
+
+            // Validação: garante que loopEixoY seja válido
+            if (loopEixoY <= 0) loopEixoY = 1;
+            if (loopEixoY > altura) loopEixoY = altura;
+
             decimal pixelVertical = altura / primeiroY;
-            decimal posicaoDosPixels = 0;
+
+            // Cria bitmap com altura comprimida (loopEixoY)
+            var bmp2 = new SKBitmap(largura, loopEixoY);
 
             for (int horizontal = 0; horizontal < largura; horizontal++)
             {
-                posicaoDosPixels = 0;
+                decimal posicaoDosPixels = 0;
 
                 for (int vertical = 0; vertical < loopEixoY; vertical++)
                 {
