@@ -648,15 +648,10 @@ namespace PicStoneFotoAPI.Services
         /// </summary>
         private SKBitmap RotateFlip90FlipX(SKBitmap source)
         {
-            // Rotaciona 90° no sentido horário: largura e altura trocam
+            // VB.NET RotateFlipType.Rotate90FlipX: primeiro flip horizontal, depois rotação 90° horário
+            // Resultado: largura e altura trocam
             var surface = SKSurface.Create(new SKImageInfo(source.Height, source.Width));
             var canvas = surface.Canvas;
-
-            // Primeiro faz flip horizontal no espaço original
-            canvas.Translate(0, source.Width);
-            canvas.RotateDegrees(90);
-            canvas.Scale(-1, 1);
-            canvas.Translate(-source.Width, 0);
 
             using var paint = new SKPaint
             {
@@ -664,6 +659,18 @@ namespace PicStoneFotoAPI.Services
                 IsAntialias = true
             };
 
+            // ORDEM CORRETA (reversa no SkiaSharp):
+            // 1. Translate para posicionar corretamente após rotação
+            canvas.Translate(source.Height, 0);
+
+            // 2. Rotaciona 90° horário
+            canvas.RotateDegrees(90);
+
+            // 3. Flip horizontal (Scale -1 em X)
+            canvas.Scale(-1, 1);
+            canvas.Translate(-source.Width, 0);
+
+            // Desenha a imagem source no canvas transformado
             canvas.DrawBitmap(source, 0, 0, paint);
 
             var image = surface.Snapshot();
@@ -839,9 +846,9 @@ namespace PicStoneFotoAPI.Services
                 }
                 _logger.LogInformation($"T6: Canvas 2000x2000 com bmp6 at (0,0)");
 
-                // Transformação 7: RotateImage2(13.2°, 50, 600)
-                var bmp7 = _transformService.RotateImage2(canvas2000, 13.2f, 50, 600);
-                _logger.LogInformation($"T7: RotateImage2(13.2°,50,600) -> bmp7 completo");
+                // Transformação 7: RotateImage2(-13.2°, 50, 600) - ângulo NEGATIVO para perspectiva correta
+                var bmp7 = _transformService.RotateImage2(canvas2000, -13.2f, 50, 600);
+                _logger.LogInformation($"T7: RotateImage2(-13.2°,50,600) -> bmp7 completo");
 
                 // DEBUG: Salva bmp7 para análise
                 if (contaProcesso == 1)

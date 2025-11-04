@@ -671,19 +671,26 @@ namespace PicStoneFotoAPI.Services
             {
                 canvas.Clear(SKColors.Transparent);
 
-                // Rotaciona em torno do centro da imagem
-                canvas.Translate(img.Width / 2f, img.Height / 2f);
-                canvas.RotateDegrees(angle);
-                canvas.Translate(-img.Width / 2f, -img.Height / 2f);
-
                 using var paint = new SKPaint
                 {
                     FilterQuality = SKFilterQuality.High,
                     IsAntialias = true
                 };
 
-                // VB.NET: g.DrawImage(img, New PointF(Ponto1, Ponto2))
-                canvas.DrawBitmap(img, offsetX, offsetY, paint);
+                // VB.NET: g.DrawImage(img, New PointF(offsetX, offsetY))
+                // Offset integrado NA transformação de rotação
+
+                // 1. Move para ponto de desenho + centro da imagem
+                canvas.Translate(offsetX + img.Width / 2f, offsetY + img.Height / 2f);
+
+                // 2. Rotaciona em torno deste ponto
+                canvas.RotateDegrees(angle);
+
+                // 3. Move de volta para desenhar centrado
+                canvas.Translate(-img.Width / 2f, -img.Height / 2f);
+
+                // 4. Desenha na origem do sistema transformado
+                canvas.DrawBitmap(img, 0, 0, paint);
             }
 
             return retBMP;
