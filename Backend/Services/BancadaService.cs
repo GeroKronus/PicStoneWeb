@@ -762,6 +762,29 @@ namespace PicStoneFotoAPI.Services
                 var lateral = _transformService.DistortionInclina(imagemLateral, 390, 280, 182, 399, 0);
                 lateral = _transformService.SkewSimples(lateral, 0, 90);  // Skew
 
+                // DEBUG: Salva imagens transformadas para análise
+                if (contaProcesso == 1)
+                {
+                    var debugPath = Path.Combine("wwwroot", "debug");
+                    Directory.CreateDirectory(debugPath);
+
+                    // Salva LATERAL transformada
+                    using (var lateralData = lateral.Encode(SKEncodedImageFormat.Png, 100))
+                    using (var lateralStream = File.OpenWrite(Path.Combine(debugPath, "bancada4_lateral_transformed.png")))
+                    {
+                        lateralData.SaveTo(lateralStream);
+                    }
+
+                    // Salva FRENTE transformada
+                    using (var frenteData = frente.Encode(SKEncodedImageFormat.Png, 100))
+                    using (var frenteStream = File.OpenWrite(Path.Combine(debugPath, "bancada4_frente_transformed.png")))
+                    {
+                        frenteData.SaveTo(frenteStream);
+                    }
+
+                    _logger.LogWarning("DEBUG: Imagens salvas em /debug/bancada4_lateral_transformed.png e bancada4_frente_transformed.png");
+                }
+
                 // Monta mosaico 1523x1238
                 var mosaicoEmBranco = new SKBitmap(1523, 1238);
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
