@@ -760,7 +760,7 @@ namespace PicStoneFotoAPI.Services
                 // Aplica transformações LATERAL (VB.NET: Distortion → Skew)
                 // Mantém dimensões originais do crop - DistortionInclina faz o resize internamente
                 var lateral = _transformService.DistortionInclina(imagemLateral, 390, 280, 182, 399, 0);
-                lateral = _transformService.SkewSimples(lateral, 0, 90);  // Skew
+                lateral = _transformService.SkewLateral(lateral, 0, 90);  // Skew com 4º ponto corrigido
 
                 // DEBUG: Salva imagens transformadas para análise
                 if (contaProcesso == 1)

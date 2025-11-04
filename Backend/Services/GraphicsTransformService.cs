@@ -264,7 +264,63 @@ namespace PicStoneFotoAPI.Services
                     0, 0,                    // pt1: (0, 0)
                     largura, fatorSkew,      // pt2: (largura, fatorSkew)
                     0, altura,               // pt3: (0, altura)
-                    srcW, altura             // pt4: calculado automaticamente
+                    srcW, altura             // pt4: mantém original para não quebrar Bancadas #1 e #2
+                );
+
+                var matrix = new SKMatrix
+                {
+                    ScaleX = t[0],
+                    SkewX = t[3],
+                    TransX = t[6],
+                    SkewY = t[1],
+                    ScaleY = t[4],
+                    TransY = t[7],
+                    Persp0 = t[2],
+                    Persp1 = t[5],
+                    Persp2 = t[8]
+                };
+
+                canvas.SetMatrix(matrix);
+
+                using var paint = new SKPaint
+                {
+                    FilterQuality = SKFilterQuality.High,
+                    IsAntialias = true
+                };
+
+                canvas.DrawBitmap(imagem, 0, 0, paint);
+            }
+
+            return quadroSkew;
+        }
+
+        /// <summary>
+        /// Aplica Skew com 4º ponto calculado corretamente (paralelogramo)
+        /// Específico para LATERAL da Bancada #4 - não afeta Bancadas #1 e #2
+        /// </summary>
+        public SKBitmap SkewLateral(SKBitmap imagem, int acrescimo, int fatorSkew)
+        {
+            int largura = imagem.Width;
+            int altura = imagem.Height + acrescimo;
+
+            // Cria canvas com altura extra para acomodar o skew
+            var quadroSkew = new SKBitmap(largura, altura + fatorSkew);
+
+            using (var canvas = new SKCanvas(quadroSkew))
+            {
+                canvas.Clear(SKColors.Transparent);
+
+                // VB.NET GDI+ com 3 pontos calcula 4º ponto automaticamente como paralelogramo:
+                // pt4 = pt2 + (pt3 - pt1) = (largura, fatorSkew) + (0, altura) - (0, 0) = (largura, altura + fatorSkew)
+                float srcW = imagem.Width;
+                float srcH = imagem.Height;
+
+                float[] t = Transform2d(
+                    srcW, srcH,
+                    0, 0,                         // pt1: (0, 0) - topo esquerdo
+                    largura, fatorSkew,           // pt2: (largura, fatorSkew) - topo direito desce fatorSkew
+                    0, altura,                    // pt3: (0, altura) - base esquerda
+                    largura, altura + fatorSkew   // pt4: (largura, altura + fatorSkew) - base direita desce fatorSkew
                 );
 
                 var matrix = new SKMatrix
