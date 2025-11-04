@@ -768,7 +768,11 @@ namespace PicStoneFotoAPI.Services
                 {
                     canvas.Clear(SKColors.Transparent);
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    canvas.DrawBitmap(lateral, 209, 676, paint);
+
+                    // GEOMETRIA: Alinhar no ponto de interseção X=391
+                    // Skew lateral=90, skew frente=220
+                    // lateralY = frenteY + skewFrente - skewLateral = 545 + 220 - 90 = 675
+                    canvas.DrawBitmap(lateral, 209, 675, paint);  // Ajustado de 676 para 675
                     canvas.DrawBitmap(frente, 391, 545, paint);
                 }
 
