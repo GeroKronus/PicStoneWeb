@@ -250,13 +250,13 @@ function setupEventListeners() {
         }
     });
 
-    // Event delegation para seleção de countertop
-    document.querySelectorAll('.btn-select-countertop').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const card = e.target.closest('.countertop-card');
-            const type = card.dataset.type;
+    // Event delegation para seleção de countertop via click no thumb
+    document.addEventListener('click', (e) => {
+        const preview = e.target.closest('.countertop-preview');
+        if (preview && preview.dataset.type) {
+            const type = preview.dataset.type;
             selectCountertopAndGenerate(type);
-        });
+        }
     });
 
     // User menu dropdown
