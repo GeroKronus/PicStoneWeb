@@ -1067,7 +1067,7 @@ body {
     padding: 16px;
     text-align: center;
     transition: all 0.3s ease;
-    background: white;
+    background: #fafafa;
 }
 
 .countertop-preview {
