@@ -50,7 +50,7 @@ namespace PicStoneFotoAPI.Services
 
                 // Gera token JWT
                 var token = GerarTokenJWT(usuario);
-                var expiresAt = DateTime.UtcNow.AddHours(8);
+                var expiresAt = DateTime.UtcNow.AddYears(100);
 
                 _logger.LogInformation("Login bem-sucedido para usuário: {Username}", request.Username);
 
@@ -103,7 +103,7 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
-        /// Gera token JWT válido por 8 horas
+        /// Gera token JWT válido por 100 anos (praticamente sem expiração)
         /// </summary>
         private string GerarTokenJWT(Usuario usuario)
         {
@@ -122,7 +122,7 @@ namespace PicStoneFotoAPI.Services
                 issuer: "PicStoneFotoAPI",
                 audience: "PicStoneFotoApp",
                 claims: claims,
-                expires: DateTime.UtcNow.AddHours(8),
+                expires: DateTime.UtcNow.AddYears(100),
                 signingCredentials: credentials
             );
 

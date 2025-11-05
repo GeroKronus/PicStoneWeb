@@ -13,12 +13,55 @@ namespace PicStoneFotoAPI.Services
         private readonly ILogger<BancadaService> _logger;
         private readonly GraphicsTransformService _transformService;
         private readonly string _resourcesPath;
+        private readonly string _logoPath;
 
         public BancadaService(ILogger<BancadaService> logger, GraphicsTransformService transformService)
         {
             _logger = logger;
             _transformService = transformService;
             _resourcesPath = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Bancadas");
+            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.png");
+        }
+
+        /// <summary>
+        /// Adiciona marca d'água (logo) no canto inferior direito
+        /// </summary>
+        private void AdicionarMarcaDagua(SKCanvas canvas, int canvasWidth, int canvasHeight)
+        {
+            if (!File.Exists(_logoPath))
+            {
+                _logger.LogWarning("Logo não encontrada em: {LogoPath}", _logoPath);
+                return;
+            }
+
+            try
+            {
+                using var streamLogo = File.OpenRead(_logoPath);
+                using var logo = SKBitmap.Decode(streamLogo);
+
+                if (logo == null)
+                {
+                    _logger.LogWarning("Não foi possível decodificar a logo");
+                    return;
+                }
+
+                // Usa tamanho original da logo (49x50 pixels)
+                int logoWidth = logo.Width;
+                int logoHeight = logo.Height;
+
+                // Posição: canto inferior direito com margem de 5px
+                int posX = canvasWidth - logoWidth - 5;
+                int posY = canvasHeight - logoHeight - 5;
+
+                // Desenha a logo sem redimensionar
+                canvas.DrawBitmap(logo, posX, posY);
+
+                _logger.LogInformation("Marca d'água adicionada no ambiente");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao adicionar marca d'água");
+            }
         }
 
         /// <summary>
@@ -147,6 +190,9 @@ namespace PicStoneFotoAPI.Services
                     {
                         _logger.LogWarning("Moldura bancada1.png NÃO foi carregada!");
                     }
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_11_MosaicoComMoldura.png");
@@ -417,6 +463,9 @@ namespace PicStoneFotoAPI.Services
                     {
                         _logger.LogWarning("Moldura bancada2.png NÃO foi carregada!");
                     }
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada2_P{contaProcesso}_19_MosaicoComMoldura.png");
@@ -931,6 +980,9 @@ namespace PicStoneFotoAPI.Services
                         canvas.DrawBitmap(moldura, 0, 0, paint);
                         _logger.LogInformation("5. Moldura vazada sobreposta (overlay)");
                     }
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
@@ -1011,6 +1063,9 @@ namespace PicStoneFotoAPI.Services
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
                     var moldura = CarregarRecurso("bancada4.png");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
@@ -1135,6 +1190,9 @@ namespace PicStoneFotoAPI.Services
                     {
                         _logger.LogWarning("Moldura bancada5.png NÃO encontrada!");
                     }
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
@@ -1195,6 +1253,9 @@ namespace PicStoneFotoAPI.Services
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
                     var moldura = CarregarRecurso("bancada6.png");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
@@ -1248,6 +1309,9 @@ namespace PicStoneFotoAPI.Services
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
                     var moldura = CarregarRecurso("bancada7.png");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
@@ -1304,6 +1368,9 @@ namespace PicStoneFotoAPI.Services
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
                     var moldura = CarregarRecurso("bancada8.png");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);

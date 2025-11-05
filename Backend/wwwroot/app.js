@@ -370,8 +370,14 @@ function handleLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
 
-    clearPhoto();
-    elements.uploadForm.reset();
+    // Limpa estados
+    state.currentPhotoFile = null;
+    state.originalPhoto = null;
+
+    // Reset formulário se existir
+    if (elements.uploadForm) {
+        elements.uploadForm.reset();
+    }
 
     showLoginScreen();
 }
@@ -691,6 +697,9 @@ function compressAndPreviewImageAmbientes(file) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
+            // Salva imagem original para uso nos ambientes
+            state.originalPhoto = img;
+
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
@@ -1343,7 +1352,7 @@ function downloadAmbiente(url, nome) {
 }
 
 /**
- * Compartilha ambiente via Web Share API ou WhatsApp Web
+ * Compartilha ambiente via Web Share API nativa
  */
 async function shareAmbiente(url, nome) {
     try {
@@ -1355,15 +1364,15 @@ async function shareAmbiente(url, nome) {
             const file = new File([blob], `${nome}.jpg`, { type: 'image/jpeg' });
 
             await navigator.share({
-                title: 'Ambiente PicStone',
-                text: `Confira este ambiente de ${nome}`,
+                title: 'PicStone Mobile',
+                text: 'Make with PicStone® mobile',
                 files: [file]
             });
 
             showAmbienteMessage('Compartilhado com sucesso!', 'success');
         } else {
-            // Fallback: Compartilhar via WhatsApp Web com link da imagem
-            const texto = encodeURIComponent(`Confira este ambiente: ${url}`);
+            // Fallback: Compartilhar via WhatsApp Web
+            const texto = encodeURIComponent('Make with PicStone® mobile');
             const whatsappUrl = `https://wa.me/?text=${texto}`;
             window.open(whatsappUrl, '_blank');
             showAmbienteMessage('Abrindo WhatsApp...', 'success');

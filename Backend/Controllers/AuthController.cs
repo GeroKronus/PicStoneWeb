@@ -69,7 +69,7 @@ namespace PicStoneFotoAPI.Controllers
 
                 return Ok(new {
                     token = newToken,
-                    expiresAt = DateTime.UtcNow.AddHours(8)
+                    expiresAt = DateTime.UtcNow.AddYears(100)
                 });
             }
             catch (Exception ex)

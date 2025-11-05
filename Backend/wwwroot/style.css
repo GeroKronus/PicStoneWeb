@@ -608,21 +608,25 @@ body {
 .option-icon {
     font-size: 64px;
     margin-bottom: 16px;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 96px;
+    min-height: 96px;
+}
+
+.option-icon img {
+    max-width: 128px;
+    max-height: 96px;
+    height: auto;
+    object-fit: contain;
 }
 
 .option-card h2 {
     font-size: 24px;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 12px;
-}
-
-.option-card p {
-    color: var(--text-secondary);
-    font-size: 14px;
     margin-bottom: 20px;
-    line-height: 1.5;
 }
 
 .option-card .btn {
@@ -632,6 +636,10 @@ body {
 /* Ambiente Options */
 .ambiente-options {
     margin-top: 24px;
+}
+
+.ambiente-options.hidden {
+    display: none;
 }
 
 .ambiente-options h3 {
