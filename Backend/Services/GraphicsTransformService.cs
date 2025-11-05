@@ -74,6 +74,222 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Mapeia uma imagem diretamente para 4 vértices específicos usando Transform2d
+        /// </summary>
+        /// <param name="input">Bitmap de entrada</param>
+        /// <param name="canvasWidth">Largura do canvas de destino</param>
+        /// <param name="canvasHeight">Altura do canvas de destino</param>
+        /// <param name="v1x">Vértice 1 (top-left) - coordenada X</param>
+        /// <param name="v1y">Vértice 1 (top-left) - coordenada Y</param>
+        /// <param name="v2x">Vértice 2 (top-right) - coordenada X</param>
+        /// <param name="v2y">Vértice 2 (top-right) - coordenada Y</param>
+        /// <param name="v4x">Vértice 4 (bottom-left) - coordenada X</param>
+        /// <param name="v4y">Vértice 4 (bottom-left) - coordenada Y</param>
+        /// <param name="v3x">Vértice 3 (bottom-right) - coordenada X</param>
+        /// <param name="v3y">Vértice 3 (bottom-right) - coordenada Y</param>
+        /// <returns>Bitmap transformado no canvas especificado</returns>
+        public SKBitmap MapToVertices(SKBitmap input, int canvasWidth, int canvasHeight,
+                                      float v1x, float v1y, float v2x, float v2y,
+                                      float v4x, float v4y, float v3x, float v3y)
+        {
+            int w = input.Width;
+            int h = input.Height;
+
+            _logger.LogInformation($"MapToVertices: input={w}x{h}, canvas={canvasWidth}x{canvasHeight}");
+            _logger.LogInformation($"  V1 (top-left): ({v1x}, {v1y})");
+            _logger.LogInformation($"  V2 (top-right): ({v2x}, {v2y})");
+            _logger.LogInformation($"  V4 (bottom-left): ({v4x}, {v4y})");
+            _logger.LogInformation($"  V3 (bottom-right): ({v3x}, {v3y})");
+
+            var surface = SKSurface.Create(new SKImageInfo(canvasWidth, canvasHeight));
+            var canvas = surface.Canvas;
+            canvas.Clear(SKColors.Transparent);
+
+            // Calcula matriz de transformação 2D mapeando os 4 cantos da imagem para os 4 vértices
+            // Transform2d(w, h, x1_dest, y1_dest, x2_dest, y2_dest, x3_dest, y3_dest, x4_dest, y4_dest)
+            // Origem: (0,0), (w,0), (0,h), (w,h)
+            // Destino: V1, V2, V4, V3
+            float[] t = Transform2d(w, h, v1x, v1y, v2x, v2y, v4x, v4y, v3x, v3y);
+
+            _logger.LogInformation($"Transform2d result: [{t[0]}, {t[1]}, {t[2]}, {t[3]}, {t[4]}, {t[5]}, {t[6]}, {t[7]}, {t[8]}]");
+
+            var matrix = new SKMatrix
+            {
+                ScaleX = t[0],  // m11
+                SkewX = t[3],   // m21
+                TransX = t[6],  // m31
+                SkewY = t[1],   // m12
+                ScaleY = t[4],  // m22
+                TransY = t[7],  // m32
+                Persp0 = t[2],  // m13
+                Persp1 = t[5],  // m23
+                Persp2 = t[8]   // m33
+            };
+
+            _logger.LogInformation($"SKMatrix: ScaleX={matrix.ScaleX}, SkewX={matrix.SkewX}, TransX={matrix.TransX}");
+            _logger.LogInformation($"SKMatrix: SkewY={matrix.SkewY}, ScaleY={matrix.ScaleY}, TransY={matrix.TransY}");
+            _logger.LogInformation($"SKMatrix: Persp0={matrix.Persp0}, Persp1={matrix.Persp1}, Persp2={matrix.Persp2}");
+
+            canvas.SetMatrix(matrix);
+            canvas.DrawBitmap(input, 0, 0);
+
+            var image = surface.Snapshot();
+            var data = image.Encode(SKEncodedImageFormat.Png, 100);
+
+            using var mStream = new MemoryStream(data.ToArray());
+            return SKBitmap.Decode(mStream);
+        }
+
+        /// <summary>
+        /// Transformação especializada: mapeia qualquer retângulo para o quadrilátero irregular com distorção natural
+        /// BANCADA 3 - TOPO (2/3 da largura)
+        /// Vértices fixos especificados pelo usuário:
+        ///   V1 (top-left):     (560, 714)
+        ///   V2 (top-right):    (1624, 929)
+        ///   V3 (bottom-right): (1083, 1006)
+        ///   V4 (bottom-left):  (198, 734)
+        ///
+        /// Características da distorção natural:
+        ///   - Quadrilátero irregular com perspectiva complexa
+        ///   - Largura superior: 1064px (560→1624)
+        ///   - Largura inferior: 885px (198→1083)
+        ///   - Altura esquerda: 20px (714→734)
+        ///   - Altura direita: 77px (929→1006)
+        ///   - Perspectiva suave e natural para bancada de mármore
+        /// </summary>
+        /// <param name="input">Bitmap de entrada (qualquer retângulo)</param>
+        /// <param name="canvasWidth">Largura do canvas de destino</param>
+        /// <param name="canvasHeight">Altura do canvas de destino</param>
+        /// <returns>Bitmap transformado no quadrilátero com distorção natural</returns>
+        public SKBitmap MapToCustomQuadrilateral(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral - TOPO DA BANCADA 3 ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+            _logger.LogInformation("Vértices alvo (quadrilátero irregular):");
+            _logger.LogInformation("  V1 (top-left):     (560, 714)");
+            _logger.LogInformation("  V2 (top-right):    (1624, 929)");
+            _logger.LogInformation("  V3 (bottom-right): (1083, 1006)");
+            _logger.LogInformation("  V4 (bottom-left):  (198, 734)");
+
+            // Usar MapToVertices com coordenadas CORRETAS especificadas pelo usuário
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 560,  v1y: 714,   // top-left
+                v2x: 1624, v2y: 929,   // top-right
+                v4x: 198,  v4y: 734,   // bottom-left
+                v3x: 1083, v3y: 1006   // bottom-right
+            );
+        }
+
+        /// <summary>
+        /// Transformação especializada: mapeia qualquer retângulo para o quadrilátero irregular com distorção natural
+        /// BANCADA 3 - PÉ/LATERAL (1/3 da largura principal - 95%)
+        /// Vértices fixos especificados pelo usuário:
+        ///   V1 (top-left):     (1083, 1005)
+        ///   V2 (top-right):    (1614, 928)
+        ///   V3 (bottom-right): (1580, 1528)
+        ///   V4 (bottom-left):  (1065, 1715)
+        /// </summary>
+        /// <param name="input">Bitmap de entrada (1/3 da largura do crop)</param>
+        /// <param name="canvasWidth">Largura do canvas de destino (2000)</param>
+        /// <param name="canvasHeight">Altura do canvas de destino (1863)</param>
+        /// <returns>Bitmap transformado no quadrilátero do pé da bancada</returns>
+        public SKBitmap MapToCustomQuadrilateral_Pe(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_Pe - PÉ/LATERAL DA BANCADA 3 ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+            _logger.LogInformation("Vértices alvo (quadrilátero irregular):");
+            _logger.LogInformation("  V1 (top-left):     (1083, 1005)");
+            _logger.LogInformation("  V2 (top-right):    (1614, 928)");
+            _logger.LogInformation("  V3 (bottom-right): (1580, 1528)");
+            _logger.LogInformation("  V4 (bottom-left):  (1065, 1715)");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 1083, v1y: 1005,  // top-left
+                v2x: 1614, v2y: 928,   // top-right
+                v4x: 1065, v4y: 1715,  // bottom-left
+                v3x: 1580, v3y: 1528   // bottom-right
+            );
+        }
+
+        /// <summary>
+        /// Transformação especializada: mapeia qualquer retângulo para o quadrilátero irregular com distorção natural
+        /// BANCADA 3 - FAIXA LATERAL SUPERIOR (2/3 da faixa 5%)
+        /// Vértices fixos especificados pelo usuário:
+        ///   V1 (top-left):     (197, 733)
+        ///   V2 (top-right):    (1083, 1005)
+        ///   V3 (bottom-right): (1058, 1033)
+        ///   V4 (bottom-left):  (197, 757)
+        /// </summary>
+        /// <param name="input">Bitmap de entrada (2/3 da largura da faixa 5%)</param>
+        /// <param name="canvasWidth">Largura do canvas de destino (2000)</param>
+        /// <param name="canvasHeight">Altura do canvas de destino (1863)</param>
+        /// <returns>Bitmap transformado no quadrilátero da faixa lateral superior</returns>
+        public SKBitmap MapToCustomQuadrilateral_FaixaSuperior(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_FaixaSuperior - FAIXA LATERAL SUPERIOR ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+            _logger.LogInformation("Vértices alvo (quadrilátero irregular):");
+            _logger.LogInformation("  V1 (top-left):     (197, 733)");
+            _logger.LogInformation("  V2 (top-right):    (1083, 1005)");
+            _logger.LogInformation("  V3 (bottom-right): (1058, 1033)");
+            _logger.LogInformation("  V4 (bottom-left):  (197, 757)");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 197,  v1y: 733,   // top-left
+                v2x: 1083, v2y: 1005,  // top-right
+                v4x: 197,  v4y: 757,   // bottom-left
+                v3x: 1058, v3y: 1033   // bottom-right
+            );
+        }
+
+        /// <summary>
+        /// Transformação especializada: mapeia qualquer retângulo para o quadrilátero irregular com distorção natural
+        /// BANCADA 3 - FAIXA LATERAL INFERIOR (1/3 da faixa 5%)
+        /// Vértices fixos especificados pelo usuário:
+        ///   V1 (top-left):     (1054, 1030)
+        ///   V2 (top-right):    (1083, 1004)
+        ///   V3 (bottom-right): (1066, 1714)
+        ///   V4 (bottom-left):  (1039, 1702)
+        /// </summary>
+        /// <param name="input">Bitmap de entrada (1/3 da largura da faixa 5%)</param>
+        /// <param name="canvasWidth">Largura do canvas de destino (2000)</param>
+        /// <param name="canvasHeight">Altura do canvas de destino (1863)</param>
+        /// <returns>Bitmap transformado no quadrilátero da faixa lateral inferior</returns>
+        public SKBitmap MapToCustomQuadrilateral_FaixaInferior(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_FaixaInferior - FAIXA LATERAL INFERIOR ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+            _logger.LogInformation("Vértices alvo (quadrilátero irregular):");
+            _logger.LogInformation("  V1 (top-left):     (1054, 1030)");
+            _logger.LogInformation("  V2 (top-right):    (1083, 1004)");
+            _logger.LogInformation("  V3 (bottom-right): (1066, 1714)");
+            _logger.LogInformation("  V4 (bottom-left):  (1039, 1702)");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 1054, v1y: 1030,  // top-left
+                v2x: 1083, v2y: 1004,  // top-right
+                v4x: 1039, v4y: 1702,  // bottom-left
+                v3x: 1066, v3y: 1714   // bottom-right
+            );
+        }
+
+        /// <summary>
         /// Cria matriz de transformação 2D para projeção em perspectiva
         /// </summary>
         private float[] Transform2d(float w, float h,
@@ -536,46 +752,39 @@ namespace PicStoneFotoAPI.Services
         {
             _logger.LogInformation($"Distortion ENTRADA: imagem={imagem?.Width ?? 0}x{imagem?.Height ?? 0}, ladoMaior={ladoMaior}, ladoMenor={ladoMenor}, novaLargura={novaLargura}, novaAltura={novaAltura}");
 
-            // VALIDAÇÃO #1: Imagem de entrada
+            // VALIDAÇÃO: Parâmetros
             if (imagem == null || imagem.Width <= 0 || imagem.Height <= 0)
             {
-                _logger.LogError($"Distortion: Imagem de entrada inválida! Width={imagem?.Width}, Height={imagem?.Height}");
+                _logger.LogError($"Distortion: Imagem de entrada inválida!");
                 throw new ArgumentException($"Imagem de entrada inválida para Distortion");
             }
 
-            // VALIDAÇÃO #2: Parâmetros de entrada
-            if (ladoMaior <= 0 || ladoMenor <= 0)
+            if (ladoMaior <= 0 || ladoMenor <= 0 || novaLargura <= 0 || novaAltura <= 0)
             {
-                _logger.LogError($"Distortion: Parâmetros ladoMaior/ladoMenor inválidos! ladoMaior={ladoMaior}, ladoMenor={ladoMenor}");
-                throw new ArgumentException($"Parâmetros inválidos: ladoMaior={ladoMaior}, ladoMenor={ladoMenor}");
+                _logger.LogError($"Distortion: Parâmetros inválidos!");
+                throw new ArgumentException($"Parâmetros inválidos para Distortion");
             }
 
-            // VALIDAÇÃO #3: Dimensões de saída
-            if (novaLargura <= 0 || novaAltura <= 0)
-            {
-                _logger.LogError($"Distortion: Dimensões inválidas! novaLargura={novaLargura}, novaAltura={novaAltura}");
-                throw new ArgumentException($"Dimensões inválidas para Distortion: {novaLargura}x{novaAltura}");
-            }
+            // CORREÇÃO: VB.NET faz apenas RESIZE UNIFORME (sem amostragem não-linear)
+            // Isso cria PARALELOGRAMO (sem convergência) em vez de TRAPÉZIO
 
-            // VALIDAÇÃO #4: Limites máximos razoáveis
-            const int MAX_DIMENSION = 10000;
-            if (novaLargura > MAX_DIMENSION || novaAltura > MAX_DIMENSION)
-            {
-                _logger.LogError($"Distortion: Dimensões excederam limite máximo! novaLargura={novaLargura}, novaAltura={novaAltura}, max={MAX_DIMENSION}");
-                throw new ArgumentException($"Dimensões excedem limite máximo de {MAX_DIMENSION}px");
-            }
+            // Calcula altura final usando o fator
+            float fator = (float)ladoMaior / ladoMenor;
+            int alturaFinal = (int)(novaAltura / fator);
 
-            // Redimensiona para o tamanho desejado
-            SKBitmap bmpImage;
+            _logger.LogInformation($"Distortion: fator={fator:F3}, alturaFinal={alturaFinal} (de {novaAltura})");
+
+            // APENAS RESIZE uniforme (mantém linhas paralelas = PARALELOGRAMO)
+            SKBitmap resultado;
             try
             {
-                bmpImage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
-                if (bmpImage == null || bmpImage.Width <= 0 || bmpImage.Height <= 0)
+                resultado = imagem.Resize(new SKImageInfo(novaLargura, alturaFinal), SKFilterQuality.High);
+                if (resultado == null || resultado.Width <= 0 || resultado.Height <= 0)
                 {
                     _logger.LogError($"Distortion: Resize retornou bitmap inválido!");
-                    throw new InvalidOperationException("Resize falhou ao criar bitmap válido");
+                    throw new InvalidOperationException("Resize falhou");
                 }
-                _logger.LogInformation($"Distortion: Após resize -> {bmpImage.Width}x{bmpImage.Height}");
+                _logger.LogInformation($"Distortion SAÍDA: {resultado.Width}x{resultado.Height}");
             }
             catch (Exception ex)
             {
@@ -583,73 +792,7 @@ namespace PicStoneFotoAPI.Services
                 throw;
             }
 
-            int largura = bmpImage.Width;
-            int altura = bmpImage.Height;
-
-            // Cálculo do fator de distorção (perspectiva)
-            decimal fatorDeDistortion = (decimal)ladoMaior / ladoMenor;
-            decimal primeiroY = altura / fatorDeDistortion;
-
-            int loopEixoY = (int)primeiroY;
-            _logger.LogInformation($"Distortion: fatorDeDistortion={fatorDeDistortion}, primeiroY={primeiroY}, loopEixoY={loopEixoY}");
-
-            // VALIDAÇÃO #5: Garantir loopEixoY válido (MELHORADA)
-            if (loopEixoY <= 0)
-            {
-                _logger.LogWarning($"Distortion: loopEixoY calculado como {loopEixoY}, ajustando para 1");
-                loopEixoY = 1;
-            }
-            if (loopEixoY > altura)
-            {
-                _logger.LogWarning($"Distortion: loopEixoY calculado como {loopEixoY} (maior que altura {altura}), ajustando para {altura}");
-                loopEixoY = altura;
-            }
-
-            decimal pixelVertical = altura / primeiroY;
-
-            _logger.LogInformation($"Distortion: Criando bitmap de saída {largura}x{loopEixoY}");
-
-            // VALIDAÇÃO #6: Criar bitmap com try-catch
-            SKBitmap bmp2;
-            try
-            {
-                bmp2 = new SKBitmap(largura, loopEixoY);
-                if (bmp2 == null)
-                {
-                    _logger.LogError($"Distortion: SKBitmap retornou null para dimensões {largura}x{loopEixoY}");
-                    throw new OutOfMemoryException($"Falha ao alocar bitmap {largura}x{loopEixoY}");
-                }
-                _logger.LogInformation($"Distortion: Bitmap criado com sucesso! {bmp2.Width}x{bmp2.Height}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Distortion: ERRO ao criar bitmap {largura}x{loopEixoY}: {ex.Message}");
-                _logger.LogError($"Distortion: Stack trace: {ex.StackTrace}");
-                bmpImage.Dispose();
-                throw new InvalidOperationException($"Falha ao alocar bitmap {largura}x{loopEixoY}: {ex.Message}", ex);
-            }
-
-            for (int horizontal = 0; horizontal < largura; horizontal++)
-            {
-                decimal posicaoDosPixels = 0;
-
-                for (int vertical = 0; vertical < loopEixoY; vertical++)
-                {
-                    int pixelY = (int)posicaoDosPixels;
-                    if (pixelY >= altura) pixelY = altura - 1;
-                    if (pixelY < 0) pixelY = 0;
-
-                    var pixel = bmpImage.GetPixel(horizontal, pixelY);
-                    bmp2.SetPixel(horizontal, vertical, pixel);
-
-                    posicaoDosPixels += pixelVertical;
-                    if (posicaoDosPixels >= altura) posicaoDosPixels = altura - 1;
-                }
-            }
-
-            bmpImage.Dispose();
-            _logger.LogInformation($"Distortion SAÍDA: {bmp2.Width}x{bmp2.Height}");
-            return bmp2;
+            return resultado;
         }
 
         /// <summary>
@@ -694,6 +837,84 @@ namespace PicStoneFotoAPI.Services
             }
 
             return retBMP;
+        }
+
+        /// <summary>
+        /// Transformação para Bancada 5 - Frente Direita
+        /// Canvas: 1500x1068
+        /// Vértices fixos:
+        ///   V1 (top-left):     (670, 598)
+        ///   V2 (top-right):    (968, 577)
+        ///   V3 (bottom-right): (975, 854)
+        ///   V4 (bottom-left):  (309, 1037)
+        /// </summary>
+        public SKBitmap MapToCustomQuadrilateral_Bancada5_FrenteDireita(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_Bancada5_FrenteDireita ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 670,  v1y: 598,    // top-left
+                v2x: 968,  v2y: 577,    // top-right
+                v4x: 309,  v4y: 1037,   // bottom-left
+                v3x: 975,  v3y: 854     // bottom-right
+            );
+        }
+
+        /// <summary>
+        /// Transformação para Bancada 5 - Frente Esquerda
+        /// Canvas: 1500x1068
+        /// Vértices fixos:
+        ///   V1 (top-left):     (309, 623)
+        ///   V2 (top-right):    (670, 598)
+        ///   V3 (bottom-right): (669, 939)
+        ///   V4 (bottom-left):  (309, 1036)
+        /// </summary>
+        public SKBitmap MapToCustomQuadrilateral_Bancada5_FrenteEsquerda(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_Bancada5_FrenteEsquerda ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 309,  v1y: 623,    // top-left
+                v2x: 670,  v2y: 598,    // top-right
+                v4x: 309,  v4y: 1036,   // bottom-left
+                v3x: 669,  v3y: 939     // bottom-right
+            );
+        }
+
+        /// <summary>
+        /// Transformação para Bancada 5 - Lateral
+        /// Canvas: 1500x1068
+        /// Vértices fixos:
+        ///   V1 (top-left):     (188, 601)
+        ///   V2 (top-right):    (309, 623)
+        ///   V3 (bottom-right): (309, 1036)
+        ///   V4 (bottom-left):  (196, 922)
+        /// </summary>
+        public SKBitmap MapToCustomQuadrilateral_Bancada5_Lateral(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_Bancada5_Lateral ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 188,  v1y: 601,    // top-left
+                v2x: 309,  v2y: 623,    // top-right
+                v4x: 196,  v4y: 922,    // bottom-left
+                v3x: 309,  v3y: 1036    // bottom-right
+            );
         }
     }
 }

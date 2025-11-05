@@ -481,7 +481,7 @@ namespace PicStoneFotoAPI.Services
             canvas.DrawBitmap(source, 0, 0, paint);
 
             var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
 
             using var mStream = new MemoryStream(data.ToArray());
             return SKBitmap.Decode(mStream);
@@ -502,7 +502,7 @@ namespace PicStoneFotoAPI.Services
             canvas.DrawBitmap(source, 0, 0, paint);
 
             var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
 
             using var mStream = new MemoryStream(data.ToArray());
             return SKBitmap.Decode(mStream);
@@ -541,7 +541,7 @@ namespace PicStoneFotoAPI.Services
                 string caminhoCompleto = Path.Combine(pastaDebug, nomeArquivo);
 
                 using var image = SKImage.FromBitmap(bitmap);
-                using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+                using var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
                 using var stream = File.OpenWrite(caminhoCompleto);
                 data.SaveTo(stream);
 
@@ -587,7 +587,7 @@ namespace PicStoneFotoAPI.Services
             canvas.DrawBitmap(source, 0, 0, paint);
 
             var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
 
             using var mStream = new MemoryStream(data.ToArray());
             return SKBitmap.Decode(mStream);
@@ -637,7 +637,7 @@ namespace PicStoneFotoAPI.Services
             canvas.DrawBitmap(source, 0, 0, paint);
 
             var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
 
             using var mStream = new MemoryStream(data.ToArray());
             return SKBitmap.Decode(mStream);
@@ -674,7 +674,7 @@ namespace PicStoneFotoAPI.Services
             canvas.DrawBitmap(source, 0, 0, paint);
 
             var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
 
             using var mStream = new MemoryStream(data.ToArray());
             return SKBitmap.Decode(mStream);
@@ -737,219 +737,169 @@ namespace PicStoneFotoAPI.Services
             _logger.LogWarning($"========== INICIANDO GerarBancada3 COMPLETO - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
             var resultado = new List<SKBitmap>();
 
-            // Bancada 3 do VB.NET processa apenas 1 versão
-            for (int contaProcesso = 1; contaProcesso <= 1; contaProcesso++)
+            // Bancada 3 - gera 2 versões (normal e 180°)
+            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
             {
-                // imagemOriginal já é o resultado do BookMatch (2000x1200)
-                var imagemBookMatch = imagemOriginal.Copy();
+                // DEBUG MODE: Substituir textura por verde sólido para testes
+                bool DEBUG_GREEN_MODE = false; // Definir como true para ativar modo verde
+
+                // ROTACIONA A IMAGEM ORIGINAL ANTES DE PROCESSAR (se contaProcesso == 2)
+                SKBitmap imagemParaProcessar;
+                if (contaProcesso == 1)
+                {
+                    imagemParaProcessar = imagemOriginal.Copy();
+                    _logger.LogInformation($"contaProcesso={contaProcesso}: Usando imagem ORIGINAL");
+                }
+                else
+                {
+                    imagemParaProcessar = RotateFlip180(imagemOriginal);
+                    _logger.LogInformation($"contaProcesso={contaProcesso}: Usando imagem ROTACIONADA 180°");
+                }
+
+                SKBitmap imagemBookMatch;
+                if (DEBUG_GREEN_MODE)
+                {
+                    // Criar superfície verde sólida 2000x1200
+                    imagemBookMatch = new SKBitmap(2000, 1200);
+                    using (var canvas = new SKCanvas(imagemBookMatch))
+                    {
+                        canvas.Clear(new SKColor(0, 200, 100, 180)); // Verde semi-transparente
+                    }
+                    _logger.LogWarning("🟢 DEBUG MODE: Usando superfície VERDE sólida");
+                }
+                else
+                {
+                    // imagemParaProcessar já foi rotacionada (ou não) conforme contaProcesso
+                    imagemBookMatch = imagemParaProcessar.Copy();
+                }
                 _logger.LogInformation($"BookMatch entrada: {imagemBookMatch.Width}x{imagemBookMatch.Height}");
 
-                // ============ DIVISÃO EM 2/3 E 1/3 COM OVERLAP ============
-                int doisTercos = (int)(imagemBookMatch.Width / 1.5);
-                int umTerco = imagemBookMatch.Width - doisTercos;
+                // ============ DIVISÃO DA FAIXA: 95% PRINCIPAL + 5% FAIXA LATERAL ============
+                // A faixa deve ter o COMPRIMENTO TOTAL (Height) e 5% da LARGURA (Width)
+                // Dividimos na ALTURA (Height): os primeiros 95% são a parte principal, os últimos 5% são a faixa
+                int alturaPrincipal = (int)(imagemBookMatch.Height * 0.95);
+                int alturaFaixa = imagemBookMatch.Height - alturaPrincipal;
 
-                _logger.LogInformation($"Divisão: 2/3={doisTercos}px, 1/3={umTerco}px");
+                _logger.LogInformation($"Divisão da faixa: 95% principal={alturaPrincipal}px altura, 5% faixa={alturaFaixa}px altura");
+                _logger.LogInformation($"Faixa terá: largura={imagemBookMatch.Width}px (100% do comprimento), altura={alturaFaixa}px (5% da largura)");
 
-                var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
-                // SKRectI(left, top, right, bottom) - right = left + width
-                var rectUmTerco = new SKRectI(doisTercos - 10, 0, doisTercos - 10 + umTerco + 10, imagemBookMatch.Height);
+                var rectPrincipal = new SKRectI(0, 0, imagemBookMatch.Width, alturaPrincipal);
+                var rectFaixaLateral = new SKRectI(0, alturaPrincipal, imagemBookMatch.Width, imagemBookMatch.Height);
 
-                var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
-                var imagemUmTerco = CropBitmap(imagemBookMatch, rectUmTerco);
+                var imagemPrincipal = CropBitmap(imagemBookMatch, rectPrincipal);
+                var imagemFaixaLateral = CropBitmap(imagemBookMatch, rectFaixaLateral);
 
-                _logger.LogInformation($"✓ Divisão: 2/3={imagemDoisTercos.Width}x{imagemDoisTercos.Height}, 1/3={imagemUmTerco.Width}x{imagemUmTerco.Height}");
-                _logger.LogInformation($"✓ Razão 2/3: {(float)imagemDoisTercos.Width / imagemDoisTercos.Height:F2} (esperado ~1.1 para paisagem)");
+                _logger.LogInformation($"✓ Parte principal (95%): {imagemPrincipal.Width}x{imagemPrincipal.Height}");
+                _logger.LogInformation($"✓ Faixa lateral (5%): {imagemFaixaLateral.Width}x{imagemFaixaLateral.Height}");
+
+                // ============ DIVISÃO VERTICAL DA PARTE PRINCIPAL: 2/3 E 1/3 ============
+                int doisTercos = (int)(imagemPrincipal.Width / 1.5);
+                int umTerco = imagemPrincipal.Width - doisTercos;
+
+                _logger.LogInformation($"Divisão vertical (principal): 2/3={doisTercos}px, 1/3={umTerco}px");
+
+                var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemPrincipal.Height);
+                var rectUmTerco = new SKRectI(doisTercos - 10, 0, doisTercos - 10 + umTerco + 10, imagemPrincipal.Height);
+
+                var imagemDoisTercos = CropBitmap(imagemPrincipal, rectDoisTercos);
+                var imagemUmTerco = CropBitmap(imagemPrincipal, rectUmTerco);
+
+                _logger.LogInformation($"✓ Principal 2/3: {imagemDoisTercos.Width}x{imagemDoisTercos.Height}");
+                _logger.LogInformation($"✓ Principal 1/3: {imagemUmTerco.Width}x{imagemUmTerco.Height}");
+
+                // ============ DIVISÃO HORIZONTAL DA FAIXA LATERAL: 2/3 E 1/3 ============
+                // A faixa agora é horizontal (comprimento total x 5% largura)
+                // Dividimos na LARGURA (Width): 2/3 esquerda + 1/3 direita
+                int faixaDoisTercos = (int)(imagemFaixaLateral.Width / 1.5);
+                int faixaUmTerco = imagemFaixaLateral.Width - faixaDoisTercos;
+
+                _logger.LogInformation($"Divisão horizontal (faixa): 2/3={faixaDoisTercos}px largura, 1/3={faixaUmTerco}px largura");
+
+                // Dividimos na LARGURA (Width)
+                var rectFaixaSuperior = new SKRectI(0, 0, faixaDoisTercos, imagemFaixaLateral.Height);
+                var rectFaixaInferior = new SKRectI(faixaDoisTercos, 0, imagemFaixaLateral.Width, imagemFaixaLateral.Height);
+
+                var imagemFaixaSuperior = CropBitmap(imagemFaixaLateral, rectFaixaSuperior);
+                var imagemFaixaInferior = CropBitmap(imagemFaixaLateral, rectFaixaInferior);
+
+                _logger.LogInformation($"✓ Faixa superior (2/3): {imagemFaixaSuperior.Width}x{imagemFaixaSuperior.Height}");
+                _logger.LogInformation($"✓ Faixa inferior (1/3): {imagemFaixaInferior.Width}x{imagemFaixaInferior.Height}");
 
                 // ============ PARTE 1: bmp7 (COMPONENTE PRINCIPAL) - 12 TRANSFORMAÇÕES ============
                 _logger.LogInformation("=== Iniciando PARTE 1: bmp7 (12 transformações) ===");
 
                 // Transformação 1: Rotate90
-                var bmp2 = imagemDoisTercos.Copy();
-                _logger.LogInformation($"T1 PRÉ: bmp2 = {bmp2.Width}x{bmp2.Height} (paisagem esperada)");
-                bmp2 = RotateFlip90(bmp2);
-                _logger.LogInformation($"T1 PÓS: Rotate90 -> {bmp2.Width}x{bmp2.Height} (retrato esperado)");
+                // ============ NOVA LÓGICA: MapToCustomQuadrilateral ============
+                // SUBSTITUINDO 12 transformações complexas por 1 transformação direta
 
-                // VALIDAÇÃO: Após Rotate90, altura deve ser > largura (retrato)
-                if (bmp2.Width > bmp2.Height)
-                {
-                    _logger.LogError($"❌ ALERTA: Após Rotate90, bmp2 ainda em paisagem ({bmp2.Width}x{bmp2.Height})! Deveria estar em retrato.");
-                }
+                _logger.LogInformation($"imagemDoisTercos (2/3 largura): {imagemDoisTercos.Width}x{imagemDoisTercos.Height} (paisagem)");
 
-                // ============ EXTRAÇÃO DA FAIXA DECORATIVA (será processada depois) ============
-                // VB.NET: rect = Rectangle(0, height - 80, width, 40)
-                // SKRectI(left, top, right, bottom) - bottom = top + height
-                var rectFaixa = new SKRectI(0, bmp2.Height - 80, bmp2.Width, bmp2.Height - 80 + 40);
-                var faixa1 = CropBitmap(bmp2, rectFaixa);
-                _logger.LogInformation($"Faixa1 extraída: {faixa1.Width}x{faixa1.Height}");
+                // TRANSFORMAÇÃO PRINCIPAL: MapToCustomQuadrilateral
+                // Aplica transformação de perspectiva direta nos 2/3 da largura
+                _logger.LogInformation("Aplicando MapToCustomQuadrilateral...");
+                var bmp7 = _transformService.MapToCustomQuadrilateral(
+                    input: imagemDoisTercos,
+                    canvasWidth: 2000,
+                    canvasHeight: 1863  // Canvas final da Bancada 3
+                );
+                _logger.LogInformation($"MapToCustomQuadrilateral -> bmp7: {bmp7.Width}x{bmp7.Height}");
 
-                // Transformação 2: Distortion(1060, 909, 187, 1060)
-                SKBitmap bmp3;
-                try
-                {
-                    bmp3 = _transformService.Distortion(bmp2, 1060, 909, 187, 1060);
-                    _logger.LogInformation($"T2: Distortion(1060,909,187,1060) -> {bmp3.Width}x{bmp3.Height}");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"ERRO em T2 Distortion: {ex.Message}");
-                    throw;
-                }
+                // ============ PARTE 3: FAIXA LATERAL SUPERIOR - NOVA TRANSFORMAÇÃO ============
+                _logger.LogInformation("=== Iniciando PARTE 3: Faixa Lateral Superior (MapToCustomQuadrilateral_FaixaSuperior) ===");
+                _logger.LogInformation($"imagemFaixaSuperior (3/4 largura faixa 5%): {imagemFaixaSuperior.Width}x{imagemFaixaSuperior.Height}");
 
-                // Transformação 3: Skew(0, 371)
-                var bmp4 = _transformService.SkewSimples(bmp3, 0, 371);
-                _logger.LogInformation($"T3: Skew(0,371) -> {bmp4.Width}x{bmp4.Height}");
+                // SEM ROTAÇÃO - a faixa já está na orientação correta (horizontal com comprimento total)
+                _logger.LogInformation("Faixa já está na orientação correta, sem necessidade de rotação");
 
-                // Transformação 4: Rotate270
-                var bmp5 = RotateFlip270(bmp4);
-                _logger.LogInformation($"T4: Rotate270 -> {bmp5.Width}x{bmp5.Height}");
+                // TRANSFORMAÇÃO DA FAIXA SUPERIOR: MapToCustomQuadrilateral_FaixaSuperior
+                _logger.LogInformation("Aplicando MapToCustomQuadrilateral_FaixaSuperior...");
+                var faixaSuperiorTransformada = _transformService.MapToCustomQuadrilateral_FaixaSuperior(
+                    input: imagemFaixaSuperior,
+                    canvasWidth: 2000,
+                    canvasHeight: 1863  // Canvas final da Bancada 3
+                );
+                _logger.LogInformation($"MapToCustomQuadrilateral_FaixaSuperior -> {faixaSuperiorTransformada.Width}x{faixaSuperiorTransformada.Height}");
 
-                // VALIDAÇÃO EXTRA: Verificar bmp5 antes de usar
-                if (bmp5 == null || bmp5.Width <= 0 || bmp5.Height <= 0)
-                {
-                    _logger.LogError($"T4: bmp5 está inválido após Rotate270! Width={bmp5?.Width}, Height={bmp5?.Height}");
-                    throw new InvalidOperationException("bmp5 inválido após Rotate270");
-                }
+                // ============ PARTE 2: bmp9 (PÉ/LATERAL) - NOVA TRANSFORMAÇÃO DIRETA ============
+                _logger.LogInformation("=== Iniciando PARTE 2: bmp9 (MapToCustomQuadrilateral_Pe) ===");
+                _logger.LogInformation($"imagemUmTerco (1/3 largura): {imagemUmTerco.Width}x{imagemUmTerco.Height}");
 
-                // Transformação 5: Distortion(187, 110, width*1.1, height*1.4)
-                int novaLarg = (int)(bmp5.Width * 1.1);
-                int novaAlt = (int)(bmp5.Height * 1.4);
+                // ROTAÇÃO PARA CONTINUIDADE DOS VEIOS
+                // O pé é uma continuação vertical do topo, então precisa rotacionar 90° (sentido horário)
+                // para manter os veios do mármore em continuidade
+                var imagemUmTercoRotacionada = RotateFlip90(imagemUmTerco);
+                _logger.LogInformation($"Rotacionado 90° para continuidade dos veios: {imagemUmTercoRotacionada.Width}x{imagemUmTercoRotacionada.Height}");
 
-                _logger.LogInformation($"T5: Calculado novaLarg={novaLarg}, novaAlt={novaAlt} a partir de bmp5 {bmp5.Width}x{bmp5.Height}");
+                // TRANSFORMAÇÃO PRINCIPAL: MapToCustomQuadrilateral_Pe
+                // Substitui as 5 transformações antigas (Resize → Rotate90FlipX → Distortion → FlipX → Skew2)
+                // por uma única transformação de perspectiva direta
+                _logger.LogInformation("Aplicando MapToCustomQuadrilateral_Pe...");
+                var bmp9 = _transformService.MapToCustomQuadrilateral_Pe(
+                    input: imagemUmTercoRotacionada,
+                    canvasWidth: 2000,
+                    canvasHeight: 1863  // Canvas final da Bancada 3
+                );
+                _logger.LogInformation($"MapToCustomQuadrilateral_Pe -> bmp9: {bmp9.Width}x{bmp9.Height}");
 
-                // VALIDAÇÃO EXTRA: Verificar dimensões calculadas
-                if (novaLarg <= 0 || novaAlt <= 0)
-                {
-                    _logger.LogError($"T5: Dimensões calculadas inválidas! novaLarg={novaLarg}, novaAlt={novaAlt}");
-                    throw new InvalidOperationException($"Dimensões calculadas inválidas: {novaLarg}x{novaAlt}");
-                }
+                // ============ PARTE 4: FAIXA LATERAL INFERIOR - NOVA TRANSFORMAÇÃO ============
+                _logger.LogInformation("=== Iniciando PARTE 4: Faixa Lateral Inferior (MapToCustomQuadrilateral_FaixaInferior) ===");
+                _logger.LogInformation($"imagemFaixaInferior (1/4 largura faixa 5%): {imagemFaixaInferior.Width}x{imagemFaixaInferior.Height}");
 
-                SKBitmap bmp6;
-                try
-                {
-                    bmp6 = _transformService.Distortion(bmp5, 187, 110, novaLarg, novaAlt);
-                    _logger.LogInformation($"T5: Distortion(187,110,{novaLarg},{novaAlt}) -> {bmp6.Width}x{bmp6.Height}");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"ERRO em T5 Distortion: {ex.Message}");
-                    _logger.LogError($"T5: Parâmetros - bmp5: {bmp5.Width}x{bmp5.Height}, novaLarg={novaLarg}, novaAlt={novaAlt}");
-                    throw;
-                }
+                // ROTAÇÃO -90° (270°) PARA CONTINUIDADE DOS VEIOS
+                var imagemFaixaInferiorRotacionada = RotateFlip270(imagemFaixaInferior);
+                _logger.LogInformation($"Rotacionado -90° para continuidade dos veios: {imagemFaixaInferiorRotacionada.Width}x{imagemFaixaInferiorRotacionada.Height}");
 
-                // Transformação 6: Canvas 2000x2000
-                var canvas2000 = new SKBitmap(2000, 2000);
-                using (var canvas = new SKCanvas(canvas2000))
-                {
-                    canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    canvas.DrawBitmap(bmp6, 0, 0, paint);
-                }
-                _logger.LogInformation($"T6: Canvas 2000x2000 com bmp6 at (0,0)");
-
-                // Transformação 7: RotateImage2(-13.2°, 50, 600) - ângulo NEGATIVO para perspectiva correta
-                var bmp7 = _transformService.RotateImage2(canvas2000, -13.2f, 50, 600);
-                _logger.LogInformation($"T7: RotateImage2(-13.2°,50,600) -> bmp7 completo");
-
-                // DEBUG: Salva bmp7 para análise
-                if (contaProcesso == 1)
-                {
-                    var debugPath = Path.Combine("wwwroot", "debug");
-                    Directory.CreateDirectory(debugPath);
-
-                    using (var bmp7Data = bmp7.Encode(SKEncodedImageFormat.Png, 100))
-                    using (var bmp7Stream = File.OpenWrite(Path.Combine(debugPath, "bancada3_bmp7_principal.png")))
-                    {
-                        bmp7Data.SaveTo(bmp7Stream);
-                    }
-                    _logger.LogWarning($"DEBUG: bmp7 salvo em wwwroot/debug/bancada3_bmp7_principal.png");
-                }
-
-                // ============ PARTE 3: FaixaRotacionada (DECORATIVA) - 5 TRANSFORMAÇÕES ============
-                _logger.LogInformation("=== Iniciando PARTE 3: FaixaRotacionada (5 transformações) ===");
-
-                // Transformação 1: Resize(980, 40)
-                var faixa1Pronta = faixa1.Resize(new SKImageInfo(980, 40), SKFilterQuality.High);
-                _logger.LogInformation($"FT1: Resize(980,40) -> {faixa1Pronta.Width}x{faixa1Pronta.Height}");
-
-                // Transformação 2: Rotate90
-                faixa1Pronta = RotateFlip90(faixa1Pronta);
-                _logger.LogInformation($"FT2: Rotate90 -> {faixa1Pronta.Width}x{faixa1Pronta.Height}");
-
-                // Transformação 3: Skew(0, 15)
-                faixa1Pronta = _transformService.SkewSimples(faixa1Pronta, 0, 15);
-                _logger.LogInformation($"FT3: Skew(0,15) -> {faixa1Pronta.Width}x{faixa1Pronta.Height}");
-
-                // Transformação 4: Canvas 1500x1500
-                var canvas1500 = new SKBitmap(1500, 1500);
-                using (var canvas = new SKCanvas(canvas1500))
-                {
-                    canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    canvas.DrawBitmap(faixa1Pronta, 0, 0, paint);
-                }
-                _logger.LogInformation($"FT4: Canvas 1500x1500 com faixa at (0,0)");
-
-                // Transformação 5: RotateImage2(-73°, 300, 200)
-                var faixaRotacionada = _transformService.RotateImage2(canvas1500, -73f, 300, 200);
-                _logger.LogInformation($"FT5: RotateImage2(-73°,300,200) -> FaixaRotacionada completa");
-
-                // DEBUG: Salva FaixaRotacionada para análise
-                if (contaProcesso == 1)
-                {
-                    var debugPath = Path.Combine("wwwroot", "debug");
-                    using (var faixaData = faixaRotacionada.Encode(SKEncodedImageFormat.Png, 100))
-                    using (var faixaStream = File.OpenWrite(Path.Combine(debugPath, "bancada3_faixa_decorativa.png")))
-                    {
-                        faixaData.SaveTo(faixaStream);
-                    }
-                    _logger.LogWarning($"DEBUG: FaixaRotacionada salva em wwwroot/debug/bancada3_faixa_decorativa.png");
-                }
-
-                // ============ PARTE 2: bmp9 (LATERAL) - 5 TRANSFORMAÇÕES ============
-                _logger.LogInformation("=== Iniciando PARTE 2: bmp9 (5 transformações) ===");
-
-                // Transformação 1: Resize(600, 720)
-                var bmp8 = imagemUmTerco.Resize(new SKImageInfo(600, 720), SKFilterQuality.High);
-                _logger.LogInformation($"LT1: Resize(600,720) -> {bmp8.Width}x{bmp8.Height}");
-
-                // Transformação 2: Rotate90FlipX
-                bmp8 = RotateFlip90FlipX(bmp8);
-                _logger.LogInformation($"LT2: Rotate90FlipX -> {bmp8.Width}x{bmp8.Height}");
-
-                // Transformação 3: Distortion(710, 600, 600, 720)
-                try
-                {
-                    bmp8 = _transformService.Distortion(bmp8, 710, 600, 600, 720);
-                    _logger.LogInformation($"LT3: Distortion(710,600,600,720) -> {bmp8.Width}x{bmp8.Height}");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"ERRO em LT3 Distortion: {ex.Message}");
-                    throw;
-                }
-
-                // Transformação 4: FlipX
-                bmp8 = FlipHorizontal(bmp8);
-                _logger.LogInformation($"LT4: FlipX -> {bmp8.Width}x{bmp8.Height}");
-
-                // Transformação 5: Skew2(0, 83)
-                var bmp9 = _transformService.Skew2(bmp8, 0, 83);
-                _logger.LogInformation($"LT5: Skew2(0,83) -> bmp9 completo {bmp9.Width}x{bmp9.Height}");
-
-                // DEBUG: Salva bmp9 para análise
-                if (contaProcesso == 1)
-                {
-                    var debugPath = Path.Combine("wwwroot", "debug");
-                    using (var bmp9Data = bmp9.Encode(SKEncodedImageFormat.Png, 100))
-                    using (var bmp9Stream = File.OpenWrite(Path.Combine(debugPath, "bancada3_bmp9_lateral.png")))
-                    {
-                        bmp9Data.SaveTo(bmp9Stream);
-                    }
-                    _logger.LogWarning($"DEBUG: bmp9 salvo em wwwroot/debug/bancada3_bmp9_lateral.png");
-                }
+                // TRANSFORMAÇÃO DA FAIXA INFERIOR: MapToCustomQuadrilateral_FaixaInferior
+                _logger.LogInformation("Aplicando MapToCustomQuadrilateral_FaixaInferior...");
+                var faixaInferiorTransformada = _transformService.MapToCustomQuadrilateral_FaixaInferior(
+                    input: imagemFaixaInferiorRotacionada,
+                    canvasWidth: 2000,
+                    canvasHeight: 1863  // Canvas final da Bancada 3
+                );
+                _logger.LogInformation($"MapToCustomQuadrilateral_FaixaInferior -> {faixaInferiorTransformada.Width}x{faixaInferiorTransformada.Height}");
 
                 // ============ MONTAGEM FINAL: Canvas 2000x1863 ============
-                _logger.LogInformation("=== Montagem final: MOLDURA primeiro, depois 3 componentes ===");
+                _logger.LogInformation("=== Montagem final: MÁRMORE primeiro, MOLDURA por cima (overlay) ===");
 
                 var mosaicoEmBranco = new SKBitmap(2000, 1863);
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
@@ -957,37 +907,30 @@ namespace PicStoneFotoAPI.Services
                     canvas.Clear(SKColors.Transparent);
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
 
-                    // ORDEM CORRETA: Moldura primeiro (fundo)
+                    // ORDEM CORRETA:
+                    // 1. Mármore transformado (bmp7 - topo) - FUNDO
+                    canvas.DrawBitmap(bmp7, 0, 0, paint);
+                    _logger.LogInformation("1. bmp7 (topo transformado) desenhado at (0, 0)");
+
+                    // 2. Mármore transformado (bmp9 - pé/lateral) - FUNDO
+                    canvas.DrawBitmap(bmp9, 0, 0, paint);
+                    _logger.LogInformation("2. bmp9 (pé transformado) desenhado at (0, 0)");
+
+                    // 3. Faixa lateral superior transformada - FUNDO
+                    canvas.DrawBitmap(faixaSuperiorTransformada, 0, 0, paint);
+                    _logger.LogInformation("3. faixaSuperiorTransformada desenhada at (0, 0)");
+
+                    // 4. Faixa lateral inferior transformada - FUNDO
+                    canvas.DrawBitmap(faixaInferiorTransformada, 0, 0, paint);
+                    _logger.LogInformation("4. faixaInferiorTransformada desenhada at (0, 0)");
+
+                    // 5. Moldura vazada - OVERLAY (por cima do mármore)
                     var moldura = CarregarRecurso("bancada3.png");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("1. Moldura desenhada (fundo)");
+                        _logger.LogInformation("5. Moldura vazada sobreposta (overlay)");
                     }
-
-                    // Depois as 3 partes do mármore (por cima da moldura)
-                    canvas.DrawBitmap(bmp7, -35, 169, paint);
-                    _logger.LogInformation("2. bmp7 desenhado at (-35, 169)");
-
-                    canvas.DrawBitmap(bmp9, 1042, 926, paint);
-                    _logger.LogInformation("3. bmp9 desenhado at (1042, 926)");
-
-                    canvas.DrawBitmap(faixaRotacionada, 20, -271, paint);
-                    _logger.LogInformation("4. FaixaRotacionada desenhada at (20, -271)");
-                }
-
-                // DEBUG: Salva mosaico final
-                if (contaProcesso == 1)
-                {
-                    var debugPath = Path.Combine("wwwroot", "debug");
-                    Directory.CreateDirectory(debugPath);
-
-                    using (var finalData = mosaicoEmBranco.Encode(SKEncodedImageFormat.Png, 100))
-                    using (var finalStream = File.OpenWrite(Path.Combine(debugPath, "bancada3_final_completo.png")))
-                    {
-                        finalData.SaveTo(finalStream);
-                    }
-                    _logger.LogWarning($"DEBUG: Final completo salvo em wwwroot/debug/bancada3_final_completo.png");
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
@@ -995,25 +938,21 @@ namespace PicStoneFotoAPI.Services
 
                 // Dispose de todos os bitmaps intermediários
                 imagemBookMatch.Dispose();
+                imagemPrincipal.Dispose();
+                imagemFaixaLateral.Dispose();
                 imagemDoisTercos.Dispose();
                 imagemUmTerco.Dispose();
-                bmp2.Dispose();
-                faixa1.Dispose();
-                bmp3.Dispose();
-                bmp4.Dispose();
-                bmp5.Dispose();
-                bmp6.Dispose();
-                canvas2000.Dispose();
+                imagemUmTercoRotacionada.Dispose();
+                imagemFaixaSuperior.Dispose();
+                imagemFaixaInferior.Dispose();
+                imagemFaixaInferiorRotacionada.Dispose();
+                // bmp2, faixa1, faixa1Pronta, canvas1500, faixaRotacionada removidos (lógica antiga)
                 bmp7.Dispose();
-                faixa1Pronta.Dispose();
-                canvas1500.Dispose();
-                faixaRotacionada.Dispose();
-                bmp8.Dispose();
                 bmp9.Dispose();
+                faixaSuperiorTransformada.Dispose();
+                faixaInferiorTransformada.Dispose();
             }
 
-            // Adiciona segunda versão rotacionada para consistência com outras bancadas
-            resultado.Add(RotateFlip180(resultado[0]));
             _logger.LogWarning("========== GerarBancada3 COMPLETO FINALIZADO ==========");
             return resultado;
         }
@@ -1053,29 +992,6 @@ namespace PicStoneFotoAPI.Services
                 var lateral = _transformService.DistortionInclina(imagemLateral, 390, 280, 182, 399, 0);
                 lateral = _transformService.SkewLateral(lateral, 0, 90);  // Skew com 4º ponto corrigido
 
-                // DEBUG: Salva imagens transformadas para análise
-                if (contaProcesso == 1)
-                {
-                    var debugPath = Path.Combine("wwwroot", "debug");
-                    Directory.CreateDirectory(debugPath);
-
-                    // Salva LATERAL transformada
-                    using (var lateralData = lateral.Encode(SKEncodedImageFormat.Png, 100))
-                    using (var lateralStream = File.OpenWrite(Path.Combine(debugPath, "bancada4_lateral_transformed.png")))
-                    {
-                        lateralData.SaveTo(lateralStream);
-                    }
-
-                    // Salva FRENTE transformada
-                    using (var frenteData = frente.Encode(SKEncodedImageFormat.Png, 100))
-                    using (var frenteStream = File.OpenWrite(Path.Combine(debugPath, "bancada4_frente_transformed.png")))
-                    {
-                        frenteData.SaveTo(frenteStream);
-                    }
-
-                    _logger.LogWarning("DEBUG: Imagens salvas em /debug/bancada4_lateral_transformed.png e bancada4_frente_transformed.png");
-                }
-
                 // Monta mosaico 1523x1238
                 var mosaicoEmBranco = new SKBitmap(1523, 1238);
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
@@ -1112,73 +1028,129 @@ namespace PicStoneFotoAPI.Services
 
         /// <summary>
         /// Gera mockup de Bancada tipo 5 (Countertop #5)
-        /// Três componentes com frente espelhada - 4 variações
+        /// NOVA ESTRATÉGIA: Usa 3 transformações MapToCustomQuadrilateral
+        /// - 1/3 esquerdo transformado (0-33%)
+        /// - 2/3 direitos transformados direto (33-100%)
+        /// - 2/3 direitos flipados + transformados (33-100%)
+        /// Gera 4 variações (normal, 180°, FlipX, 180° + FlipX)
         /// </summary>
         public List<SKBitmap> GerarBancada5(SKBitmap imagemOriginal, bool flip = false)
         {
-            _logger.LogWarning($"========== INICIANDO GerarBancada5 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            _logger.LogWarning($"========== INICIANDO GerarBancada5 NOVA LÓGICA - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
             var resultado = new List<SKBitmap>();
 
-            // Bancada5 gera 4 variações (normal, 180°, FlipX, 180° novamente)
+            // Bancada5 gera 4 variações (normal, 180°, FlipX, 180° + FlipX)
             for (int contaProcesso = 1; contaProcesso <= 4; contaProcesso++)
             {
                 SKBitmap imagemBookMatch;
-                if (contaProcesso == 1) imagemBookMatch = imagemOriginal.Copy();
-                else if (contaProcesso == 2) imagemBookMatch = RotateFlip180(imagemOriginal);
-                else if (contaProcesso == 3) imagemBookMatch = FlipHorizontal(imagemOriginal);
-                else imagemBookMatch = RotateFlip180(FlipHorizontal(imagemOriginal));
+                if (contaProcesso == 1)
+                    imagemBookMatch = imagemOriginal.Copy();
+                else if (contaProcesso == 2)
+                    imagemBookMatch = RotateFlip180(imagemOriginal);
+                else if (contaProcesso == 3)
+                    imagemBookMatch = FlipHorizontal(imagemOriginal);
+                else
+                    imagemBookMatch = RotateFlip180(FlipHorizontal(imagemOriginal));
 
-                // Divide em frente (1400px) e lateral (700px)
-                int larguraFrente = (int)(imagemBookMatch.Width * 0.67);
-                int larguraLateral = imagemBookMatch.Width - larguraFrente;
+                _logger.LogInformation($"Processando variação {contaProcesso} - BookMatch: {imagemBookMatch.Width}x{imagemBookMatch.Height}");
 
-                var rectFrente = new SKRectI(larguraLateral, 0, imagemBookMatch.Width, imagemBookMatch.Height);
-                var rectLateral = new SKRectI(0, 0, larguraLateral, imagemBookMatch.Height);
+                // Divide em 1/3 esquerdo e 2/3 direitos
+                int umTerco = imagemBookMatch.Width / 3;
+                int doisTercosLargura = imagemBookMatch.Width - umTerco;
 
-                var imagemFrente = CropBitmap(imagemBookMatch, rectFrente);
-                var imagemLateral = CropBitmap(imagemBookMatch, rectLateral);
+                // Recorta 1/3 esquerdo (0% a 33%)
+                var rectUmTerco = new SKRectI(0, 0, umTerco, imagemBookMatch.Height);
+                var imagemUmTerco = CropBitmap(imagemBookMatch, rectUmTerco);
+                _logger.LogInformation($"1/3 esquerdo: {imagemUmTerco.Width}x{imagemUmTerco.Height}");
 
-                // Processa frente
-                var frente = imagemFrente.Resize(new SKImageInfo(420, 360), SKFilterQuality.High);
-                frente = _transformService.DistortionInclina(frente, 420, 340, 360, 420, 0);
+                // Recorta 2/3 direitos (33% a 100%)
+                var rectDoisTercos = new SKRectI(umTerco, 0, imagemBookMatch.Width, imagemBookMatch.Height);
+                var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
+                _logger.LogInformation($"2/3 direitos: {imagemDoisTercos.Width}x{imagemDoisTercos.Height}");
 
-                // Processa frente espelhada
-                var frenteEsp = imagemFrente.Resize(new SKImageInfo(340, 304), SKFilterQuality.High);
-                frenteEsp = FlipHorizontal(frenteEsp);
+                // TRANSFORMAÇÃO 1: 1/3 esquerdo
+                var umTercoTransformado = MapToCustomQuadrilateral_Bancada3_TEST(
+                    input: imagemUmTerco,
+                    canvasWidth: 1500,
+                    canvasHeight: 1068,
+                    v1x: 188, v1y: 601,    // topLeft
+                    v2x: 309, v2y: 623,    // topRight
+                    v4x: 196, v4y: 922,    // bottomLeft
+                    v3x: 309, v3y: 1036    // bottomRight
+                );
+                _logger.LogInformation($"1/3 transformado: {umTercoTransformado.Width}x{umTercoTransformado.Height}");
 
-                // Processa lateral
-                var lateral = imagemLateral.Resize(new SKImageInfo(420, 125), SKFilterQuality.High);
-                lateral = _transformService.DistortionInclina(lateral, 420, 324, 125, 420, 0);
+                // TRANSFORMAÇÃO 2: 2/3 direitos direto
+                var doisTercosTransformado = MapToCustomQuadrilateral_Bancada3_TEST(
+                    input: imagemDoisTercos,
+                    canvasWidth: 1500,
+                    canvasHeight: 1068,
+                    v1x: 309, v1y: 623,    // topLeft
+                    v2x: 670, v2y: 598,    // topRight
+                    v4x: 309, v4y: 1036,   // bottomLeft
+                    v3x: 670, v3y: 939     // bottomRight
+                );
+                _logger.LogInformation($"2/3 direto transformado: {doisTercosTransformado.Width}x{doisTercosTransformado.Height}");
 
-                // Monta mosaico 1500x1068
+                // TRANSFORMAÇÃO 3: 2/3 direitos flipados
+                var imagemDoisTercosFlipped = FlipHorizontal(imagemDoisTercos);
+                var doisTercosFlippedTransformado = MapToCustomQuadrilateral_Bancada3_TEST(
+                    input: imagemDoisTercosFlipped,
+                    canvasWidth: 1500,
+                    canvasHeight: 1068,
+                    v1x: 670, v1y: 598,    // topLeft
+                    v2x: 968, v2y: 577,    // topRight
+                    v4x: 670, v4y: 937,    // bottomLeft
+                    v3x: 975, v3y: 854     // bottomRight
+                );
+                _logger.LogInformation($"2/3 flipado transformado: {doisTercosFlippedTransformado.Width}x{doisTercosFlippedTransformado.Height}");
+
+                // Monta o canvas 1500x1068 desenhando as 3 peças
                 var mosaicoEmBranco = new SKBitmap(1500, 1068);
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     canvas.Clear(SKColors.Transparent);
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    canvas.DrawBitmap(lateral, 185, 589, paint);
-                    canvas.DrawBitmap(frente, 310, 518, paint);
-                    canvas.DrawBitmap(frenteEsp, 670, 575, paint);
+
+                    // Desenha as 3 peças transformadas (já estão no canvas 1500x1068)
+                    // As peças já possuem as coordenadas corretas dentro do canvas, então desenhamos em (0,0)
+                    canvas.DrawBitmap(umTercoTransformado, 0, 0, paint);
+                    canvas.DrawBitmap(doisTercosTransformado, 0, 0, paint);
+                    canvas.DrawBitmap(doisTercosFlippedTransformado, 0, 0, paint);
+
+                    _logger.LogInformation("3 peças desenhadas no canvas 1500x1068");
                 }
 
+                // Adiciona a moldura por cima
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
                     var moldura = CarregarRecurso("bancada5.png");
-                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
+                    if (moldura != null)
+                    {
+                        canvas.DrawBitmap(moldura, 0, 0, paint);
+                        _logger.LogInformation("Moldura bancada5.png aplicada");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Moldura bancada5.png NÃO encontrada!");
+                    }
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
                 resultado.Add(mosaicoEmBranco);
 
+                // Limpa recursos
                 imagemBookMatch.Dispose();
-                imagemFrente.Dispose();
-                imagemLateral.Dispose();
-                frente.Dispose();
-                frenteEsp.Dispose();
-                lateral.Dispose();
+                imagemUmTerco.Dispose();
+                imagemDoisTercos.Dispose();
+                imagemDoisTercosFlipped.Dispose();
+                umTercoTransformado.Dispose();
+                doisTercosTransformado.Dispose();
+                doisTercosFlippedTransformado.Dispose();
             }
 
+            _logger.LogWarning($"========== GerarBancada5 CONCLUÍDO - {resultado.Count} mockups gerados ==========");
             return resultado;
         }
 
@@ -1344,6 +1316,25 @@ namespace PicStoneFotoAPI.Services
             }
 
             return resultado;
+        }
+
+        /// <summary>
+        /// Método de TESTE para Bancada 5 - Nova estratégia
+        /// Aplica MapToVertices com coordenadas customizadas
+        /// </summary>
+        public SKBitmap MapToCustomQuadrilateral_Bancada3_TEST(SKBitmap input, int canvasWidth, int canvasHeight,
+                                                                 int v1x, int v1y, int v2x, int v2y,
+                                                                 int v4x, int v4y, int v3x, int v3y)
+        {
+            return _transformService.MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: v1x, v1y: v1y,
+                v2x: v2x, v2y: v2y,
+                v4x: v4x, v4y: v4y,
+                v3x: v3x, v3y: v3y
+            );
         }
     }
 }

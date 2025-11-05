@@ -15,12 +15,16 @@ namespace PicStoneFotoAPI.Controllers
         private readonly AppDbContext _context;
         private readonly AuthService _authService;
         private readonly ILogger<MigrationController> _logger;
+        private readonly GraphicsTransformService _transformService;
+        private readonly BancadaService _bancadaService;
 
-        public MigrationController(AppDbContext context, AuthService authService, ILogger<MigrationController> logger)
+        public MigrationController(AppDbContext context, AuthService authService, ILogger<MigrationController> logger, GraphicsTransformService transformService, BancadaService bancadaService)
         {
             _context = context;
             _authService = authService;
             _logger = logger;
+            _transformService = transformService;
+            _bancadaService = bancadaService;
         }
 
         /// <summary>
@@ -382,6 +386,189 @@ namespace PicStoneFotoAPI.Controllers
                     mensagem = "Erro ao popular materiais",
                     erro = ex.Message,
                     innerException = innerMsg,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/migration/test-transform
+        /// Testa as transformações identificadas pela análise ultrathink
+        /// Recebe imagem via upload e retorna a imagem transformada
+        /// </summary>
+        [HttpPost("test-transform")]
+        public async Task<IActionResult> TestTransform(IFormFile imagem)
+        {
+            try
+            {
+                _logger.LogInformation("=== TESTE DE TRANSFORMAÇÃO ULTRATHINK ===");
+
+                if (imagem == null || imagem.Length == 0)
+                {
+                    return BadRequest(new
+                    {
+                        sucesso = false,
+                        mensagem = "Nenhuma imagem fornecida. Use form-data com campo 'imagem'"
+                    });
+                }
+
+                _logger.LogInformation($"Imagem recebida: {imagem.FileName} ({imagem.Length} bytes)");
+
+                // Carregar imagem original do upload
+                SkiaSharp.SKBitmap imagemOriginal;
+                using (var stream = imagem.OpenReadStream())
+                {
+                    imagemOriginal = SkiaSharp.SKBitmap.Decode(stream);
+                }
+
+                if (imagemOriginal == null)
+                {
+                    return StatusCode(500, new
+                    {
+                        sucesso = false,
+                        mensagem = "Erro ao decodificar imagem"
+                    });
+                }
+
+                _logger.LogInformation($"Imagem carregada: {imagemOriginal.Width}x{imagemOriginal.Height}");
+
+                // TRANSFORMAÇÃO ESPECIALIZADA COM DISTORÇÃO NATURAL
+                // Usa MapToCustomQuadrilateral() que aplica transformação de perspectiva
+                // para quadrilátero irregular com vértices específicos
+
+                _logger.LogInformation("=== USANDO TRANSFORMAÇÃO ESPECIALIZADA ===");
+                _logger.LogInformation("Método: MapToCustomQuadrilateral()");
+                _logger.LogInformation("Vértices: (560,714), (1624,929), (1083,1006), (193,730)");
+
+                // Aplicar transformação com distorção natural
+                // Canvas 2000x1863 (tamanho correto especificado)
+                var resultado = _transformService.MapToCustomQuadrilateral(
+                    input: imagemOriginal,
+                    canvasWidth: 2000,
+                    canvasHeight: 1863
+                );
+
+                _logger.LogInformation($"Resultado final: {resultado.Width}x{resultado.Height}");
+                _logger.LogInformation("Transformação aplicada com perspectiva suave e natural");
+
+                // Converter resultado para bytes (PNG)
+                _logger.LogInformation("Codificando resultado como PNG...");
+                byte[] imageBytes;
+                using (var data = resultado.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100))
+                using (var ms = new System.IO.MemoryStream())
+                {
+                    data.SaveTo(ms);
+                    imageBytes = ms.ToArray();
+                }
+
+                // Salvar também em wwwroot/debug para fácil acesso
+                var debugPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "debug");
+                Directory.CreateDirectory(debugPath);
+                var savedPath = Path.Combine(debugPath, "ret_canvas.png");
+                await System.IO.File.WriteAllBytesAsync(savedPath, imageBytes);
+                _logger.LogInformation($"Imagem salva em: {savedPath}");
+
+                // Limpar recursos
+                var dimensoesOriginais = $"{imagemOriginal.Width}x{imagemOriginal.Height}";
+                var dimensoesFinais = $"{resultado.Width}x{resultado.Height}";
+
+                imagemOriginal.Dispose();
+                resultado.Dispose();
+
+                _logger.LogInformation("✅ Transformação concluída com sucesso!");
+
+                // Retornar a imagem transformada como arquivo
+                return File(imageBytes, "image/png", "ret_canvas.png");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao aplicar transformações");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    mensagem = "Erro ao aplicar transformações",
+                    erro = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/migration/test-bancada3
+        /// Testa a geração completa da Bancada 3 com nova lógica
+        /// </summary>
+        [HttpPost("test-bancada3")]
+        public async Task<IActionResult> TestBancada3(IFormFile imagem)
+        {
+            try
+            {
+                _logger.LogInformation("=== TESTE BANCADA 3 - NOVA LÓGICA ===");
+
+                if (imagem == null || imagem.Length == 0)
+                {
+                    return BadRequest(new { mensagem = "Nenhuma imagem fornecida" });
+                }
+
+                _logger.LogInformation($"Imagem recebida: {imagem.FileName} ({imagem.Length} bytes)");
+
+                // Carregar imagem
+                SkiaSharp.SKBitmap imagemOriginal;
+                using (var stream = imagem.OpenReadStream())
+                {
+                    imagemOriginal = SkiaSharp.SKBitmap.Decode(stream);
+                }
+
+                if (imagemOriginal == null)
+                {
+                    return StatusCode(500, new { mensagem = "Erro ao decodificar imagem" });
+                }
+
+                _logger.LogInformation($"Imagem carregada: {imagemOriginal.Width}x{imagemOriginal.Height}");
+
+                // Gerar Bancada 3
+                var resultados = _bancadaService.GerarBancada3(imagemOriginal, flip: false);
+
+                if (resultados == null || resultados.Count == 0)
+                {
+                    return StatusCode(500, new { mensagem = "Erro ao gerar Bancada 3" });
+                }
+
+                _logger.LogInformation($"Bancada 3 gerada: {resultados.Count} variações");
+
+                // Retornar a primeira variação
+                byte[] imageBytes;
+                using (var data = resultados[0].Encode(SkiaSharp.SKEncodedImageFormat.Png, 100))
+                using (var ms = new System.IO.MemoryStream())
+                {
+                    data.SaveTo(ms);
+                    imageBytes = ms.ToArray();
+                }
+
+                // Salvar em debug
+                var debugPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "debug");
+                Directory.CreateDirectory(debugPath);
+                var savedPath = Path.Combine(debugPath, "bancada3_teste.png");
+                await System.IO.File.WriteAllBytesAsync(savedPath, imageBytes);
+                _logger.LogInformation($"Bancada 3 salva em: {savedPath}");
+
+                // Cleanup
+                imagemOriginal.Dispose();
+                foreach (var resultado in resultados)
+                {
+                    resultado.Dispose();
+                }
+
+                _logger.LogInformation("✅ Bancada 3 gerada com sucesso!");
+
+                return File(imageBytes, "image/png", "bancada3_teste.png");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Bancada 3");
+                return StatusCode(500, new
+                {
+                    mensagem = "Erro ao gerar Bancada 3",
+                    erro = ex.Message,
                     stackTrace = ex.StackTrace
                 });
             }

@@ -103,17 +103,6 @@ namespace PicStoneFotoAPI.Services
                 patamarInf = _transformService.RotateImage(patamarInf, 90);
                 _logger.LogInformation($"PatamarInf APÓS Rotate90: {patamarInf.Width}x{patamarInf.Height}");
 
-                // DEBUG: Salva PatamarInf transformado
-                var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
-                var debugPatamarInfPath = Path.Combine(uploadsPath, $"DEBUG_PatamarInf_{contaProcesso}.png");
-                using (var debugStream = File.OpenWrite(debugPatamarInfPath))
-                {
-                    using var debugImg = SKImage.FromBitmap(patamarInf);
-                    var debugImgData = debugImg.Encode(SKEncodedImageFormat.Png, 100);
-                    debugImgData.SaveTo(debugStream);
-                }
-                _logger.LogInformation($"DEBUG PatamarInf salvo: {debugPatamarInfPath}");
-
                 patamarSup = _transformService.RotateImage(patamarSup, 270);
                 patamarSup = _transformService.DistortionInclina(patamarSup, 600, 550, 25, 600, 25);
                 patamarSup = _transformService.RotateImage(patamarSup, 270);
@@ -190,15 +179,6 @@ namespace PicStoneFotoAPI.Services
 
                 var nichoMontado = surface.Snapshot();
 
-                // DEBUG: Salva BaseNicho para inspeção
-                _logger.LogInformation("BaseNicho montado (700x500) - salvando para debug");
-                var uploadsPathFinal = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
-                using var debugDataBase = nichoMontado.Encode(SKEncodedImageFormat.Png, 100);
-                var debugPath = Path.Combine(uploadsPathFinal, $"DEBUG_BaseNicho_{contaProcesso}.png");
-                using var debugFile = File.OpenWrite(debugPath);
-                debugDataBase.SaveTo(debugFile);
-                _logger.LogInformation($"DEBUG BaseNicho salvo em: {debugPath}");
-
                 // Cria canvas final 1000x1000 com fundo e sombra de borda
                 var surfaceFinal = SKSurface.Create(new SKImageInfo(1000, 1000));
                 var canvasFinal = surfaceFinal.Canvas;
@@ -217,13 +197,13 @@ namespace PicStoneFotoAPI.Services
                 }
 
                 // Desenha o nicho montado
-                using var nichoData = nichoMontado.Encode(SKEncodedImageFormat.Png, 100);
+                using var nichoData = nichoMontado.Encode(SKEncodedImageFormat.Jpeg, 95);
                 using var nichoStream = new MemoryStream(nichoData.ToArray());
                 using var nichoBitmap = SKBitmap.Decode(nichoStream);
                 canvasFinal.DrawBitmap(nichoBitmap, 150, 250, paint);
 
                 var imagemFinal = surfaceFinal.Snapshot();
-                using var finalData = imagemFinal.Encode(SKEncodedImageFormat.Png, 100);
+                using var finalData = imagemFinal.Encode(SKEncodedImageFormat.Jpeg, 95);
                 using var finalStream = new MemoryStream(finalData.ToArray());
                 var resultadoBitmap = SKBitmap.Decode(finalStream);
 
@@ -283,7 +263,7 @@ namespace PicStoneFotoAPI.Services
             canvas.DrawBitmap(source, 0, 0, paint);
 
             var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
 
             using var mStream = new MemoryStream(data.ToArray());
             return SKBitmap.Decode(mStream);
