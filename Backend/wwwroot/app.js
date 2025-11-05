@@ -7,8 +7,8 @@ const state = {
     username: localStorage.getItem('username') || null,
     currentPhoto: null,
     currentPhotoFile: null,
-    originalPhoto: null, // Foto original para mockup
-    mockupMode: false, // Indica se está em modo mockup
+    originalPhoto: null, // Foto original para ambiente
+    ambienteMode: false, // Indica se está em modo ambiente
     cropData: {
         image: null,
         startX: 0,
@@ -18,9 +18,15 @@ const state = {
         isDragging: false,
         scale: 1
     },
-    mockupConfig: {
+    ambienteConfig: {
         tipo: 'simples',
         fundo: 'claro'
+    },
+    // Estado específico para bancadas (countertops)
+    countertopState: {
+        croppedImage: null,    // Imagem cortada (reutilizável)
+        selectedType: null,     // 'bancada1' ou 'bancada2'
+        flip: false            // Opção global de flip
     }
 };
 
@@ -28,24 +34,44 @@ const state = {
 const elements = {
     loginScreen: document.getElementById('loginScreen'),
     mainScreen: document.getElementById('mainScreen'),
+    integracaoScreen: document.getElementById('integracaoScreen'),
+    ambientesScreen: document.getElementById('ambientesScreen'),
     cropScreen: document.getElementById('cropScreen'),
     historyScreen: document.getElementById('historyScreen'),
-    mockupConfigScreen: document.getElementById('mockupConfigScreen'),
-    mockupResultScreen: document.getElementById('mockupResultScreen'),
+    ambienteConfigScreen: document.getElementById('ambienteConfigScreen'),
+    ambienteResultScreen: document.getElementById('ambienteResultScreen'),
     loginForm: document.getElementById('loginForm'),
     loginError: document.getElementById('loginError'),
-    captureBtn: document.getElementById('captureBtn'),
-    fileInput: document.getElementById('fileInput'),
-    photoPreview: document.getElementById('photoPreview'),
-    previewImage: document.getElementById('previewImage'),
-    clearPhotoBtn: document.getElementById('clearPhotoBtn'),
-    adjustImageBtn: document.getElementById('adjustImageBtn'),
-    resetImageBtn: document.getElementById('resetImageBtn'),
+    // Botões principais
+    integracaoCard: document.getElementById('integracaoCard'),
+    ambientesCard: document.getElementById('ambientesCard'),
+    // Integração
+    captureBtnIntegracao: document.getElementById('captureBtnIntegracao'),
+    fileInputIntegracao: document.getElementById('fileInputIntegracao'),
+    photoPreviewIntegracao: document.getElementById('photoPreviewIntegracao'),
+    previewImageIntegracao: document.getElementById('previewImageIntegracao'),
+    clearPhotoBtnIntegracao: document.getElementById('clearPhotoBtnIntegracao'),
+    adjustImageBtnIntegracao: document.getElementById('adjustImageBtnIntegracao'),
+    backToMainFromIntegracaoBtn: document.getElementById('backToMainFromIntegracaoBtn'),
+    // Ambientes
+    captureBtnAmbientes: document.getElementById('captureBtnAmbientes'),
+    fileInputAmbientes: document.getElementById('fileInputAmbientes'),
+    photoPreviewAmbientes: document.getElementById('photoPreviewAmbientes'),
+    previewImageAmbientes: document.getElementById('previewImageAmbientes'),
+    clearPhotoBtnAmbientes: document.getElementById('clearPhotoBtnAmbientes'),
+    backToMainFromAmbientesBtn: document.getElementById('backToMainFromAmbientesBtn'),
+    ambienteOptions: document.getElementById('ambienteOptions'),
+    // Formulário (apenas na Integração)
     uploadForm: document.getElementById('uploadForm'),
     submitBtn: document.getElementById('submitBtn'),
     uploadProgress: document.getElementById('uploadProgress'),
     uploadMessage: document.getElementById('uploadMessage'),
     userDisplay: document.getElementById('userDisplay'),
+    userInitials: document.getElementById('userInitials'),
+    userMenuBtn: document.getElementById('userMenuBtn'),
+    userMenuDropdown: document.getElementById('userMenuDropdown'),
+    dropdownUsername: document.getElementById('dropdownUsername'),
+    dropdownEmail: document.getElementById('dropdownEmail'),
     logoutBtn: document.getElementById('logoutBtn'),
     historyBtn: document.getElementById('historyBtn'),
     backBtn: document.getElementById('backBtn'),
@@ -53,25 +79,135 @@ const elements = {
     cropCanvas: document.getElementById('cropCanvas'),
     cancelCropBtn: document.getElementById('cancelCropBtn'),
     resetCropBtn: document.getElementById('resetCropBtn'),
-    mockupBtn: document.getElementById('mockupBtn'),
-    countertopBtn: document.getElementById('countertopBtn'),
+    ambienteBtn: document.getElementById('ambienteBtn'),
+    nichoBtn: document.getElementById('nichoBtn'),
     photoIndicator: document.getElementById('photoIndicator'),
-    cancelMockupBtn: document.getElementById('cancelMockupBtn'),
-    continuarCropMockupBtn: document.getElementById('continuarCropMockupBtn'),
+    cancelAmbienteBtn: document.getElementById('cancelAmbienteBtn'),
+    nichoConfigScreen: document.getElementById('nichoConfigScreen'),
+    cancelNichoBtn: document.getElementById('cancelNichoBtn'),
+    continuarCropNichoBtn: document.getElementById('continuarCropNichoBtn'),
+    continuarCropAmbienteBtn: document.getElementById('continuarCropAmbienteBtn'),
+    countertopsBtn: document.getElementById('countertopsBtn'),
+    countertopSelectionScreen: document.getElementById('countertopSelectionScreen'),
+    cancelCountertopSelectionBtn: document.getElementById('cancelCountertopSelectionBtn'),
+    flipCountertop: document.getElementById('flipCountertop'),
     backToMainBtn: document.getElementById('backToMainBtn'),
-    downloadMockupBtn: document.getElementById('downloadMockupBtn'),
-    newMockupBtn: document.getElementById('newMockupBtn'),
-    mockupImage: document.getElementById('mockupImage'),
-    mockupMessage: document.getElementById('mockupMessage'),
-    countertopConfigScreen: document.getElementById('countertopConfigScreen'),
-    cancelCountertopBtn: document.getElementById('cancelCountertopBtn'),
-    gerarCountertopBtn: document.getElementById('gerarCountertopBtn')
+    downloadAllAmbientesBtn: document.getElementById('downloadAllAmbientesBtn'),
+    newAmbienteBtn: document.getElementById('newAmbienteBtn'),
+    ambientesGallery: document.getElementById('ambientesGallery'),
+    ambienteMessage: document.getElementById('ambienteMessage'),
+    cropInfo: document.getElementById('cropInfo'),
+    cropInfoArea: document.getElementById('cropInfoArea'),
+    cropInfoMP: document.getElementById('cropInfoMP'),
+    cropInfoSize: document.getElementById('cropInfoSize'),
+    changePasswordBtn: document.getElementById('changePasswordBtn'),
+    manageUsersBtn: document.getElementById('manageUsersBtn'),
+    changePasswordScreen: document.getElementById('changePasswordScreen'),
+    changePasswordForm: document.getElementById('changePasswordForm'),
+    changePasswordMessage: document.getElementById('changePasswordMessage'),
+    backFromPasswordBtn: document.getElementById('backFromPasswordBtn'),
+    usersScreen: document.getElementById('usersScreen'),
+    usersList: document.getElementById('usersList'),
+    backFromUsersBtn: document.getElementById('backFromUsersBtn'),
+    addUserBtn: document.getElementById('addUserBtn'),
+    addUserScreen: document.getElementById('addUserScreen'),
+    addUserForm: document.getElementById('addUserForm'),
+    addUserMessage: document.getElementById('addUserMessage'),
+    backFromAddUserBtn: document.getElementById('backFromAddUserBtn'),
+    loadingOverlay: document.getElementById('loadingOverlay')
 };
+
+// ========== AUTO-RENOVAÇÃO DE TOKEN ==========
+
+/**
+ * Decodifica JWT token para extrair payload
+ */
+function decodeToken(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (error) {
+        console.error('Erro ao decodificar token:', error);
+        return null;
+    }
+}
+
+/**
+ * Verifica se token expira em menos de 1 hora
+ */
+function tokenExpiresInLessThanOneHour(token) {
+    const decoded = decodeToken(token);
+    if (!decoded || !decoded.exp) {
+        return false;
+    }
+
+    const expirationTime = decoded.exp * 1000; // Converte para milissegundos
+    const currentTime = Date.now();
+    const oneHour = 60 * 60 * 1000; // 1 hora em milissegundos
+
+    return (expirationTime - currentTime) < oneHour;
+}
+
+/**
+ * Renova token JWT automaticamente
+ */
+async function renovarTokenAutomaticamente() {
+    if (!state.token) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/refresh`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            state.token = data.token;
+            localStorage.setItem('token', data.token);
+            console.log('✅ Token renovado automaticamente');
+        } else if (response.status === 401) {
+            // Token expirado ou inválido - redireciona para login
+            console.log('⚠️ Token expirado, redirecionando para login...');
+            logout();
+        }
+    } catch (error) {
+        console.error('Erro ao renovar token:', error);
+    }
+}
+
+/**
+ * Verifica token periodicamente e renova se necessário
+ */
+function iniciarVerificacaoToken() {
+    // Verifica a cada 30 minutos
+    setInterval(() => {
+        if (state.token && tokenExpiresInLessThanOneHour(state.token)) {
+            console.log('⏰ Token expirando em menos de 1 hora, renovando...');
+            renovarTokenAutomaticamente();
+        }
+    }, 30 * 60 * 1000); // 30 minutos
+
+    // Também verifica imediatamente ao iniciar
+    if (state.token && tokenExpiresInLessThanOneHour(state.token)) {
+        console.log('⏰ Token expirando em menos de 1 hora, renovando...');
+        renovarTokenAutomaticamente();
+    }
+}
 
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', () => {
     if (state.token) {
         showMainScreen();
+        iniciarVerificacaoToken();
     } else {
         showLoginScreen();
     }
@@ -83,14 +219,26 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
     elements.loginForm.addEventListener('submit', handleLogin);
 
-    // Captura de foto - múltiplos eventos para compatibilidade mobile
-    elements.captureBtn.addEventListener('click', () => elements.fileInput.click());
-    elements.fileInput.addEventListener('change', handleFileSelect);
-    elements.fileInput.addEventListener('input', handleFileSelect); // Fallback mobile
+    // Navegação principal
+    elements.integracaoCard.addEventListener('click', showIntegracaoScreen);
+    elements.ambientesCard.addEventListener('click', showAmbientesScreen);
+    elements.backToMainFromIntegracaoBtn.addEventListener('click', showMainScreen);
+    elements.backToMainFromAmbientesBtn.addEventListener('click', showMainScreen);
 
-    elements.clearPhotoBtn.addEventListener('click', clearPhoto);
-    elements.adjustImageBtn.addEventListener('click', abrirCropParaAjuste);
-    elements.resetImageBtn.addEventListener('click', resetToOriginalImage);
+    // Integração - Captura de foto
+    elements.captureBtnIntegracao.addEventListener('click', () => elements.fileInputIntegracao.click());
+    elements.fileInputIntegracao.addEventListener('change', handleFileSelectIntegracao);
+    elements.fileInputIntegracao.addEventListener('input', handleFileSelectIntegracao);
+    elements.clearPhotoBtnIntegracao.addEventListener('click', clearPhotoIntegracao);
+    elements.adjustImageBtnIntegracao.addEventListener('click', abrirCropParaAjuste);
+
+    // Ambientes - Captura de foto
+    elements.captureBtnAmbientes.addEventListener('click', () => elements.fileInputAmbientes.click());
+    elements.fileInputAmbientes.addEventListener('change', handleFileSelectAmbientes);
+    elements.fileInputAmbientes.addEventListener('input', handleFileSelectAmbientes);
+    elements.clearPhotoBtnAmbientes.addEventListener('click', clearPhotoAmbientes);
+
+    // Formulário de upload (só na Integração)
     elements.uploadForm.addEventListener('submit', handleUpload);
     elements.logoutBtn.addEventListener('click', handleLogout);
     elements.historyBtn.addEventListener('click', showHistoryScreen);
@@ -108,18 +256,77 @@ function setupEventListeners() {
     elements.cropCanvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     elements.cropCanvas.addEventListener('touchend', endCrop);
 
-    // Mockup event listeners
-    elements.mockupBtn.addEventListener('click', startMockupFlow);
-    elements.cancelMockupBtn.addEventListener('click', () => showMainScreen());
-    elements.continuarCropMockupBtn.addEventListener('click', abrirCropParaMockup);
-    elements.backToMainBtn.addEventListener('click', () => showMainScreen());
-    elements.newMockupBtn.addEventListener('click', startMockupFlow);
-    elements.downloadMockupBtn.addEventListener('click', downloadMockup);
+    // Ambiente event listeners
+    elements.ambienteBtn.addEventListener('click', startAmbienteFlow);
+    elements.nichoBtn.addEventListener('click', startNichoFlow);
+    elements.countertopsBtn.addEventListener('click', startCountertopFlow);
+    elements.cancelAmbienteBtn.addEventListener('click', () => showMainScreen());
+    elements.cancelNichoBtn.addEventListener('click', () => showMainScreen());
+    elements.cancelCountertopSelectionBtn.addEventListener('click', () => showMainScreen());
+    elements.continuarCropAmbienteBtn.addEventListener('click', abrirCropParaAmbiente);
+    elements.continuarCropNichoBtn.addEventListener('click', abrirCropParaNicho);
+    elements.backToMainBtn.addEventListener('click', handleBackFromResults);
+    elements.newAmbienteBtn.addEventListener('click', startAmbienteFlow);
+    elements.downloadAllAmbientesBtn.addEventListener('click', downloadAllAmbientes);
 
-    // Countertop event listeners
-    elements.countertopBtn.addEventListener('click', openCountertopConfig);
-    elements.cancelCountertopBtn.addEventListener('click', () => showMainScreen());
-    elements.gerarCountertopBtn.addEventListener('click', gerarCountertop);
+    // Event delegation para botões de download e compartilhar
+    elements.ambientesGallery.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-download-single')) {
+            const url = e.target.dataset.url;
+            const nome = e.target.dataset.nome;
+            downloadAmbiente(url, nome);
+        } else if (e.target.classList.contains('btn-share-single')) {
+            const url = e.target.dataset.url;
+            const nome = e.target.dataset.nome;
+            shareAmbiente(url, nome);
+        }
+    });
+
+    // Event delegation para seleção de countertop via click no thumb
+    document.addEventListener('click', (e) => {
+        const preview = e.target.closest('.countertop-preview');
+        if (preview && preview.dataset.type) {
+            const type = preview.dataset.type;
+            selectCountertopAndGenerate(type);
+        }
+    });
+
+    // User menu dropdown
+    elements.userMenuBtn.addEventListener('click', toggleUserMenu);
+
+    // Fecha dropdown ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.user-menu')) {
+            elements.userMenuDropdown.classList.add('hidden');
+        }
+    });
+
+    // Gerenciamento de usuários
+    elements.changePasswordBtn.addEventListener('click', () => {
+        elements.userMenuDropdown.classList.add('hidden');
+        showChangePasswordScreen();
+    });
+    elements.manageUsersBtn.addEventListener('click', () => {
+        elements.userMenuDropdown.classList.add('hidden');
+        showUsersScreen();
+    });
+    elements.backFromPasswordBtn.addEventListener('click', showMainScreen);
+    elements.backFromUsersBtn.addEventListener('click', showMainScreen);
+    elements.backFromAddUserBtn.addEventListener('click', showUsersScreen);
+    elements.changePasswordForm.addEventListener('submit', handleChangePassword);
+    elements.addUserBtn.addEventListener('click', showAddUserScreen);
+    elements.addUserForm.addEventListener('submit', handleAddUser);
+
+    // Event delegation para botões de gerenciar usuários
+    elements.usersList.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('btn-deactivate-user')) {
+            const userId = e.target.dataset.userId;
+            await deactivateUser(userId);
+        } else if (e.target.classList.contains('btn-reactivate-user')) {
+            const userId = e.target.dataset.userId;
+            await reactivateUser(userId);
+        }
+    });
 }
 
 // ========== AUTENTICAÇÃO ==========
@@ -149,6 +356,7 @@ async function handleLogin(e) {
         localStorage.setItem('username', data.username);
 
         showMainScreen();
+        iniciarVerificacaoToken(); // Inicia verificação automática do token
         elements.loginError.classList.add('hidden');
     } catch (error) {
         elements.loginError.textContent = error.message;
@@ -178,15 +386,85 @@ function showLoginScreen() {
     showScreen(elements.loginScreen);
 }
 
+/**
+ * Gerencia o botão "Voltar" da tela de resultados
+ * Se há crop de countertop salvo, volta para seleção
+ * Caso contrário, volta para tela principal
+ */
+function handleBackFromResults() {
+    if (state.countertopState.croppedImage) {
+        // Está no flow de countertop: volta para seleção
+        showScreen(elements.countertopSelectionScreen);
+    } else {
+        // Flow normal: volta para tela principal
+        showMainScreen();
+    }
+}
+
 async function showMainScreen() {
     showScreen(elements.mainScreen);
-    elements.userDisplay.textContent = `Olá, ${state.username}`;
+
+    // Atualiza informações do usuário
+    elements.userDisplay.textContent = state.username;
+    elements.dropdownUsername.textContent = state.username;
+    elements.dropdownEmail.textContent = `@${state.username}`;
+
+    // Gera iniciais do usuário
+    const initials = state.username.substring(0, 2).toUpperCase();
+    elements.userInitials.textContent = initials;
+
+    // Mostra botão de gerenciar usuários apenas para admin
+    if (state.username === 'admin') {
+        elements.manageUsersBtn.classList.remove('hidden');
+    } else {
+        elements.manageUsersBtn.classList.add('hidden');
+    }
+
     await loadMaterials();
+}
+
+/**
+ * Toggle do menu dropdown do usuário
+ */
+function toggleUserMenu(e) {
+    e.stopPropagation();
+    elements.userMenuDropdown.classList.toggle('hidden');
 }
 
 async function showHistoryScreen() {
     showScreen(elements.historyScreen);
     await loadHistory();
+}
+
+function showChangePasswordScreen() {
+    showScreen(elements.changePasswordScreen);
+    elements.changePasswordForm.reset();
+    elements.changePasswordMessage.classList.add('hidden');
+}
+
+async function showUsersScreen() {
+    if (state.username !== 'admin') {
+        alert('Acesso negado. Apenas admin pode gerenciar usuários.');
+        return;
+    }
+    showScreen(elements.usersScreen);
+    await loadUsers();
+}
+
+function showAddUserScreen() {
+    showScreen(elements.addUserScreen);
+    elements.addUserForm.reset();
+    elements.addUserMessage.classList.add('hidden');
+}
+
+function showIntegracaoScreen() {
+    showScreen(elements.integracaoScreen);
+    clearPhotoIntegracao();
+}
+
+function showAmbientesScreen() {
+    showScreen(elements.ambientesScreen);
+    clearPhotoAmbientes();
 }
 
 // ========== MATERIAIS ==========
@@ -262,16 +540,10 @@ function compressAndPreviewImage(file) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            // Comprime imagem para máximo 1920x1080
+            // Usa imagem original sem redimensionamento
             const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
-
-            if (width > 1920 || height > 1080) {
-                const ratio = Math.min(1920 / width, 1080 / height);
-                width = width * ratio;
-                height = height * ratio;
-            }
 
             canvas.width = width;
             canvas.height = height;
@@ -285,12 +557,12 @@ function compressAndPreviewImage(file) {
                     lastModified: Date.now()
                 });
 
-                // Exibe preview
+                // Exibe preview (qualidade reduzida apenas para preview)
                 elements.previewImage.src = canvas.toDataURL('image/jpeg', 0.85);
                 elements.photoPreview.classList.remove('hidden');
                 elements.submitBtn.disabled = false;
 
-            }, 'image/jpeg', 0.85);
+            }, 'image/jpeg', 0.95);
         };
         img.src = e.target.result;
     };
@@ -306,8 +578,9 @@ function clearPhoto() {
     elements.photoPreview.classList.add('hidden');
     elements.fileInput.value = '';
     elements.submitBtn.disabled = true;
-    elements.mockupBtn.classList.add('hidden');
-    elements.countertopBtn.classList.add('hidden');
+    elements.ambienteBtn.classList.add('hidden');
+    elements.nichoBtn.classList.add('hidden');
+    elements.countertopsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -317,9 +590,138 @@ function clearPhotoState() {
     elements.previewImage.src = '';
     elements.photoPreview.classList.add('hidden');
     elements.submitBtn.disabled = true;
-    elements.mockupBtn.classList.add('hidden');
-    elements.countertopBtn.classList.add('hidden');
+    elements.ambienteBtn.classList.add('hidden');
+    elements.nichoBtn.classList.add('hidden');
+    elements.countertopsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
+}
+
+// ========== INTEGRAÇÃO - CAPTURA DE FOTO ==========
+function handleFileSelectIntegracao(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showMessage('Por favor, selecione uma imagem válida', 'error');
+        return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        showMessage('Arquivo muito grande. Máximo 10MB', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            state.originalPhoto = img;
+            compressAndPreviewImageIntegracao(file);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function compressAndPreviewImageIntegracao(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob((blob) => {
+                state.currentPhotoFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+
+                elements.previewImageIntegracao.src = canvas.toDataURL('image/jpeg', 0.85);
+                elements.photoPreviewIntegracao.classList.remove('hidden');
+                elements.submitBtn.disabled = false;
+            }, 'image/jpeg', 0.95);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearPhotoIntegracao() {
+    state.currentPhotoFile = null;
+    state.originalPhoto = null;
+    elements.previewImageIntegracao.src = '';
+    elements.photoPreviewIntegracao.classList.add('hidden');
+    elements.fileInputIntegracao.value = '';
+    elements.submitBtn.disabled = true;
+}
+
+// ========== AMBIENTES - CAPTURA DE FOTO ==========
+function handleFileSelectAmbientes(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        alert('Por favor, selecione uma imagem válida');
+        return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        alert('Arquivo muito grande. Máximo 10MB');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            state.originalPhoto = img;
+            compressAndPreviewImageAmbientes(file);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function compressAndPreviewImageAmbientes(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob((blob) => {
+                state.currentPhotoFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+
+                elements.previewImageAmbientes.src = canvas.toDataURL('image/jpeg', 0.85);
+                elements.photoPreviewAmbientes.classList.remove('hidden');
+
+                // Mostra opções de ambiente
+                elements.ambienteOptions.classList.remove('hidden');
+            }, 'image/jpeg', 0.95);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearPhotoAmbientes() {
+    state.currentPhotoFile = null;
+    state.originalPhoto = null;
+    elements.previewImageAmbientes.src = '';
+    elements.photoPreviewAmbientes.classList.add('hidden');
+    elements.fileInputAmbientes.value = '';
+    elements.ambienteOptions.classList.add('hidden');
 }
 
 // ========== UPLOAD ==========
@@ -334,7 +736,7 @@ async function handleUpload(e) {
     const formData = new FormData();
     formData.append('Arquivo', state.currentPhotoFile);
     formData.append('Material', document.getElementById('material').value);
-    formData.append('Bloco', document.getElementById('bloco').value);
+    formData.append('Bloco', document.getElementById('bloco').value.toUpperCase());
     formData.append('Chapa', document.getElementById('chapa').value);
 
     const espessura = document.getElementById('espessura').value;
@@ -362,9 +764,10 @@ async function handleUpload(e) {
 
         showMessage(data.mensagem, 'success');
 
-        // Mostra botões de mockup e countertop (permanecem visíveis)
-        elements.mockupBtn.classList.remove('hidden');
-        elements.countertopBtn.classList.remove('hidden');
+        // Mostra botões de ambiente (permanecem visíveis)
+        elements.ambienteBtn.classList.remove('hidden');
+        elements.nichoBtn.classList.remove('hidden');
+        elements.countertopsBtn.classList.remove('hidden');
 
         // Limpa apenas o preview e formulário (mantém imagem original)
         setTimeout(() => {
@@ -376,8 +779,8 @@ async function handleUpload(e) {
             elements.uploadForm.reset();
             // Mostra indicador de foto disponível
             elements.photoIndicator.classList.remove('hidden');
-            // NÃO limpa state.originalPhoto - fica disponível para mockup/ajuste
-            // NÃO oculta mockupBtn - fica acessível
+            // NÃO limpa state.originalPhoto - fica disponível para ambiente/ajuste
+            // NÃO oculta ambienteBtn - fica acessível
         }, 2000);
 
     } catch (error) {
@@ -471,6 +874,7 @@ function openCropScreen(file) {
 function showCropScreen() {
     elements.mainScreen.classList.remove('active');
     elements.cropScreen.classList.add('active');
+    elements.cropInfo.classList.add('hidden'); // Esconde até haver uma seleção
 }
 
 function initializeCropCanvas() {
@@ -499,7 +903,15 @@ function initializeCropCanvas() {
     canvas.height = height;
 
     // Calcula escala para conversão de coordenadas canvas -> imagem original
-    state.cropData.scale = img.width / width;
+    state.cropData.scaleX = img.width / width;
+    state.cropData.scaleY = img.height / height;
+
+    console.log('=== DEBUG INITIALIZE CROP ===');
+    console.log('Imagem original:', img.width, 'x', img.height);
+    console.log('Canvas final:', width, 'x', height);
+    console.log('ScaleX calculado:', state.cropData.scaleX);
+    console.log('ScaleY calculado:', state.cropData.scaleY);
+    console.log('=============================');
 
     // Desenha imagem
     ctx.drawImage(img, 0, 0, width, height);
@@ -630,6 +1042,22 @@ function drawCropOverlay() {
     // Baixo
     ctx.fillRect(0, y + height, canvasWidth, canvasHeight - (y + height));
 
+    // Calcula tamanho estimado do arquivo cropado
+    const cropWidthReal = width * state.cropData.scaleX;
+    const cropHeightReal = height * state.cropData.scaleY;
+    const totalPixels = cropWidthReal * cropHeightReal;
+
+    // Fórmula: bytes = pixels * bytesPerPixel (0.25 para JPEG Q95)
+    const estimatedBytes = totalPixels * 0.25;
+    const estimatedMB = (estimatedBytes / 1048576).toFixed(2);
+    const estimatedMP = (totalPixels / 1000000).toFixed(1);
+
+    // Atualiza os elementos HTML com as informações do crop
+    elements.cropInfoArea.textContent = `${Math.round(cropWidthReal)} x ${Math.round(cropHeightReal)} px`;
+    elements.cropInfoMP.textContent = `${estimatedMP} MP`;
+    elements.cropInfoSize.textContent = `${estimatedMB} MB`;
+    elements.cropInfo.classList.remove('hidden');
+
     // Desenha borda da seleção (tracejada branca)
     ctx.strokeStyle = '#FFFFFF';
     ctx.lineWidth = 2;
@@ -680,11 +1108,24 @@ function confirmCrop() {
     const canvas = elements.cropCanvas;
     const img = state.cropData.image;
 
-    // Calcula coordenadas na imagem original
-    const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scale;
-    const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scale;
-    const width = Math.abs(state.cropData.endX - state.cropData.startX) * state.cropData.scale;
-    const height = Math.abs(state.cropData.endY - state.cropData.startY) * state.cropData.scale;
+    console.log('=== DEBUG CROP ===');
+    console.log('Imagem original:', img.width, 'x', img.height);
+    console.log('Canvas:', canvas.width, 'x', canvas.height);
+    console.log('ScaleX:', state.cropData.scaleX, 'ScaleY:', state.cropData.scaleY);
+    console.log('Seleção no canvas - startX:', state.cropData.startX, 'startY:', state.cropData.startY);
+    console.log('Seleção no canvas - endX:', state.cropData.endX, 'endY:', state.cropData.endY);
+    console.log('Largura seleção canvas:', Math.abs(state.cropData.endX - state.cropData.startX));
+    console.log('Altura seleção canvas:', Math.abs(state.cropData.endY - state.cropData.startY));
+
+    // Calcula coordenadas na imagem original usando escalas separadas para X e Y
+    const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scaleX;
+    const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scaleY;
+    const width = Math.abs(state.cropData.endX - state.cropData.startX) * state.cropData.scaleX;
+    const height = Math.abs(state.cropData.endY - state.cropData.startY) * state.cropData.scaleY;
+
+    console.log('Crop na imagem original - X:', x, 'Y:', y);
+    console.log('Crop na imagem original - Width:', width, 'Height:', height);
+    console.log('==================');
 
     // Cria canvas temporário para crop
     const tempCanvas = document.createElement('canvas');
@@ -695,29 +1136,36 @@ function confirmCrop() {
     // Desenha área cortada
     tempCtx.drawImage(img, x, y, width, height, 0, 0, width, height);
 
-    // Converte para blob e cria arquivo
+    // Converte para blob e cria arquivo (qualidade 95%)
     tempCanvas.toBlob((blob) => {
         const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
 
-        // Se for modo mockup, gera o mockup
-        if (state.mockupMode) {
-            gerarMockup(file);
+        // Verifica se é flow de countertop (crop primeiro, depois escolha)
+        if (state.countertopState.croppedImage !== null || state.ambienteConfig.tipo === 'countertop') {
+            // Flow de countertop: salva crop e mostra tela de seleção
+            showCountertopSelection(file);
+        } else if (state.ambienteMode) {
+            // Outros ambientes (cavalete, nicho): gera diretamente
+            gerarAmbiente(file);
         } else {
+            // Modo ajuste normal
             compressAndPreviewImage(file);
-            // Mostra botões mockup e countertop pois já tem imagem disponível
-            elements.mockupBtn.classList.remove('hidden');
-            elements.countertopBtn.classList.remove('hidden');
+            // Mostra botões ambiente pois já tem imagem disponível
+            elements.ambienteBtn.classList.remove('hidden');
+            elements.nichoBtn.classList.remove('hidden');
+            elements.countertopsBtn.classList.remove('hidden');
             // Mostra botão de reset pois a imagem foi modificada
             elements.resetImageBtn.classList.remove('hidden');
             showMainScreen();
         }
-    }, 'image/jpeg', 0.9);
+    }, 'image/jpeg', 0.95);
 }
 
 function cancelCrop() {
     // Limpa input file para permitir selecionar a mesma imagem novamente
     elements.fileInput.value = '';
-    state.mockupMode = false;
+    state.ambienteMode = false;
+    elements.cropInfo.classList.add('hidden');
     showMainScreen();
 }
 
@@ -728,7 +1176,7 @@ function abrirCropParaAjuste() {
     }
 
     // Carrega imagem original no crop (modo ajuste normal)
-    state.mockupMode = false;
+    state.ambienteMode = false;
     state.cropData.image = state.originalPhoto;
     initializeCropCanvas();
     showCropScreen();
@@ -753,30 +1201,28 @@ function resetToOriginalImage() {
         // Oculta botão de reset pois voltou ao original
         elements.resetImageBtn.classList.add('hidden');
         showMessage('Imagem original restaurada', 'success');
-    }, 'image/jpeg', 0.9);
+    }, 'image/jpeg', 0.95);
 }
 
 // ========== MOCKUP DE CAVALETES ==========
-function startMockupFlow() {
+function startAmbienteFlow() {
     if (!state.originalPhoto) {
-        showMessage('Nenhuma foto disponível para mockup', 'error');
+        showMessage('Nenhuma foto disponível para ambiente', 'error');
         return;
     }
 
     // Mostra tela de configuração
-    showScreen(elements.mockupConfigScreen);
+    showScreen(elements.ambienteConfigScreen);
 }
 
-function abrirCropParaMockup() {
-    // Captura configuração selecionada
-    const tipoSelecionado = document.querySelector('input[name="tipoCavalete"]:checked');
+function abrirCropParaAmbiente() {
+    // Captura configuração de fundo
     const fundoSelecionado = document.querySelector('input[name="fundoCavalete"]:checked');
+    state.ambienteConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
+    state.ambienteConfig.tipo = 'cavalete'; // Define tipo como cavalete
 
-    state.mockupConfig.tipo = tipoSelecionado ? tipoSelecionado.value : 'simples';
-    state.mockupConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
-
-    // Ativa modo mockup
-    state.mockupMode = true;
+    // Ativa modo ambiente
+    state.ambienteMode = true;
 
     // Carrega imagem original no crop
     state.cropData.image = state.originalPhoto;
@@ -784,16 +1230,34 @@ function abrirCropParaMockup() {
     showCropScreen();
 }
 
-async function gerarMockup(imagemCropada) {
+async function gerarAmbiente(imagemCropada) {
     try {
         elements.uploadProgress.classList.remove('hidden');
 
-        const formData = new FormData();
-        formData.append('ImagemCropada', imagemCropada);
-        formData.append('TipoCavalete', state.mockupConfig.tipo);
-        formData.append('Fundo', state.mockupConfig.fundo);
+        // Verifica o tipo de ambiente
+        const isNicho = state.ambienteConfig.tipo === 'nicho1';
+        const isBancada1 = state.ambienteConfig.tipo === 'bancada1';
 
-        const response = await fetch(`${API_URL}/api/mockup/gerar`, {
+        const formData = new FormData();
+        formData.append((isNicho || isBancada1) ? 'imagem' : 'ImagemCropada', imagemCropada);
+
+        if (isNicho) {
+            // Parâmetros específicos do nicho
+            formData.append('fundoEscuro', state.ambienteConfig.fundo === 'escuro');
+            formData.append('incluirShampoo', state.ambienteConfig.incluirShampoo || false);
+            formData.append('incluirSabonete', state.ambienteConfig.incluirSabonete || false);
+        } else if (isBancada1) {
+            // Parâmetros específicos da bancada1
+            formData.append('flip', state.ambienteConfig.flip || false);
+        } else {
+            // Parâmetros do cavalete (simples)
+            formData.append('TipoCavalete', 'simples'); // Sempre simples por enquanto
+            formData.append('Fundo', state.ambienteConfig.fundo);
+        }
+
+        const endpoint = isNicho ? '/api/ambiente/nicho1' : (isBancada1 ? '/api/ambiente/bancada1' : '/api/ambiente/gerar');
+
+        const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${state.token}`
@@ -808,93 +1272,257 @@ async function gerarMockup(imagemCropada) {
         console.log('Data:', data);
 
         if (!response.ok) {
-            throw new Error(data.mensagem || 'Erro ao gerar mockup');
+            throw new Error(data.mensagem || 'Erro ao gerar ambiente');
         }
 
-        // Exibe resultado (backend retorna em camelCase)
-        if (data.caminhosGerados && data.caminhosGerados.length > 0) {
-            const mockupUrl = `${API_URL}/uploads/${data.caminhosGerados[0]}`;
-            console.log('Mockup URL:', mockupUrl);
-            console.log('Mockup Image Element:', elements.mockupImage);
-            console.log('Mockup Result Screen:', elements.mockupResultScreen);
+        // Exibe resultado (backend retorna diferente para nicho, bancada1 e cavalete)
+        const caminhos = data.caminhosGerados || data.ambientes;
 
-            elements.mockupImage.src = mockupUrl;
-            console.log('Image src definido:', elements.mockupImage.src);
+        if (caminhos && caminhos.length > 0) {
+            const gallery = document.getElementById('ambientesGallery');
+            gallery.innerHTML = ''; // Limpa galeria
 
-            showScreen(elements.mockupResultScreen);
-            console.log('Screen mostrada');
+            // Labels diferentes para cada tipo
+            let labels;
+            if (isNicho) {
+                labels = ['Nicho - Versão Normal', 'Nicho - Rotacionado 180°'];
+            } else if (isBancada1) {
+                labels = ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'];
+            } else {
+                labels = [
+                    'Cavalete Duplo - Original/Espelho',
+                    'Cavalete Duplo - Espelho/Original',
+                    'Cavalete Simples'
+                ];
+            }
 
-            showMockupMessage(data.mensagem, 'success');
+            caminhos.forEach((caminho, index) => {
+                // Para nicho e bancada1, caminho já vem completo; para cavalete, precisa montar
+                const ambienteUrl = (isNicho || isBancada1) ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
+
+                const ambienteItem = document.createElement('div');
+                ambienteItem.className = 'ambiente-item';
+                ambienteItem.innerHTML = `
+                    <h3>${labels[index] || `Ambiente ${index + 1}`}</h3>
+                    <img src="${ambienteUrl}" alt="${labels[index]}">
+                    <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${caminho}">
+                        ⬇️ Baixar
+                    </button>
+                `;
+                gallery.appendChild(ambienteItem);
+            });
+
+            // Salva URLs para download em massa
+            state.ambienteUrls = (isNicho || isBancada1)
+                ? caminhos.map(c => `${API_URL}${c}`)
+                : caminhos.map(c => `${API_URL}/uploads/${c}`);
+
+            showScreen(elements.ambienteResultScreen);
+            showAmbienteMessage(data.mensagem, 'success');
         } else {
-            throw new Error('Nenhum mockup foi gerado');
+            throw new Error('Nenhum ambiente foi gerado');
         }
 
-        // Reseta modo mockup
-        state.mockupMode = false;
+        // Reseta modo ambiente
+        state.ambienteMode = false;
 
     } catch (error) {
-        showMockupMessage(error.message, 'error');
-        state.mockupMode = false;
+        showAmbienteMessage(error.message, 'error');
+        state.ambienteMode = false;
         showMainScreen();
     } finally {
         elements.uploadProgress.classList.add('hidden');
     }
 }
 
-function downloadMockup() {
+function downloadAmbiente(url, nome) {
     const link = document.createElement('a');
-    link.href = elements.mockupImage.src;
-    link.download = `mockup_${Date.now()}.jpg`;
+    link.href = url;
+    link.download = nome || `ambiente_${Date.now()}.jpg`;
     link.click();
 }
 
-function showMockupMessage(message, type) {
-    elements.mockupMessage.textContent = message;
-    elements.mockupMessage.className = `message ${type}`;
-    elements.mockupMessage.classList.remove('hidden');
+/**
+ * Compartilha ambiente via Web Share API ou WhatsApp Web
+ */
+async function shareAmbiente(url, nome) {
+    try {
+        // Tenta usar Web Share API (funciona em mobile e alguns browsers desktop)
+        if (navigator.share) {
+            // Faz fetch da imagem e converte para blob para compartilhar
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const file = new File([blob], `${nome}.jpg`, { type: 'image/jpeg' });
 
-    setTimeout(() => {
-        elements.mockupMessage.classList.add('hidden');
-    }, 5000);
+            await navigator.share({
+                title: 'Ambiente PicStone',
+                text: `Confira este ambiente de ${nome}`,
+                files: [file]
+            });
+
+            showAmbienteMessage('Compartilhado com sucesso!', 'success');
+        } else {
+            // Fallback: Compartilhar via WhatsApp Web com link da imagem
+            const texto = encodeURIComponent(`Confira este ambiente: ${url}`);
+            const whatsappUrl = `https://wa.me/?text=${texto}`;
+            window.open(whatsappUrl, '_blank');
+            showAmbienteMessage('Abrindo WhatsApp...', 'success');
+        }
+    } catch (error) {
+        // Se usuário cancelar ou der erro
+        if (error.name !== 'AbortError') {
+            console.error('Erro ao compartilhar:', error);
+
+            // Último fallback: copiar link para clipboard
+            try {
+                await navigator.clipboard.writeText(url);
+                showAmbienteMessage('Link copiado! Cole no WhatsApp', 'success');
+            } catch (clipError) {
+                showAmbienteMessage('Erro ao compartilhar', 'error');
+            }
+        }
+    }
 }
 
-// ========== COUNTERTOP FUNCTIONS ==========
-function openCountertopConfig() {
-    if (!state.originalPhoto) {
-        showMessage('Nenhuma foto disponível para countertop', 'error');
+function downloadAllAmbientes() {
+    if (!state.ambienteUrls || state.ambienteUrls.length === 0) {
+        showAmbienteMessage('Nenhum ambiente disponível para download', 'error');
         return;
     }
 
-    // Mostra tela de configuração de countertop
-    showScreen(elements.countertopConfigScreen);
+    state.ambienteUrls.forEach((url, index) => {
+        setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `ambiente_${index + 1}_${Date.now()}.jpg`;
+            link.click();
+        }, index * 500); // Delay de 500ms entre cada download
+    });
+
+    showAmbienteMessage('Baixando todos os ambientes...', 'success');
 }
 
-async function gerarCountertop() {
+function showAmbienteMessage(message, type) {
+    elements.ambienteMessage.textContent = message;
+    elements.ambienteMessage.className = `message ${type}`;
+    elements.ambienteMessage.classList.remove('hidden');
+
+    setTimeout(() => {
+        elements.ambienteMessage.classList.add('hidden');
+    }, 5000);
+}
+
+// ========== NICHO MOCKUP FLOW ==========
+function startNichoFlow() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma foto disponível para ambiente de nicho', 'error');
+        return;
+    }
+
+    // Mostra tela de configuração
+    showScreen(elements.nichoConfigScreen);
+}
+
+function abrirCropParaNicho() {
+    // Captura configurações do nicho
+    const fundoSelecionado = document.querySelector('input[name="fundoNicho"]:checked');
+    const incluirShampoo = document.getElementById('incluirShampoo').checked;
+    const incluirSabonete = document.getElementById('incluirSabonete').checked;
+
+    state.ambienteConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
+    state.ambienteConfig.tipo = 'nicho1'; // Identifica que é nicho
+    state.ambienteConfig.incluirShampoo = incluirShampoo;
+    state.ambienteConfig.incluirSabonete = incluirSabonete;
+
+    // Ativa modo ambiente
+    state.ambienteMode = true;
+
+    // Carrega imagem original no crop
+    state.cropData.image = state.originalPhoto;
+    initializeCropCanvas();
+
+    // Mostra tela de crop
+    showScreen(elements.cropScreen);
+}
+
+// ========== BANCADA1 MOCKUP FLOW ==========
+// ========== UNIFIED COUNTERTOP FLOW ==========
+
+/**
+ * Passo 1: Inicia o flow de countertop - vai direto para o crop
+ */
+function startCountertopFlow() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma foto disponível para ambiente de bancada', 'error');
+        return;
+    }
+
+    // Limpa estado anterior de countertop
+    state.countertopState.croppedImage = null;
+    state.countertopState.selectedType = null;
+    state.countertopState.flip = false;
+
+    // Marca que estamos no flow de countertop (para confirmCrop saber)
+    state.ambienteConfig.tipo = 'countertop';
+    state.ambienteMode = false; // Não queremos gerar ainda, só fazer crop
+
+    // Carrega imagem original no crop
+    state.cropData.image = state.originalPhoto;
+    initializeCropCanvas();
+
+    // Vai direto para crop
+    showScreen(elements.cropScreen);
+}
+
+/**
+ * Passo 2: Após crop, salva imagem cortada e mostra tela de seleção
+ */
+function showCountertopSelection(croppedImageBlob) {
+    // Salva crop para reutilização
+    state.countertopState.croppedImage = croppedImageBlob;
+
+    // Mostra tela de seleção
+    showScreen(elements.countertopSelectionScreen);
+
+    // Reset checkbox de flip
+    if (elements.flipCountertop) {
+        elements.flipCountertop.checked = false;
+    }
+}
+
+/**
+ * Passo 3: Usuário selecionou tipo de bancada e clicou em gerar
+ */
+async function selectCountertopAndGenerate(type) {
+    if (!state.countertopState.croppedImage) {
+        showMessage('Erro: Imagem cortada não encontrada', 'error');
+        return;
+    }
+
+    // Salva seleção
+    state.countertopState.selectedType = type;
+    state.countertopState.flip = elements.flipCountertop ? elements.flipCountertop.checked : false;
+
+    // Gera ambiente
+    await generateCountertopAmbiente();
+}
+
+/**
+ * Passo 4: Gera o ambiente da bancada selecionada
+ */
+async function generateCountertopAmbiente() {
     try {
-        // Captura configuração selecionada
-        const tipoBancadaSelecionado = document.querySelector('input[name="tipoBancada"]:checked');
-        const flipSelecionado = document.querySelector('input[name="flipBancada"]:checked');
-
-        const tipoBancada = tipoBancadaSelecionado ? tipoBancadaSelecionado.value : 'bancada1';
-        const flip = flipSelecionado ? flipSelecionado.value === 'true' : false;
-
-        console.log('=== GERANDO COUNTERTOP ===');
-        console.log('Tipo:', tipoBancada);
-        console.log('Flip:', flip);
-
-        elements.uploadProgress.classList.remove('hidden');
-
-        // Converte originalPhoto para Blob
-        const blob = await fetch(state.originalPhoto).then(r => r.blob());
+        // Mostra loading overlay global
+        elements.loadingOverlay.classList.remove('hidden');
 
         const formData = new FormData();
-        formData.append('imagem', blob, 'foto.jpg');
-        formData.append('flip', flip);
+        formData.append('imagem', state.countertopState.croppedImage, 'cropped.jpg');
+        formData.append('flip', state.countertopState.flip);
 
-        // Define endpoint baseado no tipo
-        const endpoint = tipoBancada === 'bancada1' ? 'bancada1' : 'bancada2';
+        // Suporta bancada1 até bancada8
+        const endpoint = `/api/mockup/${state.countertopState.selectedType}`;
 
-        const response = await fetch(`${API_URL}/api/mockup/${endpoint}`, {
+        const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${state.token}`
@@ -902,34 +1530,300 @@ async function gerarCountertop() {
             body: formData
         });
 
-        const data = await response.json();
+        // Verifica se há conteúdo antes de parsear JSON
+        const contentType = response.headers.get('content-type');
+        let data = null;
 
-        console.log('=== COUNTERTOP RESPONSE ===');
-        console.log('Response OK:', response.ok);
-        console.log('Data:', data);
+        if (contentType && contentType.includes('application/json')) {
+            const text = await response.text();
+            if (text) {
+                data = JSON.parse(text);
+            }
+        }
 
         if (!response.ok) {
-            throw new Error(data.mensagem || 'Erro ao gerar countertop');
+            const errorMsg = data?.mensagem ||
+                           `Erro ${response.status}: ${response.statusText || 'Falha ao gerar ambiente'}`;
+            throw new Error(errorMsg);
         }
 
         // Exibe resultado
-        if (data.mockups && data.mockups.length > 0) {
-            const mockupUrl = `${API_URL}${data.mockups[0]}`;
-            console.log('Countertop URL:', mockupUrl);
-
-            elements.mockupImage.src = mockupUrl;
-            showScreen(elements.mockupResultScreen);
-            showMockupMessage(data.mensagem, 'success');
-        } else {
-            throw new Error('Nenhum countertop foi gerado');
-        }
+        displayCountertopResults(data);
 
     } catch (error) {
-        console.error('Erro ao gerar countertop:', error);
-        showMockupMessage(error.message, 'error');
+        console.error('Erro ao gerar bancada:', error);
+        showAmbienteMessage(error.message, 'error');
         showMainScreen();
     } finally {
-        elements.uploadProgress.classList.add('hidden');
+        // Esconde loading overlay
+        elements.loadingOverlay.classList.add('hidden');
+        // Limpa flag de countertop
+        state.ambienteConfig.tipo = 'simples';
+    }
+}
+
+/**
+ * Passo 5: Exibe resultados com opção de tentar outra bancada
+ */
+function displayCountertopResults(data) {
+    const caminhos = data.ambientes;
+
+    if (!caminhos || caminhos.length === 0) {
+        showMessage('Nenhum ambiente foi gerado', 'error');
+        return;
+    }
+
+    const gallery = elements.ambientesGallery;
+    gallery.innerHTML = '';
+
+    const labels = state.countertopState.selectedType === 'bancada1'
+        ? ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°']
+        : ['Bancada #2 - Normal', 'Bancada #2 - Rotacionado 180°'];
+
+    caminhos.forEach((caminho, index) => {
+        const ambienteUrl = `${API_URL}${caminho}`;
+        const ambienteItem = document.createElement('div');
+        ambienteItem.className = 'ambiente-item';
+        ambienteItem.innerHTML = `
+            <h3>${labels[index]}</h3>
+            <img src="${ambienteUrl}" alt="${labels[index]}">
+            <div class="ambiente-actions">
+                <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${caminho}">
+                    ⬇️ Baixar
+                </button>
+                <button class="btn btn-primary btn-share-single" data-url="${ambienteUrl}" data-nome="${labels[index]}">
+                    📤 Compartilhar
+                </button>
+            </div>
+        `;
+        gallery.appendChild(ambienteItem);
+    });
+
+    // Salva URLs para download em lote
+    state.ambienteUrls = caminhos.map(c => `${API_URL}${c}`);
+
+    // Modifica botão "Novo Ambiente" para permitir tentar outra bancada
+    elements.newAmbienteBtn.textContent = '🔄 Tentar Outra Bancada (Mesmo Recorte)';
+    elements.newAmbienteBtn.onclick = () => {
+        // Retorna para seleção com o mesmo crop
+        showScreen(elements.countertopSelectionScreen);
+    };
+
+    // Mostra tela de resultado
+    showScreen(elements.ambienteResultScreen);
+    showAmbienteMessage(data.mensagem, 'success');
+}
+
+// ========== GERENCIAMENTO DE USUÁRIOS ==========
+
+/**
+ * Troca senha do usuário logado
+ */
+async function handleChangePassword(e) {
+    e.preventDefault();
+
+    const senhaAtual = document.getElementById('senhaAtual').value;
+    const novaSenha = document.getElementById('novaSenha').value;
+    const confirmarSenha = document.getElementById('confirmarSenha').value;
+
+    // Valida se senhas coincidem
+    if (novaSenha !== confirmarSenha) {
+        elements.changePasswordMessage.textContent = 'As senhas não coincidem';
+        elements.changePasswordMessage.className = 'message error';
+        elements.changePasswordMessage.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/change-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({
+                senhaAtual,
+                novaSenha
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            elements.changePasswordMessage.textContent = data.mensagem || 'Senha alterada com sucesso!';
+            elements.changePasswordMessage.className = 'message success';
+            elements.changePasswordForm.reset();
+
+            // Volta para tela principal após 2 segundos
+            setTimeout(() => {
+                showMainScreen();
+            }, 2000);
+        } else {
+            elements.changePasswordMessage.textContent = data.mensagem || 'Erro ao trocar senha';
+            elements.changePasswordMessage.className = 'message error';
+        }
+
+        elements.changePasswordMessage.classList.remove('hidden');
+    } catch (error) {
+        console.error('Erro ao trocar senha:', error);
+        elements.changePasswordMessage.textContent = 'Erro ao trocar senha';
+        elements.changePasswordMessage.className = 'message error';
+        elements.changePasswordMessage.classList.remove('hidden');
+    }
+}
+
+/**
+ * Carrega lista de usuários (apenas admin)
+ */
+async function loadUsers() {
+    elements.usersList.innerHTML = '<p class="loading">Carregando...</p>';
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/users`, {
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar usuários');
+        }
+
+        const usuarios = await response.json();
+
+        if (usuarios.length === 0) {
+            elements.usersList.innerHTML = '<p class="empty">Nenhum usuário encontrado</p>';
+            return;
+        }
+
+        // Renderiza lista de usuários
+        elements.usersList.innerHTML = usuarios.map(user => `
+            <div class="user-card ${!user.ativo ? 'inactive' : ''}">
+                <div class="user-info">
+                    <strong>${user.nomeCompleto}</strong>
+                    <span class="user-username">@${user.username}</span>
+                    <small>Criado em: ${new Date(user.dataCriacao).toLocaleDateString('pt-BR')}</small>
+                    <span class="user-status ${user.ativo ? 'active' : 'inactive'}">
+                        ${user.ativo ? '● Ativo' : '○ Inativo'}
+                    </span>
+                </div>
+                <div class="user-actions">
+                    ${user.username !== 'admin' ? `
+                        ${user.ativo ? `
+                            <button class="btn btn-secondary btn-deactivate-user" data-user-id="${user.id}">
+                                Desativar
+                            </button>
+                        ` : `
+                            <button class="btn btn-primary btn-reactivate-user" data-user-id="${user.id}">
+                                Reativar
+                            </button>
+                        `}
+                    ` : '<span class="admin-badge">Administrador</span>'}
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+        elements.usersList.innerHTML = '<p class="error">Erro ao carregar usuários</p>';
+    }
+}
+
+/**
+ * Cria novo usuário (apenas admin)
+ */
+async function handleAddUser(e) {
+    e.preventDefault();
+
+    const username = document.getElementById('newUsername').value.trim();
+    const nomeCompleto = document.getElementById('newNomeCompleto').value.trim();
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/users`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: JSON.stringify({
+                username,
+                nomeCompleto
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            elements.addUserMessage.textContent = data.mensagem || 'Usuário criado com sucesso!';
+            elements.addUserMessage.className = 'message success';
+            elements.addUserForm.reset();
+
+            // Volta para tela de usuários após 2 segundos
+            setTimeout(() => {
+                showUsersScreen();
+            }, 2000);
+        } else {
+            elements.addUserMessage.textContent = data.mensagem || 'Erro ao criar usuário';
+            elements.addUserMessage.className = 'message error';
+        }
+
+        elements.addUserMessage.classList.remove('hidden');
+    } catch (error) {
+        console.error('Erro ao criar usuário:', error);
+        elements.addUserMessage.textContent = 'Erro ao criar usuário';
+        elements.addUserMessage.className = 'message error';
+        elements.addUserMessage.classList.remove('hidden');
+    }
+}
+
+/**
+ * Desativa usuário (apenas admin)
+ */
+async function deactivateUser(userId) {
+    if (!confirm('Tem certeza que deseja desativar este usuário?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            }
+        });
+
+        if (response.ok) {
+            await loadUsers(); // Recarrega lista
+        } else {
+            const data = await response.json();
+            alert(data.mensagem || 'Erro ao desativar usuário');
+        }
+    } catch (error) {
+        console.error('Erro ao desativar usuário:', error);
+        alert('Erro ao desativar usuário');
+    }
+}
+
+/**
+ * Reativa usuário (apenas admin)
+ */
+async function reactivateUser(userId) {
+    try {
+        const response = await fetch(`${API_URL}/api/auth/users/${userId}/reactivate`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            }
+        });
+
+        if (response.ok) {
+            await loadUsers(); // Recarrega lista
+        } else {
+            const data = await response.json();
+            alert(data.mensagem || 'Erro ao reativar usuário');
+        }
+    } catch (error) {
+        console.error('Erro ao reativar usuário:', error);
+        alert('Erro ao reativar usuário');
     }
 }
 
