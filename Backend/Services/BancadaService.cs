@@ -1010,6 +1010,171 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Gera mockup de Bancada tipo 6 (Countertop #6)
+        /// Similar à Bancada 3 - usa book-match com divisões 95%/5% e 2/3-1/3
+        /// </summary>
+        public List<SKBitmap> GerarBancada6(SKBitmap imagemOriginal, bool flip = false)
+        {
+            _logger.LogWarning($"========== INICIANDO GerarBancada6 COMPLETO - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            var resultado = new List<SKBitmap>();
+
+            // Bancada 6 - gera 2 versões (normal e 180°)
+            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
+            {
+                // ROTACIONA A IMAGEM ORIGINAL ANTES DE PROCESSAR (se contaProcesso == 2)
+                SKBitmap imagemParaProcessar;
+                if (contaProcesso == 1)
+                {
+                    imagemParaProcessar = imagemOriginal.Copy();
+                    _logger.LogInformation($"contaProcesso={contaProcesso}: Usando imagem ORIGINAL");
+                }
+                else
+                {
+                    imagemParaProcessar = RotateFlip180(imagemOriginal);
+                    _logger.LogInformation($"contaProcesso={contaProcesso}: Usando imagem ROTACIONADA 180°");
+                }
+
+                // Book-match copy
+                var imagemBookMatch = imagemParaProcessar.Copy();
+
+                // ============ DIVISÃO DA FAIXA: 95% PRINCIPAL + 5% FAIXA LATERAL ============
+                int alturaPrincipal = (int)(imagemBookMatch.Height * 0.95);
+                int alturaFaixa = imagemBookMatch.Height - alturaPrincipal;
+
+                var rectPrincipal = new SKRectI(0, 0, imagemBookMatch.Width, alturaPrincipal);
+                var rectFaixaLateral = new SKRectI(0, alturaPrincipal, imagemBookMatch.Width, imagemBookMatch.Height);
+
+                var imagemPrincipal = CropBitmap(imagemBookMatch, rectPrincipal);
+                var imagemFaixaLateral = CropBitmap(imagemBookMatch, rectFaixaLateral);
+
+                _logger.LogInformation($"Bancada6: Principal={imagemPrincipal.Width}x{imagemPrincipal.Height}, Faixa={imagemFaixaLateral.Width}x{imagemFaixaLateral.Height}");
+
+                // ============ DIVISÃO VERTICAL DA PARTE PRINCIPAL: 2/3 E 1/3 ============
+                int doisTercos = (int)(imagemPrincipal.Width / 1.5);
+                int umTerco = imagemPrincipal.Width - doisTercos;
+
+                var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemPrincipal.Height);
+                var rectUmTerco = new SKRectI(doisTercos - 10, 0, doisTercos - 10 + umTerco + 10, imagemPrincipal.Height);
+
+                var imagemDoisTercos = CropBitmap(imagemPrincipal, rectDoisTercos);
+                var imagemUmTerco = CropBitmap(imagemPrincipal, rectUmTerco);
+
+                _logger.LogInformation($"Bancada6: 2/3={imagemDoisTercos.Width}x{imagemDoisTercos.Height}, 1/3={imagemUmTerco.Width}x{imagemUmTerco.Height}");
+
+                // ============ DIVISÃO HORIZONTAL DA FAIXA LATERAL: 2/3 E 1/3 ============
+                int faixaDoisTercos = (int)(imagemFaixaLateral.Width / 1.5);
+                int faixaUmTerco = imagemFaixaLateral.Width - faixaDoisTercos;
+
+                var rectFaixaSuperior = new SKRectI(0, 0, faixaDoisTercos, imagemFaixaLateral.Height);
+                var rectFaixaInferior = new SKRectI(faixaDoisTercos, 0, imagemFaixaLateral.Width, imagemFaixaLateral.Height);
+
+                var imagemFaixaSuperior = CropBitmap(imagemFaixaLateral, rectFaixaSuperior);
+                var imagemFaixaInferior = CropBitmap(imagemFaixaLateral, rectFaixaInferior);
+
+                _logger.LogInformation($"Bancada6: FaixaSup={imagemFaixaSuperior.Width}x{imagemFaixaSuperior.Height}, FaixaInf={imagemFaixaInferior.Width}x{imagemFaixaInferior.Height}");
+
+                // ============ TRANSFORMAÇÕES DE PERSPECTIVA - BANCADA 6 ============
+                // Canvas da moldura bancada6.png: 2500x1632
+                const int canvasBancada6Width = 2500;
+                const int canvasBancada6Height = 1632;
+
+                // Parte principal (2/3) - topo
+                var bmp7 = _transformService.MapToCustomQuadrilateral_Bancada6_Topo(
+                    input: imagemDoisTercos,
+                    canvasWidth: canvasBancada6Width,
+                    canvasHeight: canvasBancada6Height
+                );
+
+                // Pé/lateral (1/3) - rotacionado 90° para continuidade dos veios
+                var imagemUmTercoRotacionada = RotateFlip90(imagemUmTerco);
+                var bmp9 = _transformService.MapToCustomQuadrilateral_Bancada6_Pe(
+                    input: imagemUmTercoRotacionada,
+                    canvasWidth: canvasBancada6Width,
+                    canvasHeight: canvasBancada6Height
+                );
+
+                // Faixa superior (2/3 da faixa) - BANCADA 6
+                var faixaSuperiorTransformada = _transformService.MapToCustomQuadrilateral_Bancada6_FaixaSuperior(
+                    input: imagemFaixaSuperior,
+                    canvasWidth: canvasBancada6Width,
+                    canvasHeight: canvasBancada6Height
+                );
+
+                // Faixa inferior (1/3 da faixa) - BANCADA 6
+                // Rotaciona -90° para ficar VERTICAL (em pé), depois aplica transformação
+                var imagemFaixaInferiorVertical = RotateFlip270(imagemFaixaInferior);
+                var faixaInferiorTransformada = _transformService.MapToCustomQuadrilateral_Bancada6_FaixaInferior(
+                    input: imagemFaixaInferiorVertical,
+                    canvasWidth: canvasBancada6Width,
+                    canvasHeight: canvasBancada6Height
+                );
+
+                _logger.LogInformation($"Bancada6: Transformações aplicadas - Topo, Pé, FaixaSuperior, FaixaInferior");
+
+                // ============ MONTAGEM FINAL: Usa tamanho da moldura ============
+                var moldura = CarregarRecurso("bancada6.png");
+                if (moldura == null)
+                {
+                    _logger.LogError("Bancada6: ERRO ao carregar moldura bancada6.png");
+                    throw new Exception("Moldura bancada6.png não encontrada");
+                }
+
+                int larguraMoldura = moldura.Width;
+                int alturaMoldura = moldura.Height;
+                _logger.LogInformation($"Bancada6: Moldura dimensions = {larguraMoldura}x{alturaMoldura}");
+
+                // Canvas final no tamanho da moldura
+                var mosaicoEmBranco = new SKBitmap(larguraMoldura, alturaMoldura);
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+
+                    // ORDEM: mármore primeiro, moldura por cima (overlay)
+                    // Desenha as transformações alinhadas por (0,0) - se ultrapassar será cortado automaticamente
+                    canvas.DrawBitmap(bmp7, 0, 0, paint);  // 1. Topo
+                    canvas.DrawBitmap(bmp9, 0, 0, paint);  // 2. Pé/lateral
+                    canvas.DrawBitmap(faixaSuperiorTransformada, 0, 0, paint);  // 3. Faixa superior
+                    canvas.DrawBitmap(faixaInferiorTransformada, 0, 0, paint);  // 4. Faixa inferior
+
+                    // 5. Moldura vazada - OVERLAY
+                    canvas.DrawBitmap(moldura, 0, 0, paint);
+                    _logger.LogInformation("Bancada6: Moldura bancada6.png aplicada");
+
+                    // Marca d'água
+                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
+                }
+
+                if (flip)
+                {
+                    mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                    _logger.LogInformation($"Bancada6: Aplicado flip horizontal");
+                }
+
+                resultado.Add(mosaicoEmBranco);
+
+                // Dispose de todos os bitmaps intermediários
+                imagemParaProcessar.Dispose();
+                imagemBookMatch.Dispose();
+                imagemPrincipal.Dispose();
+                imagemFaixaLateral.Dispose();
+                imagemDoisTercos.Dispose();
+                imagemUmTerco.Dispose();
+                imagemUmTercoRotacionada.Dispose();
+                imagemFaixaSuperior.Dispose();
+                imagemFaixaInferior.Dispose();
+                imagemFaixaInferiorVertical.Dispose();
+                bmp7.Dispose();
+                bmp9.Dispose();
+                faixaSuperiorTransformada.Dispose();
+                faixaInferiorTransformada.Dispose();
+            }
+
+            _logger.LogWarning("========== GerarBancada6 COMPLETO FINALIZADO ==========");
+            return resultado;
+        }
+
+        /// <summary>
         /// Gera mockup de Bancada tipo 4 (Countertop #4)
         /// Divide em frente e lateral
         /// </summary>
@@ -1209,64 +1374,6 @@ namespace PicStoneFotoAPI.Services
             }
 
             _logger.LogWarning($"========== GerarBancada5 CONCLUÍDO - {resultado.Count} mockups gerados ==========");
-            return resultado;
-        }
-
-        /// <summary>
-        /// Gera mockup de Bancada tipo 6 (Countertop #6)
-        /// Sistema de faixas com divisão 3/4
-        /// </summary>
-        public List<SKBitmap> GerarBancada6(SKBitmap imagemOriginal, bool flip = false)
-        {
-            _logger.LogWarning($"========== INICIANDO GerarBancada6 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
-            var resultado = new List<SKBitmap>();
-
-            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
-            {
-                SKBitmap imagemBookMatch = contaProcesso == 1 ? imagemOriginal.Copy() : RotateFlip180(imagemOriginal);
-
-                // Divide em 3/4 (bancada) e 1/4 (pé)
-                int tresQuartos = (int)(imagemBookMatch.Width / 1.3333);
-                var rectBancada = new SKRectI(0, 0, tresQuartos, imagemBookMatch.Height);
-                var imagemBancada = CropBitmap(imagemBookMatch, rectBancada);
-
-                // Usa 90% da altura para bancada, 10% para faixa
-                int alturaBancada = (int)(imagemBancada.Height * 0.9);
-                var rect90 = new SKRectI(0, 0, imagemBancada.Width, alturaBancada);
-                var bmp90 = CropBitmap(imagemBancada, rect90);
-
-                // Redimensiona e aplica transformação
-                var bmp = bmp90.Resize(new SKImageInfo(290, 686), SKFilterQuality.High);
-                bmp = _transformService.DistortionInclina(bmp, 290, 114, 686, 290, 176);
-
-                // Monta mosaico 2500x1632
-                var mosaicoEmBranco = new SKBitmap(2500, 1632);
-                using (var canvas = new SKCanvas(mosaicoEmBranco))
-                {
-                    canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    canvas.DrawBitmap(bmp, -269, 825, paint);
-                }
-
-                using (var canvas = new SKCanvas(mosaicoEmBranco))
-                {
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada6.png");
-                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
-
-                    // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
-                }
-
-                if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
-                resultado.Add(mosaicoEmBranco);
-
-                imagemBookMatch.Dispose();
-                imagemBancada.Dispose();
-                bmp90.Dispose();
-                bmp.Dispose();
-            }
-
             return resultado;
         }
 
