@@ -20,7 +20,7 @@ namespace PicStoneFotoAPI.Services
             _logger = logger;
             _transformService = transformService;
             _resourcesPath = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Bancadas");
-            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.png");
+            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "watermark.png");
         }
 
         /// <summary>
