@@ -934,9 +934,9 @@ namespace PicStoneFotoAPI.Services
                 _logger.LogInformation("=== Iniciando PARTE 4: Faixa Lateral Inferior (MapToCustomQuadrilateral_FaixaInferior) ===");
                 _logger.LogInformation($"imagemFaixaInferior (1/4 largura faixa 5%): {imagemFaixaInferior.Width}x{imagemFaixaInferior.Height}");
 
-                // ROTAÇÃO -90° (270°) PARA CONTINUIDADE DOS VEIOS
-                var imagemFaixaInferiorRotacionada = RotateFlip270(imagemFaixaInferior);
-                _logger.LogInformation($"Rotacionado -90° para continuidade dos veios: {imagemFaixaInferiorRotacionada.Width}x{imagemFaixaInferiorRotacionada.Height}");
+                // ROTAÇÃO +90° PARA CONTINUIDADE DOS VEIOS
+                var imagemFaixaInferiorRotacionada = RotateFlip90(imagemFaixaInferior);
+                _logger.LogInformation($"Rotacionado +90° para continuidade dos veios: {imagemFaixaInferiorRotacionada.Width}x{imagemFaixaInferiorRotacionada.Height}");
 
                 // TRANSFORMAÇÃO DA FAIXA INFERIOR: MapToCustomQuadrilateral_FaixaInferior
                 _logger.LogInformation("Aplicando MapToCustomQuadrilateral_FaixaInferior...");
@@ -1101,8 +1101,8 @@ namespace PicStoneFotoAPI.Services
                 );
 
                 // Faixa inferior (1/3 da faixa) - BANCADA 6
-                // Rotaciona -90° para ficar VERTICAL (em pé), depois aplica transformação
-                var imagemFaixaInferiorVertical = RotateFlip270(imagemFaixaInferior);
+                // Rotaciona +90° para ficar VERTICAL (em pé), depois aplica transformação
+                var imagemFaixaInferiorVertical = RotateFlip90(imagemFaixaInferior);
                 var faixaInferiorTransformada = _transformService.MapToCustomQuadrilateral_Bancada6_FaixaInferior(
                     input: imagemFaixaInferiorVertical,
                     canvasWidth: canvasBancada6Width,

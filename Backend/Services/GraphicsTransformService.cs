@@ -416,8 +416,8 @@ namespace PicStoneFotoAPI.Services
             _logger.LogInformation("Vértices alvo (quadrilátero irregular):");
             _logger.LogInformation("  V1 (top-left):     (952, 1165)");
             _logger.LogInformation("  V2 (top-right):    (984, 1131)");
-            _logger.LogInformation("  V3 (bottom-right): (984, 1829)");
-            _logger.LogInformation("  V4 (bottom-left):  (958, 1829)");
+            _logger.LogInformation("  V3 (bottom-right): (984, 1800)");
+            _logger.LogInformation("  V4 (bottom-left):  (958, 1800)");
 
             return MapToVertices(
                 input: input,
@@ -425,8 +425,8 @@ namespace PicStoneFotoAPI.Services
                 canvasHeight: canvasHeight,
                 v1x: 952, v1y: 1165,  // top-left
                 v2x: 984, v2y: 1131,  // top-right
-                v4x: 958, v4y: 1829,  // bottom-left
-                v3x: 984, v3y: 1829   // bottom-right
+                v4x: 958, v4y: 1800,  // bottom-left
+                v3x: 984, v3y: 1800   // bottom-right
             );
         }
 
