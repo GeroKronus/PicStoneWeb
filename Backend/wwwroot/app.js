@@ -2081,9 +2081,20 @@ function displayCountertopResults(data) {
     const gallery = elements.ambientesGallery;
     gallery.innerHTML = '';
 
-    const labels = state.countertopState.selectedType === 'bancada1'
-        ? ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°']
-        : ['Bancada #2 - Normal', 'Bancada #2 - Rotacionado 180°'];
+    // Mapeia o tipo de bancada para o número correto
+    const bancadaLabels = {
+        'bancada1': ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'],
+        'bancada2': ['Bancada #2 - Normal', 'Bancada #2 - Rotacionado 180°'],
+        'bancada3': ['Bancada #3 - Normal', 'Bancada #3 - Rotacionado 180°'],
+        'bancada4': ['Bancada #4 - Normal', 'Bancada #4 - Rotacionado 180°'],
+        'bancada5': ['Bancada #5 - Normal', 'Bancada #5 - Rotacionado 180°'],
+        'bancada6': ['Bancada #6 - Normal', 'Bancada #6 - Rotacionado 180°'],
+        'bancada7': ['Bancada #7 - Normal', 'Bancada #7 - Rotacionado 180°'],
+        'bancada8': ['Bancada #8 - Normal', 'Bancada #8 - Rotacionado 180°']
+    };
+
+    const labels = bancadaLabels[state.countertopState.selectedType] ||
+                   ['Bancada - Normal', 'Bancada - Rotacionado 180°'];
 
     caminhos.forEach((caminho, index) => {
         const ambienteUrl = `${API_URL}${caminho}`;
@@ -2108,7 +2119,7 @@ function displayCountertopResults(data) {
     state.ambienteUrls = caminhos.map(c => `${API_URL}${c}`);
 
     // Modifica botão "Novo Ambiente" para permitir tentar outra bancada
-    elements.newAmbienteBtn.textContent = '🔄 Tentar Outra Bancada (Mesmo Recorte)';
+    elements.newAmbienteBtn.textContent = '🔄 Tentar Outra Bancada (Mesmo Crop)';
     elements.newAmbienteBtn.onclick = () => {
         // Retorna para seleção com o mesmo crop
         showScreen(elements.countertopSelectionScreen);
