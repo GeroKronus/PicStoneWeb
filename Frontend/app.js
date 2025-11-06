@@ -34,19 +34,34 @@ const state = {
 const elements = {
     loginScreen: document.getElementById('loginScreen'),
     mainScreen: document.getElementById('mainScreen'),
+    integracaoScreen: document.getElementById('integracaoScreen'),
+    ambientesScreen: document.getElementById('ambientesScreen'),
     cropScreen: document.getElementById('cropScreen'),
     historyScreen: document.getElementById('historyScreen'),
     ambienteConfigScreen: document.getElementById('ambienteConfigScreen'),
     ambienteResultScreen: document.getElementById('ambienteResultScreen'),
     loginForm: document.getElementById('loginForm'),
     loginError: document.getElementById('loginError'),
-    captureBtn: document.getElementById('captureBtn'),
-    fileInput: document.getElementById('fileInput'),
-    photoPreview: document.getElementById('photoPreview'),
-    previewImage: document.getElementById('previewImage'),
-    clearPhotoBtn: document.getElementById('clearPhotoBtn'),
-    adjustImageBtn: document.getElementById('adjustImageBtn'),
-    resetImageBtn: document.getElementById('resetImageBtn'),
+    // Botões principais
+    integracaoCard: document.getElementById('integracaoCard'),
+    ambientesCard: document.getElementById('ambientesCard'),
+    // Integração
+    captureBtnIntegracao: document.getElementById('captureBtnIntegracao'),
+    fileInputIntegracao: document.getElementById('fileInputIntegracao'),
+    photoPreviewIntegracao: document.getElementById('photoPreviewIntegracao'),
+    previewImageIntegracao: document.getElementById('previewImageIntegracao'),
+    clearPhotoBtnIntegracao: document.getElementById('clearPhotoBtnIntegracao'),
+    adjustImageBtnIntegracao: document.getElementById('adjustImageBtnIntegracao'),
+    backToMainFromIntegracaoBtn: document.getElementById('backToMainFromIntegracaoBtn'),
+    // Ambientes
+    captureBtnAmbientes: document.getElementById('captureBtnAmbientes'),
+    fileInputAmbientes: document.getElementById('fileInputAmbientes'),
+    photoPreviewAmbientes: document.getElementById('photoPreviewAmbientes'),
+    previewImageAmbientes: document.getElementById('previewImageAmbientes'),
+    clearPhotoBtnAmbientes: document.getElementById('clearPhotoBtnAmbientes'),
+    backToMainFromAmbientesBtn: document.getElementById('backToMainFromAmbientesBtn'),
+    ambienteOptions: document.getElementById('ambienteOptions'),
+    // Formulário (apenas na Integração)
     uploadForm: document.getElementById('uploadForm'),
     submitBtn: document.getElementById('submitBtn'),
     uploadProgress: document.getElementById('uploadProgress'),
@@ -204,14 +219,26 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
     elements.loginForm.addEventListener('submit', handleLogin);
 
-    // Captura de foto - múltiplos eventos para compatibilidade mobile
-    elements.captureBtn.addEventListener('click', () => elements.fileInput.click());
-    elements.fileInput.addEventListener('change', handleFileSelect);
-    elements.fileInput.addEventListener('input', handleFileSelect); // Fallback mobile
+    // Navegação principal
+    elements.integracaoCard.addEventListener('click', showIntegracaoScreen);
+    elements.ambientesCard.addEventListener('click', showAmbientesScreen);
+    elements.backToMainFromIntegracaoBtn.addEventListener('click', showMainScreen);
+    elements.backToMainFromAmbientesBtn.addEventListener('click', showMainScreen);
 
-    elements.clearPhotoBtn.addEventListener('click', clearPhoto);
-    elements.adjustImageBtn.addEventListener('click', abrirCropParaAjuste);
-    elements.resetImageBtn.addEventListener('click', resetToOriginalImage);
+    // Integração - Captura de foto
+    elements.captureBtnIntegracao.addEventListener('click', () => elements.fileInputIntegracao.click());
+    elements.fileInputIntegracao.addEventListener('change', handleFileSelectIntegracao);
+    elements.fileInputIntegracao.addEventListener('input', handleFileSelectIntegracao);
+    elements.clearPhotoBtnIntegracao.addEventListener('click', clearPhotoIntegracao);
+    elements.adjustImageBtnIntegracao.addEventListener('click', abrirCropParaAjuste);
+
+    // Ambientes - Captura de foto
+    elements.captureBtnAmbientes.addEventListener('click', () => elements.fileInputAmbientes.click());
+    elements.fileInputAmbientes.addEventListener('change', handleFileSelectAmbientes);
+    elements.fileInputAmbientes.addEventListener('input', handleFileSelectAmbientes);
+    elements.clearPhotoBtnAmbientes.addEventListener('click', clearPhotoAmbientes);
+
+    // Formulário de upload (só na Integração)
     elements.uploadForm.addEventListener('submit', handleUpload);
     elements.logoutBtn.addEventListener('click', handleLogout);
     elements.historyBtn.addEventListener('click', showHistoryScreen);
@@ -343,8 +370,14 @@ function handleLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
 
-    clearPhoto();
-    elements.uploadForm.reset();
+    // Limpa estados
+    state.currentPhotoFile = null;
+    state.originalPhoto = null;
+
+    // Reset formulário se existir
+    if (elements.uploadForm) {
+        elements.uploadForm.reset();
+    }
 
     showLoginScreen();
 }
@@ -428,6 +461,16 @@ function showAddUserScreen() {
     showScreen(elements.addUserScreen);
     elements.addUserForm.reset();
     elements.addUserMessage.classList.add('hidden');
+}
+
+function showIntegracaoScreen() {
+    showScreen(elements.integracaoScreen);
+    clearPhotoIntegracao();
+}
+
+function showAmbientesScreen() {
+    showScreen(elements.ambientesScreen);
+    clearPhotoAmbientes();
 }
 
 // ========== MATERIAIS ==========
@@ -557,6 +600,137 @@ function clearPhotoState() {
     elements.nichoBtn.classList.add('hidden');
     elements.countertopsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
+}
+
+// ========== INTEGRAÇÃO - CAPTURA DE FOTO ==========
+function handleFileSelectIntegracao(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showMessage('Por favor, selecione uma imagem válida', 'error');
+        return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        showMessage('Arquivo muito grande. Máximo 10MB', 'error');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            state.originalPhoto = img;
+            compressAndPreviewImageIntegracao(file);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function compressAndPreviewImageIntegracao(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob((blob) => {
+                state.currentPhotoFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+
+                elements.previewImageIntegracao.src = canvas.toDataURL('image/jpeg', 0.85);
+                elements.photoPreviewIntegracao.classList.remove('hidden');
+                elements.submitBtn.disabled = false;
+            }, 'image/jpeg', 0.95);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearPhotoIntegracao() {
+    state.currentPhotoFile = null;
+    state.originalPhoto = null;
+    elements.previewImageIntegracao.src = '';
+    elements.photoPreviewIntegracao.classList.add('hidden');
+    elements.fileInputIntegracao.value = '';
+    elements.submitBtn.disabled = true;
+}
+
+// ========== AMBIENTES - CAPTURA DE FOTO ==========
+function handleFileSelectAmbientes(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        alert('Por favor, selecione uma imagem válida');
+        return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        alert('Arquivo muito grande. Máximo 10MB');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            state.originalPhoto = img;
+            compressAndPreviewImageAmbientes(file);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function compressAndPreviewImageAmbientes(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            // Salva imagem original para uso nos ambientes
+            state.originalPhoto = img;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob((blob) => {
+                state.currentPhotoFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+
+                elements.previewImageAmbientes.src = canvas.toDataURL('image/jpeg', 0.85);
+                elements.photoPreviewAmbientes.classList.remove('hidden');
+
+                // Mostra opções de ambiente
+                elements.ambienteOptions.classList.remove('hidden');
+            }, 'image/jpeg', 0.95);
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearPhotoAmbientes() {
+    state.currentPhotoFile = null;
+    state.originalPhoto = null;
+    elements.previewImageAmbientes.src = '';
+    elements.photoPreviewAmbientes.classList.add('hidden');
+    elements.fileInputAmbientes.value = '';
+    elements.ambienteOptions.classList.add('hidden');
 }
 
 // ========== UPLOAD ==========
@@ -1178,7 +1352,7 @@ function downloadAmbiente(url, nome) {
 }
 
 /**
- * Compartilha ambiente via Web Share API ou WhatsApp Web
+ * Compartilha ambiente via Web Share API nativa
  */
 async function shareAmbiente(url, nome) {
     try {
@@ -1190,15 +1364,15 @@ async function shareAmbiente(url, nome) {
             const file = new File([blob], `${nome}.jpg`, { type: 'image/jpeg' });
 
             await navigator.share({
-                title: 'Ambiente PicStone',
-                text: `Confira este ambiente de ${nome}`,
+                title: 'PicStone Mobile',
+                text: 'Make with PicStone® mobile',
                 files: [file]
             });
 
             showAmbienteMessage('Compartilhado com sucesso!', 'success');
         } else {
-            // Fallback: Compartilhar via WhatsApp Web com link da imagem
-            const texto = encodeURIComponent(`Confira este ambiente: ${url}`);
+            // Fallback: Compartilhar via WhatsApp Web
+            const texto = encodeURIComponent('Make with PicStone® mobile');
             const whatsappUrl = `https://wa.me/?text=${texto}`;
             window.open(whatsappUrl, '_blank');
             showAmbienteMessage('Abrindo WhatsApp...', 'success');

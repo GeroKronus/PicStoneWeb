@@ -38,12 +38,12 @@
         </div>
     </div>
 
-    <!-- Tela Principal -->
+    <!-- Tela Principal - Menu Inicial -->
     <div id="mainScreen" class="screen">
         <div class="container">
             <div class="header">
                 <div class="header-left">
-                    <h1>Captura de Fotos</h1>
+                    <h1>PicStone Mobile</h1>
                 </div>
                 <div class="header-right">
                     <div class="user-menu">
@@ -94,18 +94,47 @@
                 </div>
             </div>
 
+            <!-- Cards de Opções Principais -->
+            <div class="main-options">
+                <div class="option-card" id="ambientesCard">
+                    <div class="option-icon">
+                        <img src="icon-ambientes.png" alt="Ambientes">
+                    </div>
+                    <h2>Ambientes</h2>
+                    <button class="btn btn-primary">Acessar</button>
+                </div>
+
+                <div class="option-card" id="integracaoCard">
+                    <div class="option-icon">🔗</div>
+                    <h2>Integração</h2>
+                    <button class="btn btn-primary">Acessar</button>
+                </div>
+            </div>
+
+            <!-- Botão de Histórico -->
+            <button id="historyBtn" class="btn btn-secondary">📋 Ver Histórico</button>
+        </div>
+    </div>
+
+    <!-- Tela de Integração -->
+    <div id="integracaoScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backToMainFromIntegracaoBtn" class="btn-icon">← Voltar</button>
+                <h1>Integração</h1>
+            </div>
+
             <!-- Preview da Foto -->
-            <div id="photoPreview" class="photo-preview hidden">
-                <img id="previewImage" src="" alt="Preview">
-                <button id="clearPhotoBtn" class="btn-clear">✕</button>
-                <button id="adjustImageBtn" class="btn-crop-icon" title="Ajustar Imagem">✂️</button>
-                <button id="resetImageBtn" class="btn-reset-icon hidden" title="Resetar para Imagem Original">↻</button>
+            <div id="photoPreviewIntegracao" class="photo-preview hidden">
+                <img id="previewImageIntegracao" src="" alt="Preview">
+                <button id="clearPhotoBtnIntegracao" class="btn-clear">✕</button>
+                <button id="adjustImageBtnIntegracao" class="btn-crop-icon" title="Ajustar Imagem">✂️</button>
             </div>
 
             <!-- Botão de Captura -->
             <div class="capture-section">
-                <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
-                <button id="captureBtn" class="btn btn-capture">
+                <input type="file" id="fileInputIntegracao" accept="image/*" hidden>
+                <button id="captureBtnIntegracao" class="btn btn-capture">
                     <span class="camera-icon">📷</span>
                     Escolher/Tirar Foto
                 </button>
@@ -152,20 +181,39 @@
 
                 <div id="uploadMessage" class="message hidden"></div>
             </form>
+        </div>
+    </div>
 
-            <!-- Indicador de Foto Disponível -->
-            <div id="photoIndicator" class="photo-indicator hidden">
-                <p>✅ Foto salva e pronta para uso</p>
-                <small>Tire uma nova foto ou simule um cavalete com a foto atual</small>
+    <!-- Tela de Ambientes - Seleção de Imagem -->
+    <div id="ambientesScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backToMainFromAmbientesBtn" class="btn-icon">← Voltar</button>
+                <h1>Ambientes</h1>
             </div>
 
-            <!-- Botões de Simulação -->
-            <button id="ambienteBtn" class="btn btn-ambiente hidden">📐 Simular Cavalete</button>
-            <button id="nichoBtn" class="btn btn-nicho hidden">🚿 Simular Nicho</button>
-            <button id="countertopsBtn" class="btn btn-countertops hidden">🪑 Simular Bancadas</button>
+            <!-- Preview da Foto -->
+            <div id="photoPreviewAmbientes" class="photo-preview hidden">
+                <img id="previewImageAmbientes" src="" alt="Preview">
+                <button id="clearPhotoBtnAmbientes" class="btn-clear">✕</button>
+            </div>
 
-            <!-- Botão de Histórico -->
-            <button id="historyBtn" class="btn btn-secondary">Ver Histórico</button>
+            <!-- Botão de Captura -->
+            <div class="capture-section">
+                <input type="file" id="fileInputAmbientes" accept="image/*" hidden>
+                <button id="captureBtnAmbientes" class="btn btn-capture">
+                    <span class="camera-icon">📷</span>
+                    Escolher Imagem
+                </button>
+            </div>
+
+            <!-- Botões de Simulação (aparecem após escolher imagem) -->
+            <div id="ambienteOptions" class="ambiente-options hidden">
+                <h3>Escolha o tipo de ambiente:</h3>
+                <button id="ambienteBtn" class="btn btn-ambiente">📐 Simular Cavalete</button>
+                <button id="nichoBtn" class="btn btn-nicho hidden">🚿 Simular Nicho</button>
+                <button id="countertopsBtn" class="btn btn-countertops">🪑 Simular Bancadas</button>
+            </div>
         </div>
     </div>
 
