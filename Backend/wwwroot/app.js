@@ -1264,7 +1264,7 @@ async function gerarAmbiente(imagemCropada) {
             formData.append('Fundo', state.ambienteConfig.fundo);
         }
 
-        const endpoint = isNicho ? '/api/ambiente/nicho1' : (isBancada1 ? '/api/ambiente/bancada1' : '/api/ambiente/gerar');
+        const endpoint = isNicho ? '/api/mockup/nicho1' : (isBancada1 ? '/api/mockup/bancada1' : '/api/mockup/gerar');
 
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
