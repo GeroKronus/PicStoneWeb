@@ -15,7 +15,7 @@ namespace PicStoneFotoAPI.Services
             _logger = logger;
             _moldurasPath = Path.Combine(Directory.GetCurrentDirectory(), "Molduras");
             _uploadPath = configuration["UPLOAD_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "uploads");
-            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "Cavaletes", "logoamarelo.png");
+            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "watermark.png");
         }
 
         // Adiciona logo no canto inferior direito
