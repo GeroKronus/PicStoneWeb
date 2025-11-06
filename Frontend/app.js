@@ -27,6 +27,17 @@ const state = {
         croppedImage: null,    // Imagem cortada (reutilizável)
         selectedType: null,     // 'bancada1' ou 'bancada2'
         flip: false            // Opção global de flip
+    },
+    // Estado para crop overlay na Integração
+    cropOverlayState: {
+        isActive: false,
+        isDragging: false,
+        startX: 0,
+        startY: 0,
+        endX: 0,
+        endY: 0,
+        originalImageSrc: null,
+        canvasRect: null
     }
 };
 
@@ -52,6 +63,8 @@ const elements = {
     previewImageIntegracao: document.getElementById('previewImageIntegracao'),
     clearPhotoBtnIntegracao: document.getElementById('clearPhotoBtnIntegracao'),
     adjustImageBtnIntegracao: document.getElementById('adjustImageBtnIntegracao'),
+    resetImageBtnIntegracao: document.getElementById('resetImageBtnIntegracao'),
+    cropOverlayIntegracao: document.getElementById('cropOverlayIntegracao'),
     backToMainFromIntegracaoBtn: document.getElementById('backToMainFromIntegracaoBtn'),
     // Ambientes
     captureBtnAmbientes: document.getElementById('captureBtnAmbientes'),
@@ -80,12 +93,8 @@ const elements = {
     cancelCropBtn: document.getElementById('cancelCropBtn'),
     resetCropBtn: document.getElementById('resetCropBtn'),
     ambienteBtn: document.getElementById('ambienteBtn'),
-    nichoBtn: document.getElementById('nichoBtn'),
     photoIndicator: document.getElementById('photoIndicator'),
     cancelAmbienteBtn: document.getElementById('cancelAmbienteBtn'),
-    nichoConfigScreen: document.getElementById('nichoConfigScreen'),
-    cancelNichoBtn: document.getElementById('cancelNichoBtn'),
-    continuarCropNichoBtn: document.getElementById('continuarCropNichoBtn'),
     continuarCropAmbienteBtn: document.getElementById('continuarCropAmbienteBtn'),
     countertopsBtn: document.getElementById('countertopsBtn'),
     countertopSelectionScreen: document.getElementById('countertopSelectionScreen'),
@@ -230,7 +239,12 @@ function setupEventListeners() {
     elements.fileInputIntegracao.addEventListener('change', handleFileSelectIntegracao);
     elements.fileInputIntegracao.addEventListener('input', handleFileSelectIntegracao);
     elements.clearPhotoBtnIntegracao.addEventListener('click', clearPhotoIntegracao);
-    elements.adjustImageBtnIntegracao.addEventListener('click', abrirCropParaAjuste);
+    elements.adjustImageBtnIntegracao.addEventListener('click', ativarCropOverlayIntegracao);
+    elements.resetImageBtnIntegracao.addEventListener('click', resetarParaOriginalIntegracao);
+
+    // Crop Overlay na Integração - mousedown no canvas, move/up no document
+    elements.cropOverlayIntegracao.addEventListener('mousedown', iniciarSelecaoCrop);
+    elements.cropOverlayIntegracao.addEventListener('touchstart', iniciarSelecaoCropTouch, { passive: false });
 
     // Ambientes - Captura de foto
     elements.captureBtnAmbientes.addEventListener('click', () => elements.fileInputAmbientes.click());
@@ -240,9 +254,15 @@ function setupEventListeners() {
 
     // Formulário de upload (só na Integração)
     elements.uploadForm.addEventListener('submit', handleUpload);
-    elements.logoutBtn.addEventListener('click', handleLogout);
-    elements.historyBtn.addEventListener('click', showHistoryScreen);
-    elements.backBtn.addEventListener('click', showMainScreen);
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', handleLogout);
+    }
+    if (elements.historyBtn) {
+        elements.historyBtn.addEventListener('click', showHistoryScreen);
+    }
+    if (elements.backBtn) {
+        elements.backBtn.addEventListener('click', showMainScreen);
+    }
 
     // Crop event listeners
     elements.cancelCropBtn.addEventListener('click', cancelCrop);
@@ -258,13 +278,10 @@ function setupEventListeners() {
 
     // Ambiente event listeners
     elements.ambienteBtn.addEventListener('click', startAmbienteFlow);
-    elements.nichoBtn.addEventListener('click', startNichoFlow);
     elements.countertopsBtn.addEventListener('click', startCountertopFlow);
     elements.cancelAmbienteBtn.addEventListener('click', () => showMainScreen());
-    elements.cancelNichoBtn.addEventListener('click', () => showMainScreen());
     elements.cancelCountertopSelectionBtn.addEventListener('click', () => showMainScreen());
     elements.continuarCropAmbienteBtn.addEventListener('click', abrirCropParaAmbiente);
-    elements.continuarCropNichoBtn.addEventListener('click', abrirCropParaNicho);
     elements.backToMainBtn.addEventListener('click', handleBackFromResults);
     elements.newAmbienteBtn.addEventListener('click', startAmbienteFlow);
     elements.downloadAllAmbientesBtn.addEventListener('click', downloadAllAmbientes);
@@ -286,6 +303,11 @@ function setupEventListeners() {
     document.addEventListener('click', (e) => {
         const preview = e.target.closest('.countertop-preview');
         if (preview && preview.dataset.type) {
+            // Verifica se o card pai está desabilitado
+            const card = preview.closest('.countertop-card');
+            if (card && card.classList.contains('disabled')) {
+                return; // Ignora clique em cards desabilitados
+            }
             const type = preview.dataset.type;
             selectCountertopAndGenerate(type);
         }
@@ -585,7 +607,6 @@ function clearPhoto() {
     elements.fileInput.value = '';
     elements.submitBtn.disabled = true;
     elements.ambienteBtn.classList.add('hidden');
-    elements.nichoBtn.classList.add('hidden');
     elements.countertopsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
@@ -597,7 +618,6 @@ function clearPhotoState() {
     elements.photoPreview.classList.add('hidden');
     elements.submitBtn.disabled = true;
     elements.ambienteBtn.classList.add('hidden');
-    elements.nichoBtn.classList.add('hidden');
     elements.countertopsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
@@ -663,6 +683,283 @@ function clearPhotoIntegracao() {
     elements.photoPreviewIntegracao.classList.add('hidden');
     elements.fileInputIntegracao.value = '';
     elements.submitBtn.disabled = true;
+    // Reset crop overlay state
+    state.cropOverlayState.isActive = false;
+    state.cropOverlayState.originalImageSrc = null;
+    elements.cropOverlayIntegracao.classList.add('hidden');
+    elements.resetImageBtnIntegracao.classList.add('hidden');
+}
+
+// ========== INTEGRAÇÃO - CROP OVERLAY ==========
+function ativarCropOverlayIntegracao() {
+    if (!elements.previewImageIntegracao.src) return;
+
+    // Store original image if not already stored
+    if (!state.cropOverlayState.originalImageSrc) {
+        state.cropOverlayState.originalImageSrc = elements.previewImageIntegracao.src;
+    }
+
+    // Get image dimensions and position
+    const img = elements.previewImageIntegracao;
+
+    // Setup canvas to match image EXACTLY
+    const canvas = elements.cropOverlayIntegracao;
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+
+    // Style to match displayed size
+    canvas.style.width = img.offsetWidth + 'px';
+    canvas.style.height = img.offsetHeight + 'px';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+
+    // Show canvas overlay
+    canvas.classList.remove('hidden');
+    state.cropOverlayState.isActive = true;
+
+    // Reset state
+    state.cropOverlayState.isDragging = false;
+    state.cropOverlayState.startX = 0;
+    state.cropOverlayState.startY = 0;
+    state.cropOverlayState.endX = 0;
+    state.cropOverlayState.endY = 0;
+
+    // Update canvas rect AFTER showing it
+    setTimeout(() => {
+        state.cropOverlayState.canvasRect = canvas.getBoundingClientRect();
+    }, 10);
+
+    // Clear canvas
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function iniciarSelecaoCrop(e) {
+    if (!state.cropOverlayState.isActive) return;
+
+    e.preventDefault();
+    state.cropOverlayState.isDragging = true;
+
+    const rect = state.cropOverlayState.canvasRect;
+    const canvas = elements.cropOverlayIntegracao;
+
+    // Get click position relative to canvas
+    const scaleX = canvas.width / canvas.offsetWidth;
+    const scaleY = canvas.height / canvas.offsetHeight;
+
+    state.cropOverlayState.startX = (e.clientX - rect.left) * scaleX;
+    state.cropOverlayState.startY = (e.clientY - rect.top) * scaleY;
+    state.cropOverlayState.endX = state.cropOverlayState.startX;
+    state.cropOverlayState.endY = state.cropOverlayState.startY;
+
+    // Add document listeners for move and up
+    document.addEventListener('mousemove', atualizarSelecaoCrop);
+    document.addEventListener('mouseup', finalizarEAplicarCrop);
+}
+
+function atualizarSelecaoCrop(e) {
+    if (!state.cropOverlayState.isDragging) return;
+
+    e.preventDefault();
+
+    const rect = state.cropOverlayState.canvasRect;
+    const canvas = elements.cropOverlayIntegracao;
+    const ctx = canvas.getContext('2d');
+
+    // Get current position with scaling
+    const scaleX = canvas.width / canvas.offsetWidth;
+    const scaleY = canvas.height / canvas.offsetHeight;
+
+    state.cropOverlayState.endX = Math.max(0, Math.min(canvas.width, (e.clientX - rect.left) * scaleX));
+    state.cropOverlayState.endY = Math.max(0, Math.min(canvas.height, (e.clientY - rect.top) * scaleY));
+
+    // Clear and redraw selection
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw semi-transparent dark overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Calculate selection rectangle
+    const x = Math.min(state.cropOverlayState.startX, state.cropOverlayState.endX);
+    const y = Math.min(state.cropOverlayState.startY, state.cropOverlayState.endY);
+    const width = Math.abs(state.cropOverlayState.endX - state.cropOverlayState.startX);
+    const height = Math.abs(state.cropOverlayState.endY - state.cropOverlayState.startY);
+
+    // Clear selected area (removes dark overlay)
+    ctx.clearRect(x, y, width, height);
+
+    // Draw selection border (green)
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, width, height);
+}
+
+function finalizarEAplicarCrop(e) {
+    if (!state.cropOverlayState.isDragging) return;
+
+    e.preventDefault();
+    state.cropOverlayState.isDragging = false;
+
+    // Remove document listeners
+    document.removeEventListener('mousemove', atualizarSelecaoCrop);
+    document.removeEventListener('mouseup', finalizarEAplicarCrop);
+
+    const x = Math.min(state.cropOverlayState.startX, state.cropOverlayState.endX);
+    const y = Math.min(state.cropOverlayState.startY, state.cropOverlayState.endY);
+    const width = Math.abs(state.cropOverlayState.endX - state.cropOverlayState.startX);
+    const height = Math.abs(state.cropOverlayState.endY - state.cropOverlayState.startY);
+
+    // Check if selection is valid (minimum 10x10 pixels)
+    if (width < 10 || height < 10) {
+        // Selection too small, just hide overlay
+        elements.cropOverlayIntegracao.classList.add('hidden');
+        state.cropOverlayState.isActive = false;
+        return;
+    }
+
+    // Apply crop automatically
+    aplicarCropIntegracao(x, y, width, height);
+}
+
+function aplicarCropIntegracao(x, y, width, height) {
+    // Create temp canvas to crop image
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const ctx = tempCanvas.getContext('2d');
+
+    // Load current image
+    const img = new Image();
+    img.onload = () => {
+        // Draw cropped portion
+        ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+
+        // Convert to blob and update preview
+        tempCanvas.toBlob((blob) => {
+            state.currentPhotoFile = new File([blob], 'cropped.jpg', {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+            });
+
+            // Update preview with cropped image
+            elements.previewImageIntegracao.src = tempCanvas.toDataURL('image/jpeg', 0.85);
+
+            // Hide overlay and show reset button
+            elements.cropOverlayIntegracao.classList.add('hidden');
+            state.cropOverlayState.isActive = false;
+            elements.resetImageBtnIntegracao.classList.remove('hidden');
+
+        }, 'image/jpeg', 0.95);
+    };
+    img.src = elements.previewImageIntegracao.src;
+}
+
+function iniciarSelecaoCropTouch(e) {
+    if (!state.cropOverlayState.isActive) return;
+
+    e.preventDefault();
+    const touch = e.touches[0];
+    state.cropOverlayState.isDragging = true;
+
+    const rect = state.cropOverlayState.canvasRect;
+    const canvas = elements.cropOverlayIntegracao;
+
+    const scaleX = canvas.width / canvas.offsetWidth;
+    const scaleY = canvas.height / canvas.offsetHeight;
+
+    state.cropOverlayState.startX = (touch.clientX - rect.left) * scaleX;
+    state.cropOverlayState.startY = (touch.clientY - rect.top) * scaleY;
+    state.cropOverlayState.endX = state.cropOverlayState.startX;
+    state.cropOverlayState.endY = state.cropOverlayState.startY;
+
+    // Add document listeners for touch move and end
+    document.addEventListener('touchmove', atualizarSelecaoCropTouch, { passive: false });
+    document.addEventListener('touchend', finalizarEAplicarCropTouch);
+}
+
+function atualizarSelecaoCropTouch(e) {
+    if (!state.cropOverlayState.isDragging) return;
+
+    e.preventDefault();
+    const touch = e.touches[0];
+
+    const rect = state.cropOverlayState.canvasRect;
+    const canvas = elements.cropOverlayIntegracao;
+    const ctx = canvas.getContext('2d');
+
+    const scaleX = canvas.width / canvas.offsetWidth;
+    const scaleY = canvas.height / canvas.offsetHeight;
+
+    state.cropOverlayState.endX = Math.max(0, Math.min(canvas.width, (touch.clientX - rect.left) * scaleX));
+    state.cropOverlayState.endY = Math.max(0, Math.min(canvas.height, (touch.clientY - rect.top) * scaleY));
+
+    // Clear and redraw selection (same as mouse)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const x = Math.min(state.cropOverlayState.startX, state.cropOverlayState.endX);
+    const y = Math.min(state.cropOverlayState.startY, state.cropOverlayState.endY);
+    const width = Math.abs(state.cropOverlayState.endX - state.cropOverlayState.startX);
+    const height = Math.abs(state.cropOverlayState.endY - state.cropOverlayState.startY);
+
+    ctx.clearRect(x, y, width, height);
+    ctx.strokeStyle = '#00ff00';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, width, height);
+}
+
+function finalizarEAplicarCropTouch(e) {
+    if (!state.cropOverlayState.isDragging) return;
+
+    e.preventDefault();
+    state.cropOverlayState.isDragging = false;
+
+    // Remove document listeners
+    document.removeEventListener('touchmove', atualizarSelecaoCropTouch);
+    document.removeEventListener('touchend', finalizarEAplicarCropTouch);
+
+    const x = Math.min(state.cropOverlayState.startX, state.cropOverlayState.endX);
+    const y = Math.min(state.cropOverlayState.startY, state.cropOverlayState.endY);
+    const width = Math.abs(state.cropOverlayState.endX - state.cropOverlayState.startX);
+    const height = Math.abs(state.cropOverlayState.endY - state.cropOverlayState.startY);
+
+    // Check if selection is valid (minimum 10x10 pixels)
+    if (width < 10 || height < 10) {
+        // Selection too small, just hide overlay
+        elements.cropOverlayIntegracao.classList.add('hidden');
+        state.cropOverlayState.isActive = false;
+        return;
+    }
+
+    // Apply crop automatically
+    aplicarCropIntegracao(x, y, width, height);
+}
+
+function resetarParaOriginalIntegracao() {
+    if (!state.cropOverlayState.originalImageSrc) return;
+
+    // Restore original image
+    elements.previewImageIntegracao.src = state.cropOverlayState.originalImageSrc;
+
+    // Recreate the file from the original image
+    fetch(state.cropOverlayState.originalImageSrc)
+        .then(res => res.blob())
+        .then(blob => {
+            state.currentPhotoFile = new File([blob], 'original.jpg', {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+            });
+        });
+
+    // Hide reset button and clear stored original since we're back to original
+    elements.resetImageBtnIntegracao.classList.add('hidden');
+    state.cropOverlayState.originalImageSrc = null;
+
+    // Also hide the crop overlay if it was visible
+    elements.cropOverlayIntegracao.classList.add('hidden');
+    state.cropOverlayState.isActive = false;
 }
 
 // ========== AMBIENTES - CAPTURA DE FOTO ==========
@@ -883,7 +1180,9 @@ function openCropScreen(file) {
 function showCropScreen() {
     elements.mainScreen.classList.remove('active');
     elements.cropScreen.classList.add('active');
-    elements.cropInfo.classList.add('hidden'); // Esconde até haver uma seleção
+    if (elements.cropInfo) {
+        elements.cropInfo.classList.add('hidden'); // Esconde até haver uma seleção
+    }
 }
 
 function initializeCropCanvas() {
@@ -1157,24 +1456,28 @@ function confirmCrop() {
             // Outros ambientes (cavalete, nicho): gera diretamente
             gerarAmbiente(file);
         } else {
-            // Modo ajuste normal
-            compressAndPreviewImage(file);
-            // Mostra botões ambiente pois já tem imagem disponível
-            elements.ambienteBtn.classList.remove('hidden');
-            elements.nichoBtn.classList.remove('hidden');
-            elements.countertopsBtn.classList.remove('hidden');
-            // Mostra botão de reset pois a imagem foi modificada
-            elements.resetImageBtn.classList.remove('hidden');
-            showMainScreen();
+            // Modo ajuste normal - INTEGRACAO only
+            // Since this flow should only happen from Integracao screen
+            compressAndPreviewImageIntegracao(file);
+            showScreen(elements.integracaoScreen);
         }
     }, 'image/jpeg', 0.95);
 }
 
 function cancelCrop() {
     // Limpa input file para permitir selecionar a mesma imagem novamente
-    elements.fileInput.value = '';
+    if (elements.fileInputIntegracao) {
+        elements.fileInputIntegracao.value = '';
+    }
+    if (elements.fileInputAmbientes) {
+        elements.fileInputAmbientes.value = '';
+    }
     state.ambienteMode = false;
-    elements.cropInfo.classList.add('hidden');
+    state.ambienteConfig.tipo = 'simples';  // Reset tipo
+    state.countertopState.croppedImage = null;  // Clear countertop state
+    if (elements.cropInfo) {
+        elements.cropInfo.classList.add('hidden');
+    }
     showMainScreen();
 }
 
@@ -1189,6 +1492,228 @@ function abrirCropParaAjuste() {
     state.cropData.image = state.originalPhoto;
     initializeCropCanvas();
     showCropScreen();
+}
+
+// ========== CROP INLINE NA INTEGRAÇÃO ==========
+function abrirCropIntegracaoInline() {
+    if (!state.originalPhoto) {
+        showMessage('Nenhuma imagem disponível para ajustar', 'error');
+        return;
+    }
+
+    // Esconde preview, mostra crop
+    elements.photoPreviewIntegracao.classList.add('hidden');
+    elements.cropSectionIntegracao.classList.remove('hidden');
+
+    // Inicializa crop com imagem original
+    state.cropData.image = state.originalPhoto;
+    state.cropData.startX = 0;
+    state.cropData.startY = 0;
+    state.cropData.endX = 0;
+    state.cropData.endY = 0;
+    state.cropData.isDragging = false;
+
+    initializeCropCanvasIntegracao();
+}
+
+function initializeCropCanvasIntegracao() {
+    const canvas = elements.cropCanvasIntegracao;
+    const ctx = canvas.getContext('2d');
+    const img = state.cropData.image;
+
+    // Calcula dimensões mantendo proporção
+    const maxWidth = Math.min(window.innerWidth - 40, 800);
+    const maxHeight = window.innerHeight - 300;
+
+    let canvasWidth = img.width;
+    let canvasHeight = img.height;
+
+    if (canvasWidth > maxWidth || canvasHeight > maxHeight) {
+        const scale = Math.min(maxWidth / canvasWidth, maxHeight / canvasHeight);
+        canvasWidth = canvasWidth * scale;
+        canvasHeight = canvasHeight * scale;
+    }
+
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+
+    state.cropData.scale = canvasWidth / img.width;
+
+    console.log('=== DEBUG INITIALIZE CROP INTEGRAÇÃO ===');
+    console.log('Imagem original:', img.width, 'x', img.height);
+    console.log('Canvas final:', canvasWidth, 'x', canvasHeight);
+    console.log('ScaleX calculado:', state.cropData.scale);
+    console.log('ScaleY calculado:', state.cropData.scale);
+    console.log('=============================');
+
+    // Desenha imagem
+    ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
+}
+
+function startCropIntegracao(e) {
+    const rect = elements.cropCanvasIntegracao.getBoundingClientRect();
+    state.cropData.startX = e.clientX - rect.left;
+    state.cropData.startY = e.clientY - rect.top;
+    state.cropData.isDragging = true;
+}
+
+function updateCropIntegracao(e) {
+    if (!state.cropData.isDragging) return;
+
+    const rect = elements.cropCanvasIntegracao.getBoundingClientRect();
+    state.cropData.endX = e.clientX - rect.left;
+    state.cropData.endY = e.clientY - rect.top;
+
+    redrawCropIntegracao();
+    updateCropInfoIntegracao();
+}
+
+function endCropIntegracao() {
+    state.cropData.isDragging = false;
+}
+
+function handleTouchStartIntegracao(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const rect = elements.cropCanvasIntegracao.getBoundingClientRect();
+    state.cropData.startX = touch.clientX - rect.left;
+    state.cropData.startY = touch.clientY - rect.top;
+    state.cropData.isDragging = true;
+}
+
+function handleTouchMoveIntegracao(e) {
+    e.preventDefault();
+    if (!state.cropData.isDragging) return;
+
+    const touch = e.touches[0];
+    const rect = elements.cropCanvasIntegracao.getBoundingClientRect();
+    state.cropData.endX = touch.clientX - rect.left;
+    state.cropData.endY = touch.clientY - rect.top;
+
+    redrawCropIntegracao();
+    updateCropInfoIntegracao();
+}
+
+function redrawCropIntegracao() {
+    const canvas = elements.cropCanvasIntegracao;
+    const ctx = canvas.getContext('2d');
+    const img = state.cropData.image;
+
+    // Limpa e redesenha imagem
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Desenha seleção
+    if (state.cropData.endX && state.cropData.endY) {
+        const x = Math.min(state.cropData.startX, state.cropData.endX);
+        const y = Math.min(state.cropData.startY, state.cropData.endY);
+        const width = Math.abs(state.cropData.endX - state.cropData.startX);
+        const height = Math.abs(state.cropData.endY - state.cropData.startY);
+
+        // Overlay escuro
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Área selecionada clara
+        ctx.clearRect(x, y, width, height);
+        ctx.drawImage(img,
+            x / state.cropData.scale, y / state.cropData.scale,
+            width / state.cropData.scale, height / state.cropData.scale,
+            x, y, width, height);
+
+        // Borda da seleção
+        ctx.strokeStyle = '#007bff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+    }
+}
+
+function updateCropInfoIntegracao() {
+    if (!state.cropData.endX || !state.cropData.endY) return;
+
+    const width = Math.abs(state.cropData.endX - state.cropData.startX) / state.cropData.scale;
+    const height = Math.abs(state.cropData.endY - state.cropData.startY) / state.cropData.scale;
+
+    const widthCm = width * 0.026458333;
+    const heightCm = height * 0.026458333;
+    const areaCm2 = widthCm * heightCm;
+    const megapixels = (width * height) / 1000000;
+
+    elements.cropInfoAreaIntegracao.textContent = areaCm2.toFixed(2);
+    elements.cropInfoMPIntegracao.textContent = megapixels.toFixed(2);
+    elements.cropInfoSizeIntegracao.textContent = `${Math.round(width)} x ${Math.round(height)}`;
+    elements.cropInfoIntegracao.classList.remove('hidden');
+}
+
+function resetarSelecaoCropIntegracao() {
+    state.cropData.startX = 0;
+    state.cropData.startY = 0;
+    state.cropData.endX = 0;
+    state.cropData.endY = 0;
+    state.cropData.isDragging = false;
+    elements.cropInfoIntegracao.classList.add('hidden');
+    initializeCropCanvasIntegracao();
+}
+
+function cancelarCropIntegracao() {
+    // Volta para o preview sem salvar
+    elements.cropSectionIntegracao.classList.add('hidden');
+    elements.photoPreviewIntegracao.classList.remove('hidden');
+    elements.cropInfoIntegracao.classList.add('hidden');
+}
+
+function confirmarCropIntegracao() {
+    if (!state.cropData.endX || !state.cropData.endY) {
+        showMessage('Selecione uma área para cortar', 'error');
+        return;
+    }
+
+    const canvas = elements.cropCanvasIntegracao;
+    const img = state.cropData.image;
+
+    const x = Math.min(state.cropData.startX, state.cropData.endX) / state.cropData.scale;
+    const y = Math.min(state.cropData.startY, state.cropData.endY) / state.cropData.scale;
+    const width = Math.abs(state.cropData.endX - state.cropData.startX) / state.cropData.scale;
+    const height = Math.abs(state.cropData.endY - state.cropData.startY) / state.cropData.scale;
+
+    // Cria canvas com imagem cortada
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = width;
+    cropCanvas.height = height;
+    const cropCtx = cropCanvas.getContext('2d');
+    cropCtx.drawImage(img, x, y, width, height, 0, 0, width, height);
+
+    // Converte para File e atualiza preview
+    cropCanvas.toBlob((blob) => {
+        const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
+        compressAndPreviewImageIntegracao(file);
+
+        // Esconde crop, mostra preview
+        elements.cropSectionIntegracao.classList.add('hidden');
+        elements.photoPreviewIntegracao.classList.remove('hidden');
+        elements.cropInfoIntegracao.classList.add('hidden');
+
+        showMessage('Imagem cortada com sucesso!', 'success');
+    }, 'image/jpeg', 0.95);
+}
+
+function compressAndPreviewImageIntegracao(file) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+            // Atualiza originalPhoto para futuras edições
+            state.originalPhoto = img;
+
+            // Preview da imagem
+            elements.previewImageIntegracao.src = e.target.result;
+            elements.photoPreviewIntegracao.classList.remove('hidden');
+            state.currentPhotoFile = file;
+            elements.submitBtn.disabled = false;
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
 function resetToOriginalImage() {
@@ -1233,6 +1758,11 @@ function abrirCropParaAmbiente() {
     // Ativa modo ambiente
     state.ambienteMode = true;
 
+    // CRITICAL FIX: Reset countertop state to prevent incorrect routing
+    state.countertopState.croppedImage = null;
+    state.countertopState.selectedType = null;
+    state.countertopState.flip = false;
+
     // Carrega imagem original no crop
     state.cropData.image = state.originalPhoto;
     initializeCropCanvas();
@@ -1241,21 +1771,16 @@ function abrirCropParaAmbiente() {
 
 async function gerarAmbiente(imagemCropada) {
     try {
-        elements.uploadProgress.classList.remove('hidden');
+        // Mostra loading overlay global (spinner)
+        elements.loadingOverlay.classList.remove('hidden');
 
         // Verifica o tipo de ambiente
-        const isNicho = state.ambienteConfig.tipo === 'nicho1';
         const isBancada1 = state.ambienteConfig.tipo === 'bancada1';
 
         const formData = new FormData();
-        formData.append((isNicho || isBancada1) ? 'imagem' : 'ImagemCropada', imagemCropada);
+        formData.append(isBancada1 ? 'imagem' : 'ImagemCropada', imagemCropada);
 
-        if (isNicho) {
-            // Parâmetros específicos do nicho
-            formData.append('fundoEscuro', state.ambienteConfig.fundo === 'escuro');
-            formData.append('incluirShampoo', state.ambienteConfig.incluirShampoo || false);
-            formData.append('incluirSabonete', state.ambienteConfig.incluirSabonete || false);
-        } else if (isBancada1) {
+        if (isBancada1) {
             // Parâmetros específicos da bancada1
             formData.append('flip', state.ambienteConfig.flip || false);
         } else {
@@ -1264,7 +1789,7 @@ async function gerarAmbiente(imagemCropada) {
             formData.append('Fundo', state.ambienteConfig.fundo);
         }
 
-        const endpoint = isNicho ? '/api/mockup/nicho1' : (isBancada1 ? '/api/mockup/bancada1' : '/api/mockup/gerar');
+        const endpoint = isBancada1 ? '/api/mockup/bancada1' : '/api/mockup/gerar';
 
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
@@ -1284,7 +1809,7 @@ async function gerarAmbiente(imagemCropada) {
             throw new Error(data.mensagem || 'Erro ao gerar ambiente');
         }
 
-        // Exibe resultado (backend retorna diferente para nicho, bancada1 e cavalete)
+        // Exibe resultado (backend retorna diferente para bancada1 e cavalete)
         const caminhos = data.caminhosGerados || data.ambientes;
 
         if (caminhos && caminhos.length > 0) {
@@ -1293,9 +1818,7 @@ async function gerarAmbiente(imagemCropada) {
 
             // Labels diferentes para cada tipo
             let labels;
-            if (isNicho) {
-                labels = ['Nicho - Versão Normal', 'Nicho - Rotacionado 180°'];
-            } else if (isBancada1) {
+            if (isBancada1) {
                 labels = ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'];
             } else {
                 labels = [
@@ -1306,23 +1829,28 @@ async function gerarAmbiente(imagemCropada) {
             }
 
             caminhos.forEach((caminho, index) => {
-                // Para nicho e bancada1, caminho já vem completo; para cavalete, precisa montar
-                const ambienteUrl = (isNicho || isBancada1) ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
+                // Para bancada1, caminho já vem completo; para cavalete, precisa montar
+                const ambienteUrl = isBancada1 ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
 
                 const ambienteItem = document.createElement('div');
                 ambienteItem.className = 'ambiente-item';
                 ambienteItem.innerHTML = `
                     <h3>${labels[index] || `Ambiente ${index + 1}`}</h3>
                     <img src="${ambienteUrl}" alt="${labels[index]}">
-                    <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${caminho}">
-                        ⬇️ Baixar
-                    </button>
+                    <div class="ambiente-actions">
+                        <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${labels[index] || `Ambiente ${index + 1}`}">
+                            ⬇️ Baixar
+                        </button>
+                        <button class="btn btn-primary btn-share-single" data-url="${ambienteUrl}" data-nome="${labels[index] || `Ambiente ${index + 1}`}">
+                            📤 Compartilhar
+                        </button>
+                    </div>
                 `;
                 gallery.appendChild(ambienteItem);
             });
 
             // Salva URLs para download em massa
-            state.ambienteUrls = (isNicho || isBancada1)
+            state.ambienteUrls = isBancada1
                 ? caminhos.map(c => `${API_URL}${c}`)
                 : caminhos.map(c => `${API_URL}/uploads/${c}`);
 
@@ -1340,7 +1868,8 @@ async function gerarAmbiente(imagemCropada) {
         state.ambienteMode = false;
         showMainScreen();
     } finally {
-        elements.uploadProgress.classList.add('hidden');
+        // Esconde loading overlay
+        elements.loadingOverlay.classList.add('hidden');
     }
 }
 
@@ -1419,39 +1948,6 @@ function showAmbienteMessage(message, type) {
     setTimeout(() => {
         elements.ambienteMessage.classList.add('hidden');
     }, 5000);
-}
-
-// ========== NICHO MOCKUP FLOW ==========
-function startNichoFlow() {
-    if (!state.originalPhoto) {
-        showMessage('Nenhuma foto disponível para ambiente de nicho', 'error');
-        return;
-    }
-
-    // Mostra tela de configuração
-    showScreen(elements.nichoConfigScreen);
-}
-
-function abrirCropParaNicho() {
-    // Captura configurações do nicho
-    const fundoSelecionado = document.querySelector('input[name="fundoNicho"]:checked');
-    const incluirShampoo = document.getElementById('incluirShampoo').checked;
-    const incluirSabonete = document.getElementById('incluirSabonete').checked;
-
-    state.ambienteConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
-    state.ambienteConfig.tipo = 'nicho1'; // Identifica que é nicho
-    state.ambienteConfig.incluirShampoo = incluirShampoo;
-    state.ambienteConfig.incluirSabonete = incluirSabonete;
-
-    // Ativa modo ambiente
-    state.ambienteMode = true;
-
-    // Carrega imagem original no crop
-    state.cropData.image = state.originalPhoto;
-    initializeCropCanvas();
-
-    // Mostra tela de crop
-    showScreen(elements.cropScreen);
 }
 
 // ========== BANCADA1 MOCKUP FLOW ==========

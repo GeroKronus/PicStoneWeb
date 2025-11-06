@@ -126,8 +126,12 @@
 
             <!-- Preview da Foto -->
             <div id="photoPreviewIntegracao" class="photo-preview hidden">
-                <img id="previewImageIntegracao" src="" alt="Preview">
+                <div class="image-container">
+                    <img id="previewImageIntegracao" src="" alt="Preview">
+                    <canvas id="cropOverlayIntegracao" class="crop-overlay hidden"></canvas>
+                </div>
                 <button id="clearPhotoBtnIntegracao" class="btn-clear">✕</button>
+                <button id="resetImageBtnIntegracao" class="btn-reset-icon hidden" title="Voltar à Original">↩️</button>
                 <button id="adjustImageBtnIntegracao" class="btn-crop-icon" title="Ajustar Imagem">✂️</button>
             </div>
 
@@ -377,25 +381,25 @@
                             <h4>Bancada #5</h4>
                         </div>
 
-                        <div class="countertop-card" data-type="bancada6">
+                        <div class="countertop-card disabled" data-type="bancada6" title="Em breve">
                             <div class="countertop-preview" data-type="bancada6">
                                 <img src="/images/thumb-bancada6.png" alt="Preview Bancada #6">
                             </div>
-                            <h4>Bancada #6</h4>
+                            <h4>Bancada #6 <small>(Em breve)</small></h4>
                         </div>
 
-                        <div class="countertop-card" data-type="bancada7">
+                        <div class="countertop-card disabled" data-type="bancada7" title="Em breve">
                             <div class="countertop-preview" data-type="bancada7">
                                 <img src="/images/thumb-bancada7.png" alt="Preview Bancada #7">
                             </div>
-                            <h4>Bancada #7</h4>
+                            <h4>Bancada #7 <small>(Em breve)</small></h4>
                         </div>
 
-                        <div class="countertop-card" data-type="bancada8">
+                        <div class="countertop-card disabled" data-type="bancada8" title="Em breve">
                             <div class="countertop-preview" data-type="bancada8">
                                 <img src="/images/thumb-bancada8.png" alt="Preview Bancada #8">
                             </div>
-                            <h4>Bancada #8</h4>
+                            <h4>Bancada #8 <small>(Em breve)</small></h4>
                         </div>
                     </div>
                 </div>

@@ -316,7 +316,6 @@ body {
     background: white;
     color: var(--text-primary);
     border: 1px solid var(--border-color);
-    margin-top: 10px;
 }
 
 .btn-secondary:hover {
@@ -450,8 +449,36 @@ body {
     opacity: 1;
 }
 
+/* Image Container for Crop Overlay */
+.image-container {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+/* Crop Overlay Canvas */
+.crop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: crosshair;
+    z-index: 10;
+    border-radius: 12px;
+    pointer-events: all;
+}
+
+.crop-overlay.hidden {
+    display: none;
+}
+
 .btn-reset-icon.hidden {
     display: none;
+}
+
+/* Ensure image and canvas are aligned */
+.image-container img {
+    display: block;
+    pointer-events: none;
 }
 
 
@@ -657,6 +684,9 @@ body {
 .btn-ambiente {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
+    font-size: 18px;
+    padding: 14px;
+    margin-top: 10px;
 }
 
 .btn-ambiente:hover {
