@@ -1175,6 +1175,237 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Gera mockup de Bancada tipo 7 (Countertop #7)
+        /// Estratégia: 95% superior (área principal contínua) sem book-match ou divisões
+        /// Canvas: 2500x1667 (com vértices fora para crop)
+        /// </summary>
+        public List<SKBitmap> GerarBancada7(SKBitmap imagemOriginal, bool flip = false)
+        {
+            _logger.LogWarning($"========== INICIANDO GerarBancada7 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            var resultado = new List<SKBitmap>();
+
+            // Dimensões do canvas final
+            const int CANVAS_WIDTH = 2500;
+            const int CANVAS_HEIGHT = 1667;
+
+            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
+            {
+                _logger.LogInformation($"========== BANCADA 7 - Processando variação {contaProcesso}/2 ==========");
+
+                // Book-match: primeira iteração = normal, segunda = 180°
+                SKBitmap imagemParaProcessar = contaProcesso == 1 ? imagemOriginal.Copy() : RotateFlip180(imagemOriginal);
+
+                // ============ GERA IMAGEM 1: BANCADA SEM FAIXA (95%) ============
+                _logger.LogInformation("Gerando IMAGEM 1: bancada_sem_faixa (95% da altura)");
+
+                // Corta 95% da altura
+                int altura95 = (int)(imagemParaProcessar.Height * 0.95);
+                var imagem95 = new SKBitmap(imagemParaProcessar.Width, altura95);
+                using (var canvas95 = new SKCanvas(imagem95))
+                {
+                    canvas95.DrawBitmap(imagemParaProcessar,
+                        new SKRect(0, 0, imagemParaProcessar.Width, altura95),
+                        new SKRect(0, 0, imagemParaProcessar.Width, altura95));
+                }
+
+                var imagemSemFaixa = _transformService.MapToCustomQuadrilateral_Bancada7_SemFaixa(
+                    input: imagem95,
+                    canvasWidth: CANVAS_WIDTH,
+                    canvasHeight: CANVAS_HEIGHT
+                );
+
+                // ============ GERA IMAGEM 2: BANCADA COMPLETA (100%) ============
+                _logger.LogInformation("Gerando IMAGEM 2: bancada_completa (100% da altura)");
+
+                var imagemCompleta = _transformService.MapToCustomQuadrilateral_Bancada7_Completa(
+                    input: imagemParaProcessar,  // 100% da imagem
+                    canvasWidth: CANVAS_WIDTH,
+                    canvasHeight: CANVAS_HEIGHT
+                );
+
+                // ============ DEBUG SAVE (apenas primeira iteração) ============
+                if (contaProcesso == 1)
+                {
+                    try
+                    {
+                        string debugPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "debug");
+                        Directory.CreateDirectory(debugPath);
+
+                        // Salva imagem sem faixa
+                        string semFaixaPath = Path.Combine(debugPath, "bancada_sem_faixa.png");
+                        using (var fileStream = System.IO.File.OpenWrite(semFaixaPath))
+                        {
+                            imagemSemFaixa.Encode(fileStream, SKEncodedImageFormat.Png, 100);
+                        }
+                        _logger.LogInformation($"DEBUG: bancada_sem_faixa salva em: {semFaixaPath}");
+
+                        // Salva imagem completa
+                        string completaPath = Path.Combine(debugPath, "bancada_completa.png");
+                        using (var fileStream = System.IO.File.OpenWrite(completaPath))
+                        {
+                            imagemCompleta.Encode(fileStream, SKEncodedImageFormat.Png, 100);
+                        }
+                        _logger.LogInformation($"DEBUG: bancada_completa salva em: {completaPath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Erro ao salvar imagens de debug: {ex.Message}");
+                    }
+                }
+
+                // ============ MONTA CANVAS COM MOLDURA (usando imagem completa) ============
+                var mosaicoEmBranco = new SKBitmap(CANVAS_WIDTH, CANVAS_HEIGHT);
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+
+                    // Desenha imagem completa
+                    canvas.DrawBitmap(imagemCompleta, 0, 0, paint);
+                    _logger.LogInformation("Imagem completa desenhada");
+                }
+
+                // ============ SOBREPÕE MOLDURA ============
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    var moldura = CarregarRecurso("bancada7.png");
+                    if (moldura != null)
+                    {
+                        canvas.DrawBitmap(moldura, 0, 0, paint);
+                        _logger.LogInformation("Moldura bancada7.png sobreposta");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Moldura bancada7.png NÃO encontrada!");
+                    }
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, CANVAS_WIDTH, CANVAS_HEIGHT);
+                }
+
+                // ============ APLICA FLIP HORIZONTAL SE SOLICITADO ============
+                if (flip && contaProcesso == 1)
+                {
+                    mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                    _logger.LogInformation($"Bancada7: Aplicado flip horizontal");
+                }
+
+                resultado.Add(mosaicoEmBranco);
+
+                // Dispose de bitmaps intermediários
+                imagemParaProcessar.Dispose();
+                imagem95.Dispose();
+                imagemSemFaixa.Dispose();
+                imagemCompleta.Dispose();
+            }
+
+            _logger.LogWarning("========== GerarBancada7 FINALIZADO ==========");
+            return resultado;
+        }
+
+        /// <summary>
+        /// Gera mockup de Bancada tipo 8 (Countertop #8)
+        /// Estratégia: 100% da imagem inteira com transformação única
+        /// Canvas: 2500x1554 (com vértices fora para crop)
+        /// </summary>
+        public List<SKBitmap> GerarBancada8(SKBitmap imagemOriginal, bool flip = false)
+        {
+            _logger.LogWarning($"========== INICIANDO GerarBancada8 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
+            var resultado = new List<SKBitmap>();
+
+            // Dimensões do canvas final
+            const int CANVAS_WIDTH = 2500;
+            const int CANVAS_HEIGHT = 1554;
+
+            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
+            {
+                _logger.LogInformation($"========== BANCADA 8 - Processando variação {contaProcesso}/2 ==========");
+
+                // Book-match: primeira iteração = normal, segunda = 180°
+                SKBitmap imagemParaProcessar = contaProcesso == 1 ? imagemOriginal.Copy() : RotateFlip180(imagemOriginal);
+
+                // ============ GERA IMAGEM: BANCADA COMPLETA (100%) ============
+                _logger.LogInformation("Gerando imagem: bancada_completa (100% da imagem)");
+
+                var imagemCompleta = _transformService.MapToCustomQuadrilateral_Bancada8_Completa(
+                    input: imagemParaProcessar,  // 100% da imagem
+                    canvasWidth: CANVAS_WIDTH,
+                    canvasHeight: CANVAS_HEIGHT
+                );
+
+                // ============ DEBUG SAVE (apenas primeira iteração) ============
+                if (contaProcesso == 1)
+                {
+                    try
+                    {
+                        string debugPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "debug");
+                        Directory.CreateDirectory(debugPath);
+
+                        // Salva imagem completa
+                        string completaPath = Path.Combine(debugPath, "bancada8_completa.png");
+                        using (var fileStream = System.IO.File.OpenWrite(completaPath))
+                        {
+                            imagemCompleta.Encode(fileStream, SKEncodedImageFormat.Png, 100);
+                        }
+                        _logger.LogInformation($"DEBUG: bancada8_completa salva em: {completaPath}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Erro ao salvar imagem de debug: {ex.Message}");
+                    }
+                }
+
+                // ============ MONTA CANVAS COM MOLDURA (usando imagem completa) ============
+                var mosaicoEmBranco = new SKBitmap(CANVAS_WIDTH, CANVAS_HEIGHT);
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    canvas.Clear(SKColors.Transparent);
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+
+                    // Desenha imagem completa
+                    canvas.DrawBitmap(imagemCompleta, 0, 0, paint);
+                    _logger.LogInformation("Imagem completa desenhada");
+                }
+
+                // ============ SOBREPÕE MOLDURA ============
+                using (var canvas = new SKCanvas(mosaicoEmBranco))
+                {
+                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    var moldura = CarregarRecurso("bancada8.png");
+                    if (moldura != null)
+                    {
+                        canvas.DrawBitmap(moldura, 0, 0, paint);
+                        _logger.LogInformation("Moldura bancada8.png sobreposta");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Moldura bancada8.png NÃO encontrada!");
+                    }
+
+                    // Adiciona marca d'água
+                    AdicionarMarcaDagua(canvas, CANVAS_WIDTH, CANVAS_HEIGHT);
+                }
+
+                // ============ APLICA FLIP HORIZONTAL SE SOLICITADO ============
+                if (flip && contaProcesso == 1)
+                {
+                    mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
+                    _logger.LogInformation($"Bancada8: Aplicado flip horizontal");
+                }
+
+                resultado.Add(mosaicoEmBranco);
+
+                // Dispose de bitmaps intermediários
+                imagemParaProcessar.Dispose();
+                imagemCompleta.Dispose();
+            }
+
+            _logger.LogWarning("========== GerarBancada8 FINALIZADO ==========");
+            return resultado;
+        }
+
+        /// <summary>
         /// Gera mockup de Bancada tipo 4 (Countertop #4)
         /// Divide em frente e lateral
         /// </summary>
@@ -1374,121 +1605,6 @@ namespace PicStoneFotoAPI.Services
             }
 
             _logger.LogWarning($"========== GerarBancada5 CONCLUÍDO - {resultado.Count} mockups gerados ==========");
-            return resultado;
-        }
-
-        /// <summary>
-        /// Gera mockup de Bancada tipo 7 (Countertop #7)
-        /// Com rotação de -21.5 graus e faixa decorativa
-        /// </summary>
-        public List<SKBitmap> GerarBancada7(SKBitmap imagemOriginal, bool flip = false)
-        {
-            _logger.LogWarning($"========== INICIANDO GerarBancada7 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
-            var resultado = new List<SKBitmap>();
-
-            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
-            {
-                SKBitmap imagemBookMatch = contaProcesso == 1 ? imagemOriginal.Copy() : RotateFlip180(imagemOriginal);
-
-                // Divide em 2/3 e 1/3
-                int doisTercos = (int)(imagemBookMatch.Width / 1.5);
-                var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
-                var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
-
-                // Redimensiona para grande canvas 4000x4000
-                var bmp = imagemDoisTercos.Resize(new SKImageInfo(2864, 993), SKFilterQuality.High);
-                bmp = _transformService.DistortionInclina(bmp, 2864, 1000, 993, 2864, 1864);
-
-                // Rotaciona -21.5 graus
-                var bancadaRotacionada = _transformService.RotateImage(bmp, -21.5f);
-
-                // Monta mosaico 2500x1667
-                var mosaicoEmBranco = new SKBitmap(2500, 1667);
-                using (var canvas = new SKCanvas(mosaicoEmBranco))
-                {
-                    canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    canvas.DrawBitmap(bancadaRotacionada, -211, 279, paint);
-                }
-
-                using (var canvas = new SKCanvas(mosaicoEmBranco))
-                {
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada7.png");
-                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
-
-                    // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
-                }
-
-                if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
-                resultado.Add(mosaicoEmBranco);
-
-                imagemBookMatch.Dispose();
-                imagemDoisTercos.Dispose();
-                bmp.Dispose();
-                bancadaRotacionada.Dispose();
-            }
-
-            return resultado;
-        }
-
-        /// <summary>
-        /// Gera mockup de Bancada tipo 8 (Countertop #8)
-        /// Com rotação de -57.2 graus e faixa vertical
-        /// </summary>
-        public List<SKBitmap> GerarBancada8(SKBitmap imagemOriginal, bool flip = false)
-        {
-            _logger.LogWarning($"========== INICIANDO GerarBancada8 - Imagem {imagemOriginal.Width}x{imagemOriginal.Height}, flip={flip} ==========");
-            var resultado = new List<SKBitmap>();
-
-            for (int contaProcesso = 1; contaProcesso <= 2; contaProcesso++)
-            {
-                SKBitmap imagemBookMatch = contaProcesso == 1 ? imagemOriginal.Copy() : RotateFlip180(imagemOriginal);
-
-                // Divide em 2/3 e 1/3
-                int doisTercos = (int)(imagemBookMatch.Width / 1.5);
-                var rectDoisTercos = new SKRectI(0, 0, doisTercos, imagemBookMatch.Height);
-                var imagemDoisTercos = CropBitmap(imagemBookMatch, rectDoisTercos);
-
-                // Redimensiona
-                var bmp = imagemDoisTercos.Resize(new SKImageInfo(1816, 1206), SKFilterQuality.High);
-                bmp = _transformService.DistortionInclina(bmp, 1816, 1077, 1206, 1816, 0);
-
-                // Aplica Skew com valor 950
-                bmp = _transformService.SkewSimples(bmp, 0, 950);
-
-                // Rotaciona -57.2 graus
-                var bancadaRotacionada = _transformService.RotateImage(bmp, -57.2f);
-
-                // Monta mosaico 2500x1554
-                var mosaicoEmBranco = new SKBitmap(2500, 1554);
-                using (var canvas = new SKCanvas(mosaicoEmBranco))
-                {
-                    canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    canvas.DrawBitmap(bancadaRotacionada, -89, -432, paint);
-                }
-
-                using (var canvas = new SKCanvas(mosaicoEmBranco))
-                {
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada8.png");
-                    if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
-
-                    // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
-                }
-
-                if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
-                resultado.Add(mosaicoEmBranco);
-
-                imagemBookMatch.Dispose();
-                imagemDoisTercos.Dispose();
-                bmp.Dispose();
-                bancadaRotacionada.Dispose();
-            }
-
             return resultado;
         }
 

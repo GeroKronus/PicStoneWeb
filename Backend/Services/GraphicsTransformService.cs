@@ -431,6 +431,139 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Transformação especializada: mapeia qualquer retângulo para o quadrilátero irregular com distorção natural
+        /// BANCADA 7 - ÁREA PRINCIPAL (95% superior da imagem)
+        /// Vértices fixos especificados pelo usuário:
+        ///   V1 (top-left):     (0, 1111)
+        ///   V2 (top-right):    (2084, 923)
+        ///   V3 (bottom-right): (2922, 971)
+        ///   V4 (bottom-left):  (308, 2003)
+        /// </summary>
+        /// <param name="input">Bitmap de entrada (95% superior)</param>
+        /// <param name="canvasWidth">Largura do canvas de destino (3000)</param>
+        /// <param name="canvasHeight">Altura do canvas de destino (2100)</param>
+        /// <returns>Bitmap transformado no quadrilátero da área principal da bancada 7</returns>
+        public SKBitmap MapToCustomQuadrilateral_Bancada7_AreaPrincipal(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_Bancada7_AreaPrincipal - ÁREA PRINCIPAL DA BANCADA 7 ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+            _logger.LogInformation("Vértices alvo (quadrilátero irregular):");
+            _logger.LogInformation("  V1 (top-left):     (0, 1111)");
+            _logger.LogInformation("  V2 (top-right):    (2084, 923)");
+            _logger.LogInformation("  V3 (bottom-right): (2922, 971)");
+            _logger.LogInformation("  V4 (bottom-left):  (308, 2003)");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 0,    v1y: 1111,  // top-left
+                v2x: 2084, v2y: 923,   // top-right
+                v4x: 308,  v4y: 2003,  // bottom-left
+                v3x: 2922, v3y: 971    // bottom-right
+            );
+        }
+
+        /// <summary>
+        /// Transformação especializada: mapeia qualquer retângulo para o quadrilátero irregular com distorção natural
+        /// BANCADA 7 - FAIXA LATERAL (5% inferior da imagem)
+        /// Canvas: 3000x2100
+        /// Vértices fixos especificados pelo usuário:
+        ///   V1 (top-left):     (308, 2003)
+        ///   V2 (top-right):    (2922, 971)
+        ///   V3 (bottom-right): (2922, 996)
+        ///   V4 (bottom-left):  (321, 2058)
+        /// </summary>
+        /// <param name="input">Bitmap de entrada (5% inferior)</param>
+        /// <param name="canvasWidth">Largura do canvas de destino (3000)</param>
+        /// <param name="canvasHeight">Altura do canvas de destino (2100)</param>
+        /// <returns>Bitmap transformado no quadrilátero da faixa lateral da bancada 7</returns>
+        public SKBitmap MapToCustomQuadrilateral_Bancada7_Faixa(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_Bancada7_Faixa - FAIXA LATERAL DA BANCADA 7 ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+            _logger.LogInformation("Vértices alvo (quadrilátero irregular):");
+            _logger.LogInformation("  V1 (top-left):     (308, 2003)");
+            _logger.LogInformation("  V2 (top-right):    (2922, 971)");
+            _logger.LogInformation("  V3 (bottom-right): (2922, 996)");
+            _logger.LogInformation("  V4 (bottom-left):  (321, 2058)");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 308,  v1y: 2003,  // top-left
+                v2x: 2922, v2y: 971,   // top-right (corrigido para coincidir com V3 da área principal)
+                v4x: 321,  v4y: 2058,  // bottom-left
+                v3x: 2922, v3y: 996    // bottom-right
+            );
+        }
+
+        /// <summary>
+        /// Transformação para Bancada 7 - SEM FAIXA (apenas 95% da altura)
+        /// Canvas: 3000x2100
+        /// Vértices do quadrilátero para área principal (95%):
+        ///   V1 (top-left):     (6, 1109)
+        ///   V2 (top-right):    (2094, 923)
+        ///   V3 (bottom-right): (2928, 972)
+        ///   V4 (bottom-left):  (311, 2002)
+        /// </summary>
+        public SKBitmap MapToCustomQuadrilateral_Bancada7_SemFaixa(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_Bancada7_SemFaixa - 95% da imagem ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+            _logger.LogInformation("Vértices alvo (área principal - 95%):");
+            _logger.LogInformation("  V1 (top-left):     (6, 1109)");
+            _logger.LogInformation("  V2 (top-right):    (2094, 923)");
+            _logger.LogInformation("  V3 (bottom-right): (2928, 972)");
+            _logger.LogInformation("  V4 (bottom-left):  (311, 2002)");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 6,    v1y: 1109,  // top-left
+                v2x: 2094, v2y: 923,   // top-right
+                v4x: 311,  v4y: 2002,  // bottom-left
+                v3x: 2928, v3y: 972    // bottom-right
+            );
+        }
+
+        /// <summary>
+        /// Transformação para Bancada 7 - COMPLETA (100% da imagem)
+        /// Canvas: 2500x1667 (alguns vértices fora do canvas para criar crop)
+        /// Vértices do quadrilátero completo:
+        ///   V1 (top-left):     (-164, 1105) [FORA - X negativo]
+        ///   V2 (top-right):    (1907, 922)
+        ///   V3 (bottom-right): (2746, 987) [FORA - X > 2500]
+        ///   V4 (bottom-left):  (78, 2084)  [FORA - Y > 1667]
+        /// </summary>
+        public SKBitmap MapToCustomQuadrilateral_Bancada7_Completa(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_Bancada7_Completa - 100% da imagem ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+            _logger.LogInformation("Vértices alvo (imagem completa - 100%):");
+            _logger.LogInformation("  V1 (top-left):     (-164, 1105) [FORA do canvas]");
+            _logger.LogInformation("  V2 (top-right):    (1907, 922)");
+            _logger.LogInformation("  V3 (bottom-right): (2746, 987) [FORA do canvas]");
+            _logger.LogInformation("  V4 (bottom-left):  (78, 2084) [FORA do canvas]");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: -164, v1y: 1105,  // top-left (FORA)
+                v2x: 1907, v2y: 922,   // top-right
+                v4x: 78,   v4y: 2084,  // bottom-left (FORA)
+                v3x: 2746, v3y: 987    // bottom-right (FORA)
+            );
+        }
+
+        /// <summary>
         /// Cria matriz de transformação 2D para projeção em perspectiva
         /// </summary>
         private float[] Transform2d(float w, float h,
@@ -1055,6 +1188,37 @@ namespace PicStoneFotoAPI.Services
                 v2x: 309,  v2y: 623,    // top-right
                 v4x: 196,  v4y: 922,    // bottom-left
                 v3x: 309,  v3y: 1036    // bottom-right
+            );
+        }
+
+        /// <summary>
+        /// Transformação para Bancada 8 - COMPLETA (100% da imagem)
+        /// Canvas: 2500x1554 (alguns vértices fora do canvas para criar crop)
+        /// Vértices do quadrilátero completo:
+        ///   V1 (top-left):     (1056, 830)
+        ///   V2 (top-right):    (2928, 1342) [FORA - X > 2500]
+        ///   V3 (bottom-right): (1759, 1944) [FORA - Y > 1554]
+        ///   V4 (bottom-left):  (168, 875)
+        /// </summary>
+        public SKBitmap MapToCustomQuadrilateral_Bancada8_Completa(SKBitmap input, int canvasWidth, int canvasHeight)
+        {
+            _logger.LogInformation("=== MapToCustomQuadrilateral_Bancada8_Completa - 100% da imagem ===");
+            _logger.LogInformation($"Input: {input.Width}x{input.Height}");
+            _logger.LogInformation($"Canvas: {canvasWidth}x{canvasHeight}");
+            _logger.LogInformation("Vértices alvo (imagem completa - 100%):");
+            _logger.LogInformation("  V1 (top-left):     (1056, 830)");
+            _logger.LogInformation("  V2 (top-right):    (2928, 1342) [FORA do canvas]");
+            _logger.LogInformation("  V3 (bottom-right): (1759, 1944) [FORA do canvas]");
+            _logger.LogInformation("  V4 (bottom-left):  (168, 875)");
+
+            return MapToVertices(
+                input: input,
+                canvasWidth: canvasWidth,
+                canvasHeight: canvasHeight,
+                v1x: 1056, v1y: 830,   // top-left
+                v2x: 2928, v2y: 1342,  // top-right (FORA)
+                v4x: 168,  v4y: 875,   // bottom-left
+                v3x: 1759, v3y: 1944   // bottom-right (FORA)
             );
         }
     }
