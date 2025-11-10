@@ -633,12 +633,48 @@ async function showMainScreen() {
     elements.userInitials.textContent = initials;
 
     // Mostra botão de gerenciar usuários apenas para admin
+    console.log('🔍 [DEBUG HISTÓRICO] Verificando permissões para:', state.username);
     if (state.username === 'rogerio@picstone.com.br') {
-        if (elements.manageUsersBtn) elements.manageUsersBtn.classList.remove('hidden');
-        if (elements.pendingUsersBtn) elements.pendingUsersBtn.classList.remove('hidden');
+        console.log('✅ [DEBUG HISTÓRICO] Usuário é ADMIN');
+        if (elements.manageUsersBtn) {
+            elements.manageUsersBtn.classList.remove('hidden');
+            console.log('✅ Botão Gerenciar Usuários mostrado');
+        }
+        if (elements.pendingUsersBtn) {
+            elements.pendingUsersBtn.classList.remove('hidden');
+            console.log('✅ Botão Solicitações Pendentes mostrado');
+        }
+        // Salva no localStorage para uso no history.js
+        localStorage.setItem('isAdmin', 'true');
+        console.log('✅ localStorage.isAdmin = true');
     } else {
+        console.log('ℹ️ [DEBUG HISTÓRICO] Usuário NÃO é admin');
         if (elements.manageUsersBtn) elements.manageUsersBtn.classList.add('hidden');
         if (elements.pendingUsersBtn) elements.pendingUsersBtn.classList.add('hidden');
+        localStorage.setItem('isAdmin', 'false');
+    }
+
+    // Mostra botão de histórico para todos os usuários
+    console.log('🔍 [DEBUG HISTÓRICO] Verificando botão historyBtn...');
+    console.log('🔍 elements.historyBtn existe?', !!elements.historyBtn);
+    console.log('🔍 Elemento HTML:', elements.historyBtn);
+    if (elements.historyBtn) {
+        elements.historyBtn.classList.remove('hidden');
+        console.log('✅ [DEBUG HISTÓRICO] Botão HISTÓRICO mostrado! Classes finais:', elements.historyBtn.className);
+        console.log('✅ [DEBUG HISTÓRICO] Botão está visível?', !elements.historyBtn.classList.contains('hidden'));
+    } else {
+        console.error('❌ [DEBUG HISTÓRICO] ERRO CRÍTICO: elements.historyBtn é NULL/undefined!');
+        console.log('🔍 [DEBUG HISTÓRICO] Tentando buscar diretamente no DOM...');
+        const historyBtnDirect = document.getElementById('historyBtn');
+        if (historyBtnDirect) {
+            console.warn('⚠️ [DEBUG HISTÓRICO] Elemento EXISTE no DOM mas NÃO foi capturado em elements!');
+            console.log('🔍 Elemento encontrado:', historyBtnDirect);
+            console.log('🔍 Parent:', historyBtnDirect.parentElement);
+            console.log('🔍 Classes:', historyBtnDirect.className);
+        } else {
+            console.error('❌ [DEBUG HISTÓRICO] Elemento #historyBtn NÃO EXISTE no HTML!');
+            console.log('🔍 Todos os elementos com "history":', document.querySelectorAll('[id*="history"]'));
+        }
     }
 
     await loadMaterials();
