@@ -313,6 +313,129 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// GET /api/migration/list-tables
+        /// Lista todas as tabelas do banco de dados
+        /// </summary>
+        [HttpGet("list-tables")]
+        public async Task<IActionResult> ListTables()
+        {
+            try
+            {
+                var databaseProvider = _context.Database.ProviderName;
+                _logger.LogInformation("Listando tabelas do banco: {Provider}", databaseProvider);
+
+                // Verificar conexão
+                var canConnect = await _context.Database.CanConnectAsync();
+                if (!canConnect)
+                {
+                    return StatusCode(500, new
+                    {
+                        sucesso = false,
+                        mensagem = "Não foi possível conectar ao banco de dados"
+                    });
+                }
+
+                List<string> tabelas = new List<string>();
+
+                if (databaseProvider != null && databaseProvider.Contains("Npgsql"))
+                {
+                    // PostgreSQL
+                    var sql = @"
+                        SELECT table_name
+                        FROM information_schema.tables
+                        WHERE table_schema = 'public'
+                        ORDER BY table_name";
+
+                    using (var connection = _context.Database.GetDbConnection())
+                    {
+                        await connection.OpenAsync();
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText = sql;
+                            using (var reader = await command.ExecuteReaderAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    tabelas.Add(reader.GetString(0));
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (databaseProvider != null && databaseProvider.Contains("Sqlite"))
+                {
+                    // SQLite
+                    var sql = @"
+                        SELECT name
+                        FROM sqlite_master
+                        WHERE type='table' AND name NOT LIKE 'sqlite_%'
+                        ORDER BY name";
+
+                    using (var connection = _context.Database.GetDbConnection())
+                    {
+                        await connection.OpenAsync();
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText = sql;
+                            using (var reader = await command.ExecuteReaderAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    tabelas.Add(reader.GetString(0));
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (databaseProvider != null && databaseProvider.Contains("SqlServer"))
+                {
+                    // SQL Server
+                    var sql = @"
+                        SELECT TABLE_NAME
+                        FROM INFORMATION_SCHEMA.TABLES
+                        WHERE TABLE_TYPE = 'BASE TABLE'
+                        ORDER BY TABLE_NAME";
+
+                    using (var connection = _context.Database.GetDbConnection())
+                    {
+                        await connection.OpenAsync();
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText = sql;
+                            using (var reader = await command.ExecuteReaderAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    tabelas.Add(reader.GetString(0));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    provedor = databaseProvider,
+                    totalTabelas = tabelas.Count,
+                    tabelas = tabelas,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao listar tabelas");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    mensagem = "Erro ao listar tabelas do banco",
+                    erro = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
         /// GET /api/migration/add-email-verification-columns
         /// Adiciona colunas de verificação de email e sistema de aprovação na tabela Usuarios
         /// </summary>
