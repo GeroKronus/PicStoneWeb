@@ -278,10 +278,6 @@ function hasSharedImage() {
  * Limpa o estado compartilhado de imagem
  */
 function clearSharedImage() {
-    console.log('🗑️ CLEAR: Limpando estado compartilhado de imagem', {
-        tinha: !!state.sharedImageState.originalImage,
-        source: state.sharedImageState.source
-    });
     state.sharedImageState = {
         originalImage: null,
         currentImage: null,
