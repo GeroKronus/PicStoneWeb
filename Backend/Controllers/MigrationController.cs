@@ -313,6 +313,104 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// GET /api/migration/add-email-verification-columns
+        /// Adiciona colunas de verificação de email e sistema de aprovação na tabela Usuarios
+        /// </summary>
+        [HttpGet("add-email-verification-columns")]
+        public async Task<IActionResult> AddEmailVerificationColumns()
+        {
+            try
+            {
+                _logger.LogInformation("=== ADICIONANDO COLUNAS DE VERIFICAÇÃO DE EMAIL ===");
+
+                // Verifica conexão
+                var canConnect = await _context.Database.CanConnectAsync();
+                if (!canConnect)
+                {
+                    return StatusCode(500, new
+                    {
+                        sucesso = false,
+                        mensagem = "Não foi possível conectar ao banco de dados"
+                    });
+                }
+
+                // Comandos SQL da migration 002_AddEmailVerificationColumns.sql
+                var sqlCommands = new[]
+                {
+                    "ALTER TABLE \"Usuarios\" ADD COLUMN IF NOT EXISTS \"Email\" VARCHAR(255) NOT NULL DEFAULT ''",
+                    "ALTER TABLE \"Usuarios\" ADD COLUMN IF NOT EXISTS \"EmailVerificado\" BOOLEAN NOT NULL DEFAULT FALSE",
+                    "ALTER TABLE \"Usuarios\" ADD COLUMN IF NOT EXISTS \"TokenVerificacao\" VARCHAR(255)",
+                    "ALTER TABLE \"Usuarios\" ADD COLUMN IF NOT EXISTS \"Status\" INTEGER NOT NULL DEFAULT 0",
+                    "ALTER TABLE \"Usuarios\" ADD COLUMN IF NOT EXISTS \"DataExpiracao\" TIMESTAMP",
+                    "CREATE UNIQUE INDEX IF NOT EXISTS \"IX_Usuarios_Email\" ON \"Usuarios\" (\"Email\")",
+                    "CREATE INDEX IF NOT EXISTS \"IX_Usuarios_TokenVerificacao\" ON \"Usuarios\" (\"TokenVerificacao\")"
+                };
+
+                var results = new List<object>();
+
+                foreach (var sql in sqlCommands)
+                {
+                    try
+                    {
+                        await _context.Database.ExecuteSqlRawAsync(sql);
+                        _logger.LogInformation("SQL executado: {Sql}", sql);
+                        results.Add(new { comando = sql, sucesso = true, erro = (string)null });
+                    }
+                    catch (Exception exSql)
+                    {
+                        _logger.LogError(exSql, "Erro ao executar: {Sql}", sql);
+                        results.Add(new { comando = sql, sucesso = false, erro = exSql.Message });
+                    }
+                }
+
+                // Atualizar usuário admin existente se houver
+                try
+                {
+                    var updateAdminSql = @"
+                        UPDATE ""Usuarios""
+                        SET
+                            ""Email"" = 'admin@picstone.com.br',
+                            ""EmailVerificado"" = TRUE,
+                            ""Status"" = 2,
+                            ""TokenVerificacao"" = NULL
+                        WHERE ""Username"" = 'admin' AND (""Email"" = '' OR ""Email"" IS NULL)";
+
+                    await _context.Database.ExecuteSqlRawAsync(updateAdminSql);
+                    _logger.LogInformation("Usuário admin atualizado com email e status aprovado");
+                    results.Add(new { comando = "UPDATE admin user", sucesso = true, erro = (string)null });
+                }
+                catch (Exception exUpdate)
+                {
+                    _logger.LogWarning(exUpdate, "Não foi possível atualizar admin (pode não existir ainda)");
+                    results.Add(new { comando = "UPDATE admin user", sucesso = false, erro = exUpdate.Message });
+                }
+
+                var sucessos = results.Count(r => (bool)r.GetType().GetProperty("sucesso").GetValue(r));
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    mensagem = "Colunas de verificação de email adicionadas!",
+                    totalComandos = results.Count,
+                    sucessos = sucessos,
+                    comandos = results,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao adicionar colunas de verificação de email");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    mensagem = "Erro ao adicionar colunas de verificação de email",
+                    erro = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
         /// GET /api/migration/populate-materials
         /// Cria tabela e popula com lista de materiais
         /// </summary>
