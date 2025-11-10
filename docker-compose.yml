@@ -37,6 +37,13 @@ services:
       - ASPNETCORE_URLS=http://+:5000
       - DATABASE_URL=postgres://postgres:picstone123@postgres:5432/railway
       - JWT_SECRET=ChaveSecretaPadraoParaDesenvolvimento123!@#
+      - NEXTAUTH_URL=http://localhost:5000
+      - SMTP_HOST=smtppro.zoho.com
+      - SMTP_PORT=465
+      - SMTP_USER=contato@picstone.com.br
+      - SMTP_PASSWORD=R0p4c44rl4$
+      - EMAIL_FROM=contato@picstone.com.br
+      - ADMIN_EMAIL=rogerio@picstone.com.br
     ports:
       - "5000:5000"
     volumes:

@@ -24,6 +24,9 @@
     <!-- BCrypt para hash de senhas -->
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 
+    <!-- MailKit para envio de emails via SMTP -->
+    <PackageReference Include="MailKit" Version="4.3.0" />
+
     <!-- Serilog para logs -->
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />

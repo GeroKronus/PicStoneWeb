@@ -6,56 +6,24 @@ namespace PicStoneFotoAPI.Services
     public class MockupService
     {
         private readonly ILogger<MockupService> _logger;
+        private readonly ImageWatermarkService _watermark;
         private readonly string _moldurasPath;
         private readonly string _uploadPath;
-        private readonly string _logoPath;
 
-        public MockupService(ILogger<MockupService> logger, IConfiguration configuration)
+        public MockupService(ILogger<MockupService> logger,
+                            IConfiguration configuration,
+                            ImageWatermarkService watermark)
         {
             _logger = logger;
+            _watermark = watermark;
             _moldurasPath = Path.Combine(Directory.GetCurrentDirectory(), "Molduras");
             _uploadPath = configuration["UPLOAD_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "uploads");
-            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "watermark.png");
         }
 
-        // Adiciona logo no canto inferior direito
-        private void AdicionarMarcaDagua(SKCanvas canvas, int canvasWidth, int canvasHeight)
-        {
-            if (!File.Exists(_logoPath))
-            {
-                _logger.LogWarning("Logo não encontrada em: {LogoPath}", _logoPath);
-                return;
-            }
-
-            try
-            {
-                using var streamLogo = File.OpenRead(_logoPath);
-                using var logo = SKBitmap.Decode(streamLogo);
-
-                if (logo == null)
-                {
-                    _logger.LogWarning("Não foi possível decodificar a logo");
-                    return;
-                }
-
-                // Usa tamanho original da logo (49x50 pixels)
-                int logoWidth = logo.Width;
-                int logoHeight = logo.Height;
-
-                // Posição: canto inferior direito com margem de 5px
-                int posX = canvasWidth - logoWidth - 5;
-                int posY = canvasHeight - logoHeight - 5;
-
-                // Desenha a logo sem redimensionar
-                canvas.DrawBitmap(logo, posX, posY);
-
-                _logger.LogInformation("Marca d'água adicionada: {W}x{H} em ({X},{Y})", logoWidth, logoHeight, posX, posY);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao adicionar marca d'água");
-            }
-        }
+        // ===== MÉTODO REMOVIDO: _watermark.AddWatermark (agora usa ImageWatermarkService) =====
+        // ANTES: 37 linhas de código duplicado
+        // DEPOIS: 1 linha usando _watermark.AddWatermark()
+        // ECONOMIA: 36 linhas
 
         public async Task<MockupResponse> GerarMockupAsync(MockupRequest request)
         {
@@ -186,7 +154,7 @@ namespace PicStoneFotoAPI.Services
             canvas.DrawBitmap(molduraRedimensionada, 0, 0);
 
             // Adiciona marca d'água
-            AdicionarMarcaDagua(canvas, larguraCanvas, alturaCanvas);
+            _watermark.AddWatermark(canvas, larguraCanvas, alturaCanvas);
 
             // Salva resultado
             var nomeArquivo = $"mockup_simples_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
@@ -275,7 +243,7 @@ namespace PicStoneFotoAPI.Services
             canvas.DrawBitmap(molduraRedimensionada, 0, 0);
 
             // Adiciona marca d'água
-            AdicionarMarcaDagua(canvas, larguraCanvas, alturaCanvas);
+            _watermark.AddWatermark(canvas, larguraCanvas, alturaCanvas);
 
             // Salva resultado
             var sufixo = inverterLados ? "invertido" : "normal";

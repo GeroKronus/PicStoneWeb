@@ -13,6 +13,8 @@ namespace PicStoneFotoAPI.Controllers
     [Authorize]
     public class FotosController : ControllerBase
     {
+        private const string ADMIN_USERNAME = "rogerio@picstone.com.br";
+
         private readonly FotoService _fotoService;
         private readonly ILogger<FotosController> _logger;
 
@@ -91,7 +93,7 @@ namespace PicStoneFotoAPI.Controllers
                 List<FotoMobile> fotos;
 
                 // Admin vê todas as fotos, outros usuários veem apenas as suas
-                if (username == "admin")
+                if (username == ADMIN_USERNAME)
                 {
                     _logger.LogInformation("Usuário admin - mostrando todas as fotos");
                     fotos = await _fotoService.ObterHistoricoAsync(limite);

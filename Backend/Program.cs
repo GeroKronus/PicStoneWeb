@@ -96,12 +96,26 @@ builder.Services.AddCors(options =>
 });
 
 // ========== REGISTRO DE SERVIÇOS ==========
+// Services de autenticação e email
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<EmailService>();
+
+// Services de imagem (DRY - eliminam duplicação de código)
+builder.Services.AddScoped<ImageManipulationService>();
+builder.Services.AddScoped<ImageWatermarkService>();
+builder.Services.AddScoped<ImageValidationService>();
+
+// Services de negócio
 builder.Services.AddScoped<FotoService>();
 builder.Services.AddScoped<MockupService>();
 builder.Services.AddScoped<GraphicsTransformService>();
 builder.Services.AddScoped<NichoService>();
 builder.Services.AddScoped<BancadaService>();
+builder.Services.AddScoped<BookMatchService>();
+
+// Service de histórico
+builder.Services.AddScoped<HistoryService>();
+builder.Services.AddHttpContextAccessor();  // Necessário para capturar IP/UserAgent
 
 // ========== CONTROLLERS E SWAGGER ==========
 builder.Services.AddControllers();
@@ -222,6 +236,35 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// ========== DEBUG ENDPOINTS ==========
+if (app.Environment.IsDevelopment())
+{
+    // Endpoint to list all registered routes
+    app.MapGet("/debug/routes", () =>
+    {
+        Log.Information("[DEBUG] Debug routes endpoint called");
+
+        return Results.Ok(new
+        {
+            timestamp = DateTime.UtcNow,
+            environment = "Development",
+            message = "BookMatchController should be registered at /api/bookmatch/generate (POST)",
+            debugInfo = new
+            {
+                controllerName = "BookMatchController",
+                route = "/api/bookmatch/generate",
+                method = "POST",
+                requiresAuth = true,
+                note = "Check logs for controller instantiation and endpoint invocation messages prefixed with [DEBUG]"
+            }
+        });
+    })
+    .WithName("DebugRoutes")
+    .Produces(200);
+
+    Log.Information("[DEBUG] Debug routes endpoint registered at /debug/routes");
+}
 
 // Rota raiz
 app.MapGet("/", () => Results.Redirect("/index.html"));

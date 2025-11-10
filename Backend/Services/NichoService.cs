@@ -12,12 +12,19 @@ namespace PicStoneFotoAPI.Services
     {
         private readonly ILogger<NichoService> _logger;
         private readonly GraphicsTransformService _transformService;
+        private readonly ImageManipulationService _imageManipulation;
+        private readonly ImageWatermarkService _watermark;
         private readonly string _resourcesPath;
 
-        public NichoService(ILogger<NichoService> logger, GraphicsTransformService transformService)
+        public NichoService(ILogger<NichoService> logger,
+                           GraphicsTransformService transformService,
+                           ImageManipulationService imageManipulation,
+                           ImageWatermarkService watermark)
         {
             _logger = logger;
             _transformService = transformService;
+            _imageManipulation = imageManipulation;
+            _watermark = watermark;
             _resourcesPath = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Nichos");
         }
 
@@ -202,6 +209,9 @@ namespace PicStoneFotoAPI.Services
                 using var nichoBitmap = SKBitmap.Decode(nichoStream);
                 canvasFinal.DrawBitmap(nichoBitmap, 150, 250, paint);
 
+                // Adiciona marca d'água
+                _watermark.AddWatermark(canvasFinal, 1000, 1000);
+
                 var imagemFinal = surfaceFinal.Snapshot();
                 using var finalData = imagemFinal.Encode(SKEncodedImageFormat.Jpeg, 95);
                 using var finalStream = new MemoryStream(finalData.ToArray());
@@ -227,47 +237,13 @@ namespace PicStoneFotoAPI.Services
             return resultado;
         }
 
-        /// <summary>
-        /// Recorta uma região específica de um bitmap
-        /// </summary>
-        private SKBitmap CropBitmap(SKBitmap source, SKRectI cropRect)
-        {
-            var cropped = new SKBitmap(cropRect.Width, cropRect.Height);
-            using var canvas = new SKCanvas(cropped);
-            using var paint = new SKPaint
-            {
-                FilterQuality = SKFilterQuality.High
-            };
+        // ===== MÉTODOS REMOVIDOS (agora usam ImageManipulationService) =====
+        // ANTES: CropBitmap (12 linhas), RotateFlip180 (22 linhas)
+        // DEPOIS: _imageManipulation.Crop(), _imageManipulation.Rotate180()
+        // ECONOMIA: 34 linhas
 
-            canvas.DrawBitmap(source, cropRect, new SKRect(0, 0, cropRect.Width, cropRect.Height), paint);
-            return cropped;
-        }
-
-        /// <summary>
-        /// Rotaciona bitmap 180 graus
-        /// </summary>
-        private SKBitmap RotateFlip180(SKBitmap source)
-        {
-            var surface = SKSurface.Create(new SKImageInfo(source.Width, source.Height));
-            var canvas = surface.Canvas;
-
-            canvas.Translate(source.Width / 2f, source.Height / 2f);
-            canvas.RotateDegrees(180);
-            canvas.Translate(-source.Width / 2f, -source.Height / 2f);
-
-            using var paint = new SKPaint
-            {
-                FilterQuality = SKFilterQuality.High
-            };
-
-            canvas.DrawBitmap(source, 0, 0, paint);
-
-            var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-
-            using var mStream = new MemoryStream(data.ToArray());
-            return SKBitmap.Decode(mStream);
-        }
+        private SKBitmap CropBitmap(SKBitmap source, SKRectI cropRect) => _imageManipulation.Crop(source, cropRect);
+        private SKBitmap RotateFlip180(SKBitmap source) => _imageManipulation.Rotate180(source);
 
         /// <summary>
         /// Carrega recurso PNG da pasta MockupResources

@@ -51,6 +51,7 @@ namespace PicStoneFotoAPI.Services
                 // Gera token JWT
                 var token = GerarTokenJWT(usuario);
                 var expiresAt = DateTime.UtcNow.AddYears(100);
+                var isAdmin = usuario.Username == "rogerio@picstone.com.br";
 
                 _logger.LogInformation("Login bem-sucedido para usuário: {Username}", request.Username);
 
@@ -58,7 +59,8 @@ namespace PicStoneFotoAPI.Services
                 {
                     Token = token,
                     Username = usuario.Username,
-                    ExpiresAt = expiresAt
+                    ExpiresAt = expiresAt,
+                    IsAdmin = isAdmin
                 };
             }
             catch (Exception ex)
@@ -111,11 +113,14 @@ namespace PicStoneFotoAPI.Services
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            var isAdmin = usuario.Username == "rogerio@picstone.com.br";
+
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
                 new Claim(ClaimTypes.Name, usuario.Username),
-                new Claim("NomeCompleto", usuario.NomeCompleto)
+                new Claim("NomeCompleto", usuario.NomeCompleto),
+                new Claim(ClaimTypes.Role, isAdmin ? "Admin" : "User")
             };
 
             var token = new JwtSecurityToken(
@@ -130,7 +135,7 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
-        /// Cria usuário inicial para testes (admin/admin123)
+        /// Cria usuário inicial para testes (rogerio@picstone.com.br/123456)
         /// </summary>
         public async Task CriarUsuarioInicialAsync()
         {
@@ -145,17 +150,20 @@ namespace PicStoneFotoAPI.Services
                 // Cria usuário admin padrão
                 var adminUser = new Usuario
                 {
-                    Username = "admin",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                    NomeCompleto = "Administrador",
+                    Username = "rogerio@picstone.com.br",
+                    Email = "rogerio@picstone.com.br",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"),
+                    NomeCompleto = "Rogério Isidorio",
                     Ativo = true,
+                    EmailVerificado = true,
+                    Status = StatusUsuario.Aprovado,
                     DataCriacao = DateTime.UtcNow
                 };
 
                 _context.Usuarios.Add(adminUser);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Usuário inicial 'admin' criado com sucesso");
+                _logger.LogInformation("Usuário inicial 'rogerio@picstone.com.br' criado com sucesso");
             }
             catch (Exception ex)
             {
@@ -202,7 +210,7 @@ namespace PicStoneFotoAPI.Services
         {
             try
             {
-                return await _context.Usuarios.AnyAsync(u => u.Username == "admin");
+                return await _context.Usuarios.AnyAsync(u => u.Username == "rogerio@picstone.com.br");
             }
             catch (Exception ex)
             {
@@ -266,9 +274,12 @@ namespace PicStoneFotoAPI.Services
                 var novoUsuario = new Usuario
                 {
                     Username = username,
+                    Email = username, // Usa o username como email
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("123456"), // Senha padrão
                     NomeCompleto = nomeCompleto,
                     Ativo = true,
+                    EmailVerificado = true, // Admin-created users are pre-verified
+                    Status = StatusUsuario.Aprovado, // Admin-created users are pre-approved
                     DataCriacao = DateTime.UtcNow
                 };
 
@@ -336,7 +347,7 @@ namespace PicStoneFotoAPI.Services
                 }
 
                 // Não permite desativar o admin
-                if (usuario.Username == "admin")
+                if (usuario.Username == "rogerio@picstone.com.br")
                 {
                     _logger.LogWarning("Tentativa de desativar usuário admin");
                     return false;
@@ -357,8 +368,9 @@ namespace PicStoneFotoAPI.Services
 
         /// <summary>
         /// Reativa usuário (apenas admin)
+        /// Envia email de aprovação
         /// </summary>
-        public async Task<bool> ReactivateUserAsync(int userId)
+        public async Task<(bool Success, string Message)> ReactivateUserAsync(int userId, DateTime? dataExpiracao, EmailService emailService)
         {
             try
             {
@@ -366,20 +378,238 @@ namespace PicStoneFotoAPI.Services
 
                 if (usuario == null)
                 {
-                    _logger.LogWarning("Usuário não encontrado: ID {UserId}", userId);
-                    return false;
+                    return (false, "Usuário não encontrado");
                 }
 
+                // Reativa usuário
                 usuario.Ativo = true;
+                usuario.Status = StatusUsuario.Aprovado;
+                usuario.DataExpiracao = dataExpiracao;
+
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Usuário reativado: {Username}", usuario.Username);
-                return true;
+                // Envia email de aprovação
+                await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+
+                _logger.LogInformation($"Usuário reativado: {usuario.Email}");
+
+                return (true, "Usuário reativado com sucesso!");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao reativar usuário: ID {UserId}", userId);
-                return false;
+                _logger.LogError(ex, $"Erro ao reativar usuário ID: {userId}");
+                return (false, "Erro ao reativar usuário. Tente novamente.");
+            }
+        }
+
+        /// <summary>
+        /// Registra novo usuário (cadastro público)
+        /// Envia email de verificação
+        /// </summary>
+        public async Task<(bool Success, string Message, Usuario? User)> RegisterUserAsync(RegisterRequest request, EmailService emailService, string? baseUrl = null)
+        {
+            try
+            {
+                // MODO TESTE: Remove usuário anterior com mesmo email se existir
+                var usuarioExistente = await _context.Usuarios
+                    .FirstOrDefaultAsync(u => u.Email == request.Email);
+
+                if (usuarioExistente != null)
+                {
+                    _logger.LogInformation($"[MODO TESTE] Removendo usuário existente com email: {request.Email}");
+                    _context.Usuarios.Remove(usuarioExistente);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Usa o email completo como username
+                var username = request.Email;
+
+                // Gera token de verificação
+                var token = Guid.NewGuid().ToString("N") + DateTime.UtcNow.Ticks.ToString();
+
+                // Cria usuário
+                var usuario = new Usuario
+                {
+                    Username = username,  // Email completo
+                    Email = request.Email,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Senha),
+                    NomeCompleto = request.NomeCompleto,
+                    Ativo = false,  // Inativo até aprovação
+                    EmailVerificado = false,
+                    TokenVerificacao = token,
+                    Status = StatusUsuario.Pendente,
+                    DataCriacao = DateTime.UtcNow
+                };
+
+                _context.Usuarios.Add(usuario);
+                await _context.SaveChangesAsync();
+
+                // Envia email de verificação com o endereço base do request
+                await emailService.SendVerificationEmailAsync(usuario.Email, usuario.NomeCompleto, token, baseUrl);
+
+                _logger.LogInformation($"Novo usuário registrado: {usuario.Email} (username: {usuario.Username})");
+
+                return (true, "Cadastro realizado! Verifique seu email para confirmar o cadastro.", usuario);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao registrar usuário");
+                return (false, "Erro ao realizar cadastro. Tente novamente.", null);
+            }
+        }
+
+        /// <summary>
+        /// Verifica email com token
+        /// Muda status para AguardandoAprovacao e notifica admin
+        /// </summary>
+        public async Task<(bool Success, string Message)> VerifyEmailAsync(string token, EmailService emailService)
+        {
+            try
+            {
+                var usuario = await _context.Usuarios
+                    .FirstOrDefaultAsync(u => u.TokenVerificacao == token);
+
+                if (usuario == null)
+                {
+                    return (false, "Token de verificação inválido");
+                }
+
+                if (usuario.EmailVerificado)
+                {
+                    return (false, "Email já verificado");
+                }
+
+                // Marca email como verificado
+                usuario.EmailVerificado = true;
+                usuario.TokenVerificacao = null;
+                usuario.Status = StatusUsuario.AguardandoAprovacao;
+
+                await _context.SaveChangesAsync();
+
+                // Notifica admin sobre nova solicitação
+                await emailService.SendAdminNotificationAsync(usuario.NomeCompleto, usuario.Email);
+
+                _logger.LogInformation($"Email verificado: {usuario.Email}");
+
+                return (true, "Email verificado com sucesso! Aguarde a aprovação do administrador.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao verificar email");
+                return (false, "Erro ao verificar email. Tente novamente.");
+            }
+        }
+
+        /// <summary>
+        /// Lista usuários aguardando aprovação (apenas admin)
+        /// </summary>
+        public async Task<List<UserResponse>> ListPendingUsersAsync()
+        {
+            try
+            {
+                var usuarios = await _context.Usuarios
+                    .Where(u => u.Status == StatusUsuario.AguardandoAprovacao)
+                    .OrderBy(u => u.DataCriacao)
+                    .ToListAsync();
+
+                return usuarios.Select(u => new UserResponse
+                {
+                    Id = u.Id,
+                    Username = u.Username,
+                    NomeCompleto = u.NomeCompleto,
+                    Ativo = u.Ativo,
+                    DataCriacao = u.DataCriacao,
+                    Email = u.Email,
+                    EmailVerificado = u.EmailVerificado,
+                    Status = u.Status.ToString(),
+                    DataExpiracao = u.DataExpiracao
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao listar usuários pendentes");
+                return new List<UserResponse>();
+            }
+        }
+
+        /// <summary>
+        /// Aprova usuário (apenas admin)
+        /// Envia email de aprovação
+        /// </summary>
+        public async Task<(bool Success, string Message)> ApproveUserAsync(int userId, DateTime? dataExpiracao, EmailService emailService)
+        {
+            try
+            {
+                var usuario = await _context.Usuarios.FindAsync(userId);
+
+                if (usuario == null)
+                {
+                    return (false, "Usuário não encontrado");
+                }
+
+                if (usuario.Status != StatusUsuario.AguardandoAprovacao)
+                {
+                    return (false, "Usuário não está aguardando aprovação");
+                }
+
+                // Aprova usuário
+                usuario.Status = StatusUsuario.Aprovado;
+                usuario.Ativo = true;
+                usuario.DataExpiracao = dataExpiracao;
+
+                await _context.SaveChangesAsync();
+
+                // Envia email de aprovação
+                await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+
+                _logger.LogInformation($"Usuário aprovado: {usuario.Email}");
+
+                return (true, "Usuário aprovado com sucesso!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao aprovar usuário ID: {userId}");
+                return (false, "Erro ao aprovar usuário. Tente novamente.");
+            }
+        }
+
+        /// <summary>
+        /// Rejeita usuário (apenas admin)
+        /// Envia email de rejeição
+        /// </summary>
+        public async Task<(bool Success, string Message)> RejectUserAsync(int userId, string? motivo, EmailService emailService)
+        {
+            try
+            {
+                var usuario = await _context.Usuarios.FindAsync(userId);
+
+                if (usuario == null)
+                {
+                    return (false, "Usuário não encontrado");
+                }
+
+                if (usuario.Status != StatusUsuario.AguardandoAprovacao)
+                {
+                    return (false, "Usuário não está aguardando aprovação");
+                }
+
+                // Rejeita usuário
+                usuario.Status = StatusUsuario.Rejeitado;
+                usuario.Ativo = false;
+
+                await _context.SaveChangesAsync();
+
+                // Envia email de rejeição
+                await emailService.SendRejectionEmailAsync(usuario.Email, usuario.NomeCompleto, motivo);
+
+                _logger.LogInformation($"Usuário rejeitado: {usuario.Email}");
+
+                return (true, "Usuário rejeitado.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao rejeitar usuário ID: {userId}");
+                return (false, "Erro ao rejeitar usuário. Tente novamente.");
             }
         }
     }

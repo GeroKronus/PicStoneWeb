@@ -16,63 +16,24 @@ namespace PicStoneFotoAPI.Services
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly ILogger<FotoService> _logger;
+        private readonly ImageWatermarkService _watermarkService;
         private readonly string _uploadPath;
-        private readonly string _logoPath;
         private static readonly string[] PermittedExtensions = { ".jpg", ".jpeg", ".png" };
         private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
 
-        public FotoService(AppDbContext context, IConfiguration configuration, ILogger<FotoService> logger)
+        public FotoService(AppDbContext context, IConfiguration configuration, ILogger<FotoService> logger, ImageWatermarkService watermarkService)
         {
             _context = context;
             _configuration = configuration;
             _logger = logger;
+            _watermarkService = watermarkService;
             _uploadPath = _configuration["UPLOAD_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "uploads");
-            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "Cavaletes", "logoamarelo.png");
 
             // Cria diretório de upload se não existir
             if (!Directory.Exists(_uploadPath))
             {
                 Directory.CreateDirectory(_uploadPath);
                 _logger.LogInformation("Diretório de upload criado: {Path}", _uploadPath);
-            }
-        }
-
-        // Adiciona logo no canto inferior direito
-        private void AdicionarMarcaDagua(SKCanvas canvas, int canvasWidth, int canvasHeight)
-        {
-            if (!File.Exists(_logoPath))
-            {
-                _logger.LogWarning("Logo não encontrada em: {LogoPath}", _logoPath);
-                return;
-            }
-
-            try
-            {
-                using var streamLogo = File.OpenRead(_logoPath);
-                using var logo = SKBitmap.Decode(streamLogo);
-
-                if (logo == null)
-                {
-                    _logger.LogWarning("Não foi possível decodificar a logo");
-                    return;
-                }
-
-                // Usa tamanho original da logo (49x50 pixels)
-                int logoWidth = logo.Width;
-                int logoHeight = logo.Height;
-
-                // Posição: canto inferior direito com margem de 5px
-                int posX = canvasWidth - logoWidth - 5;
-                int posY = canvasHeight - logoHeight - 5;
-
-                // Desenha a logo sem redimensionar
-                canvas.DrawBitmap(logo, posX, posY);
-
-                _logger.LogInformation("Marca d'água adicionada em foto com legenda");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao adicionar marca d'água");
             }
         }
 
@@ -364,8 +325,8 @@ namespace PicStoneFotoAPI.Services
                 // Desenha o texto preto por cima
                 canvas.DrawText(legenda, x, y, paint);
 
-                // Adiciona marca d'água
-                AdicionarMarcaDagua(canvas, original.Width, original.Height);
+                // Adiciona marca d'água usando serviço centralizado
+                _watermarkService.AddWatermark(canvas, original.Width, original.Height);
 
                 _logger.LogInformation("Texto desenhado no canvas");
 

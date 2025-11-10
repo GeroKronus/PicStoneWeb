@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PicStoneFotoAPI.Data;
 using PicStoneFotoAPI.Models;
 using PicStoneFotoAPI.Services;
 
@@ -11,12 +14,25 @@ namespace PicStoneFotoAPI.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
+        private const string ADMIN_USERNAME = "rogerio@picstone.com.br";
+
         private readonly AuthService _authService;
+        private readonly EmailService _emailService;
+        private readonly HistoryService _historyService;
+        private readonly AppDbContext _context;
         private readonly ILogger<AuthController> _logger;
 
-        public AuthController(AuthService authService, ILogger<AuthController> logger)
+        public AuthController(
+            AuthService authService,
+            EmailService emailService,
+            HistoryService historyService,
+            AppDbContext context,
+            ILogger<AuthController> logger)
         {
             _authService = authService;
+            _emailService = emailService;
+            _historyService = historyService;
+            _context = context;
             _logger = logger;
         }
 
@@ -37,6 +53,13 @@ namespace PicStoneFotoAPI.Controllers
             if (response == null)
             {
                 return Unauthorized(new { mensagem = "Usuário ou senha inválidos" });
+            }
+
+            // Registra login no histórico
+            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == request.Username);
+            if (usuario != null)
+            {
+                await _historyService.RegistrarLoginAsync(usuario.Id);
             }
 
             return Ok(response);
@@ -228,7 +251,7 @@ namespace PicStoneFotoAPI.Controllers
             {
                 // Verifica se é admin
                 var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-                if (username != "admin")
+                if (username != ADMIN_USERNAME)
                 {
                     return Forbid();
                 }
@@ -264,7 +287,7 @@ namespace PicStoneFotoAPI.Controllers
             {
                 // Verifica se é admin
                 var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-                if (username != "admin")
+                if (username != ADMIN_USERNAME)
                 {
                     return Forbid();
                 }
@@ -290,7 +313,7 @@ namespace PicStoneFotoAPI.Controllers
             {
                 // Verifica se é admin
                 var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-                if (username != "admin")
+                if (username != ADMIN_USERNAME)
                 {
                     return Forbid();
                 }
@@ -316,31 +339,222 @@ namespace PicStoneFotoAPI.Controllers
         /// Reativa usuário (apenas admin)
         /// </summary>
         [HttpPut("users/{id}/reactivate")]
-        public async Task<IActionResult> ReactivateUser(int id)
+        public async Task<IActionResult> ReactivateUser(int id, [FromBody] ApproveUserRequest? request)
         {
             try
             {
                 // Verifica se é admin
                 var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-                if (username != "admin")
+                if (username != ADMIN_USERNAME)
                 {
                     return Forbid();
                 }
 
-                var sucesso = await _authService.ReactivateUserAsync(id);
+                var dataExpiracao = request?.DataExpiracao;
 
-                if (!sucesso)
+                var (success, message) = await _authService.ReactivateUserAsync(id, dataExpiracao, _emailService);
+
+                if (!success)
                 {
-                    return BadRequest(new { mensagem = "Não foi possível reativar usuário" });
+                    return BadRequest(new { mensagem = message });
                 }
 
-                return Ok(new { mensagem = "Usuário reativado com sucesso" });
+                return Ok(new { mensagem = message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao reativar usuário");
+                _logger.LogError(ex, $"Erro ao reativar usuário {id}");
                 return StatusCode(500, new { mensagem = "Erro ao reativar usuário" });
             }
         }
+
+        // ========== CADASTRO PÚBLICO E VERIFICAÇÃO ==========
+
+        /// <summary>
+        /// POST /api/auth/register
+        /// Cadastro público de novo usuário
+        /// Envia email de verificação
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                // Captura o endereço base do request para usar nos emails
+                var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+                var (success, message, user) = await _authService.RegisterUserAsync(request, _emailService, baseUrl);
+
+                if (!success)
+                {
+                    return BadRequest(new { mensagem = message });
+                }
+
+                _logger.LogInformation($"Novo cadastro: {request.Email}");
+
+                return Ok(new
+                {
+                    mensagem = message,
+                    usuario = new
+                    {
+                        id = user!.Id,
+                        email = user.Email,
+                        nomeCompleto = user.NomeCompleto,
+                        status = user.Status.ToString()
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro no cadastro");
+                return StatusCode(500, new { mensagem = "Erro ao realizar cadastro" });
+            }
+        }
+
+        /// <summary>
+        /// GET /api/auth/verify
+        /// Verifica email com token enviado por email
+        /// Processa a verificação e redireciona para a página principal
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("verify")]
+        public async Task<IActionResult> VerifyEmail([FromQuery] string token)
+        {
+            try
+            {
+                // Processa a verificação do email no backend
+                var (success, message) = await _authService.VerifyEmailAsync(token, _emailService);
+
+                // Redireciona para a página principal com resultado
+                if (success)
+                {
+                    return Redirect($"/?verified=success&message={Uri.EscapeDataString(message)}");
+                }
+                else
+                {
+                    return Redirect($"/?verified=error&message={Uri.EscapeDataString(message)}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao verificar email");
+                return Redirect($"/?verified=error&message={Uri.EscapeDataString("Erro ao verificar email")}");
+            }
+        }
+
+        // ========== GESTÃO DE SOLICITAÇÕES (ADMIN) ==========
+
+        /// <summary>
+        /// GET /api/auth/pending-users
+        /// Lista usuários aguardando aprovação (apenas admin)
+        /// </summary>
+        [HttpGet("pending-users")]
+        public async Task<IActionResult> ListPendingUsers()
+        {
+            try
+            {
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != ADMIN_USERNAME)
+                {
+                    return Forbid();
+                }
+
+                var usuarios = await _authService.ListPendingUsersAsync();
+                return Ok(usuarios);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao listar usuários pendentes");
+                return StatusCode(500, new { mensagem = "Erro ao listar usuários" });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/auth/approve-user/{id}
+        /// Aprova usuário (apenas admin)
+        /// </summary>
+        [HttpPost("approve-user/{id}")]
+        public async Task<IActionResult> ApproveUser(int id, [FromBody] ApproveUserRequest? request)
+        {
+            try
+            {
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != ADMIN_USERNAME)
+                {
+                    return Forbid();
+                }
+
+                var dataExpiracao = request?.DataExpiracao;
+
+                var (success, message) = await _authService.ApproveUserAsync(id, dataExpiracao, _emailService);
+
+                if (!success)
+                {
+                    return BadRequest(new { mensagem = message });
+                }
+
+                return Ok(new { mensagem = message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao aprovar usuário {id}");
+                return StatusCode(500, new { mensagem = "Erro ao aprovar usuário" });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/auth/reject-user/{id}
+        /// Rejeita usuário (apenas admin)
+        /// </summary>
+        [HttpPost("reject-user/{id}")]
+        public async Task<IActionResult> RejectUser(int id, [FromBody] RejectUserRequest? request)
+        {
+            try
+            {
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != ADMIN_USERNAME)
+                {
+                    return Forbid();
+                }
+
+                var motivo = request?.Motivo;
+
+                var (success, message) = await _authService.RejectUserAsync(id, motivo, _emailService);
+
+                if (!success)
+                {
+                    return BadRequest(new { mensagem = message });
+                }
+
+                return Ok(new { mensagem = message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao rejeitar usuário {id}");
+                return StatusCode(500, new { mensagem = "Erro ao rejeitar usuário" });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Request para aprovar usuário com data de expiração opcional
+    /// </summary>
+    public class ApproveUserRequest
+    {
+        public DateTime? DataExpiracao { get; set; }
+    }
+
+    /// <summary>
+    /// Request para rejeitar usuário com motivo opcional
+    /// </summary>
+    public class RejectUserRequest
+    {
+        public string? Motivo { get; set; }
     }
 }

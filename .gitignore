@@ -60,3 +60,23 @@ PRONTO-*.txt
 
 # System files
 nul
+
+# Temporary files
+*.backup
+*.bak
+*_temp.*
+cookies*.txt
+
+# Test scripts
+test_*.py
+test_*.html
+check_*.py
+create_*.py
+update_*.py
+migrate_*.py
+*.csx
+HashGenerator/
+
+# Reports
+*-report.md
+VERIFICATION_REPORT.md

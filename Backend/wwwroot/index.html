@@ -3,37 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PicStone Mobile - Captura de Fotos</title>
+    <title>PicStone® mobile</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20251109230000">
 </head>
 <body>
-    <!-- Tela de Login -->
+    <!-- Tela de Login/Cadastro -->
     <div id="loginScreen" class="screen active">
         <div class="container">
             <div class="logo-container">
                 <img src="images/logo.png" alt="PicStone Mobile" class="logo-image">
-                <p class="app-description">Sistema de Captura de Fotos</p>
             </div>
 
-            <form id="loginForm" class="form-card">
+            <!-- Abas de Navegação -->
+            <div class="auth-tabs">
+                <button id="loginTab" class="auth-tab active">Entrar</button>
+                <button id="registerTab" class="auth-tab">Criar Conta</button>
+            </div>
+
+            <!-- Formulário de Login -->
+            <form id="loginForm" class="form-card auth-form active">
                 <div class="form-group">
-                    <label for="username">Usuário</label>
-                    <input type="text" id="username" name="username" required autocomplete="username">
+                    <label for="username">Email</label>
+                    <input type="email" id="username" name="username" required autocomplete="email" placeholder="rogerio@isidorio.com.br">
                 </div>
 
                 <div class="form-group">
                     <label for="password">Senha</label>
-                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                    <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••">
                 </div>
 
-                <button type="submit" class="btn btn-primary">Entrar</button>
+                <button type="submit" class="btn btn-primary btn-full">Entrar</button>
 
                 <div id="loginError" class="error-message hidden"></div>
             </form>
 
-            <div class="info-text">
-                <small>Usuário padrão: admin / admin123</small>
+            <!-- Formulário de Cadastro -->
+            <form id="registerForm" class="form-card auth-form">
+                <div class="form-group">
+                    <label for="registerNomeCompleto">Nome Completo *</label>
+                    <input type="text" id="registerNomeCompleto" name="nomeCompleto" required minlength="3" placeholder="Ex: João Silva">
+                </div>
+
+                <div class="form-group">
+                    <label for="registerEmail">Email *</label>
+                    <input type="email" id="registerEmail" name="email" required placeholder="seu.email@exemplo.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="registerSenha">Senha * (mínimo 6 caracteres)</label>
+                    <input type="password" id="registerSenha" name="senha" required minlength="6" placeholder="••••••">
+                </div>
+
+                <div class="form-group">
+                    <label for="registerConfirmarSenha">Confirmar Senha *</label>
+                    <input type="password" id="registerConfirmarSenha" name="confirmarSenha" required minlength="6" placeholder="••••••">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full">Criar Conta</button>
+
+                <div id="registerMessage" class="message hidden"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tela de Verificação de Email -->
+    <div id="emailVerificationScreen" class="screen">
+        <div class="container">
+            <div class="verification-card">
+                <div id="verificationIcon" class="verification-icon">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <h1 id="verificationTitle">Verificando...</h1>
+                <p id="verificationMessage" class="verification-message">Aguarde enquanto verificamos seu email.</p>
+                <div id="verificationActions" class="verification-actions hidden">
+                    <button id="goToLoginFromVerification" class="btn btn-primary">Ir para Login</button>
+                </div>
             </div>
         </div>
     </div>
@@ -80,6 +128,19 @@
                                 </svg>
                                 Gerenciar Usuários
                             </button>
+                            <button id="pendingUsersBtn" class="dropdown-item hidden">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                Solicitações Pendentes
+                            </button>
+                            <button id="historyBtn" class="dropdown-item hidden">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Histórico de Uso
+                            </button>
                             <div class="dropdown-divider"></div>
                             <button id="logoutBtn" class="dropdown-item danger">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -101,18 +162,20 @@
                         <img src="icon-ambientes.png" alt="Ambientes">
                     </div>
                     <h2>Ambientes</h2>
-                    <button class="btn btn-primary">Acessar</button>
+                </div>
+
+                <div class="option-card" id="bookmatchCard">
+                    <div class="option-icon-image">
+                        <img src="images/Thumb_bookmatch.jpg" alt="BookMatch">
+                    </div>
+                    <h2>BookMatch</h2>
                 </div>
 
                 <div class="option-card" id="integracaoCard">
                     <div class="option-icon">🔗</div>
                     <h2>Integração</h2>
-                    <button class="btn btn-primary">Acessar</button>
                 </div>
             </div>
-
-            <!-- Botão de Histórico -->
-            <button id="historyBtn" class="btn btn-secondary">📋 Ver Histórico</button>
         </div>
     </div>
 
@@ -129,6 +192,9 @@
                 <div class="image-container">
                     <img id="previewImageIntegracao" src="" alt="Preview">
                     <canvas id="cropOverlayIntegracao" class="crop-overlay hidden"></canvas>
+                    <div id="cropIndicatorIntegracao" class="crop-indicator hidden">
+                        <p>👆 Arraste para selecionar a área</p>
+                    </div>
                 </div>
                 <button id="clearPhotoBtnIntegracao" class="btn-clear">✕</button>
                 <button id="resetImageBtnIntegracao" class="btn-reset-icon hidden" title="Voltar à Original">↩️</button>
@@ -188,6 +254,103 @@
         </div>
     </div>
 
+    <!-- Tela de BookMatch -->
+    <div id="bookmatchScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backToMainFromBookmatchBtn" class="btn-icon">← Voltar</button>
+                <h1>BookMatch</h1>
+            </div>
+
+            <!-- Preview da Foto -->
+            <div id="photoPreviewBookmatch" class="photo-preview hidden">
+                <div class="image-container">
+                    <img id="previewImageBookmatch" src="" alt="Preview">
+                    <canvas id="cropOverlayBookmatch" class="crop-overlay hidden"></canvas>
+                    <div id="cropIndicatorBookmatch" class="crop-indicator hidden">
+                        ✂️ Selecione a área para recortar
+                    </div>
+                </div>
+                <button id="clearPhotoBtnBookmatch" class="btn-clear">✕</button>
+                <button id="resetImageBtnBookmatch" class="btn-reset-icon hidden" title="Voltar à Original">↩️</button>
+                <button id="adjustImageBtnBookmatch" class="btn-crop-icon" title="Ajustar Imagem">✂️</button>
+            </div>
+
+            <!-- Botão de Captura -->
+            <div id="captureSectionBookmatch" class="capture-section">
+                <input type="file" id="fileInputBookmatch" accept="image/*" hidden>
+                <button id="captureBtnBookmatch" class="btn btn-capture">
+                    <span class="camera-icon">📷</span>
+                    Escolher/Tirar Foto
+                </button>
+            </div>
+
+            <!-- Opções do BookMatch -->
+            <div id="bookmatchOptions" class="bookmatch-options hidden">
+                <h3>Opções de Geração:</h3>
+                <div class="form-group">
+                    <label for="targetWidth">Largura do Tile (px):</label>
+                    <input type="number" id="targetWidth" value="800" min="200" max="2000">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="addSeparatorLines">
+                        Adicionar linhas separadoras
+                    </label>
+                </div>
+                <button id="generateBookmatchBtn" class="btn btn-primary">Gerar BookMatch</button>
+            </div>
+
+            <!-- Resultados do BookMatch -->
+            <div id="bookmatchResults" class="bookmatch-results hidden">
+                <h3>Resultados:</h3>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <h4>Mosaico 3x3</h4>
+                        <img id="mosaicImage" src="" alt="Mosaico">
+                        <div class="result-actions">
+                            <button onclick="downloadBookmatchImage('mosaic')" class="btn-action">⬇ Baixar</button>
+                            <button onclick="shareBookmatchImage('mosaic')" class="btn-action">📤 Compartilhar</button>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <h4>Quadrante 1</h4>
+                        <img id="quadrant1Image" src="" alt="Quadrante 1">
+                        <div class="result-actions">
+                            <button onclick="downloadBookmatchImage('quad1')" class="btn-action">⬇ Baixar</button>
+                            <button onclick="shareBookmatchImage('quad1')" class="btn-action">📤 Compartilhar</button>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <h4>Quadrante 2</h4>
+                        <img id="quadrant2Image" src="" alt="Quadrante 2">
+                        <div class="result-actions">
+                            <button onclick="downloadBookmatchImage('quad2')" class="btn-action">⬇ Baixar</button>
+                            <button onclick="shareBookmatchImage('quad2')" class="btn-action">📤 Compartilhar</button>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <h4>Quadrante 3</h4>
+                        <img id="quadrant3Image" src="" alt="Quadrante 3">
+                        <div class="result-actions">
+                            <button onclick="downloadBookmatchImage('quad3')" class="btn-action">⬇ Baixar</button>
+                            <button onclick="shareBookmatchImage('quad3')" class="btn-action">📤 Compartilhar</button>
+                        </div>
+                    </div>
+                    <div class="result-item">
+                        <h4>Quadrante 4</h4>
+                        <img id="quadrant4Image" src="" alt="Quadrante 4">
+                        <div class="result-actions">
+                            <button onclick="downloadBookmatchImage('quad4')" class="btn-action">⬇ Baixar</button>
+                            <button onclick="shareBookmatchImage('quad4')" class="btn-action">📤 Compartilhar</button>
+                        </div>
+                    </div>
+                </div>
+                <button id="newBookmatchBtn" class="btn btn-secondary">Novo BookMatch</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Tela de Ambientes - Seleção de Imagem -->
     <div id="ambientesScreen" class="screen">
         <div class="container">
@@ -198,16 +361,24 @@
 
             <!-- Preview da Foto -->
             <div id="photoPreviewAmbientes" class="photo-preview hidden">
-                <img id="previewImageAmbientes" src="" alt="Preview">
+                <div class="image-container">
+                    <img id="previewImageAmbientes" src="" alt="Preview">
+                    <canvas id="cropOverlayAmbientes" class="crop-overlay hidden"></canvas>
+                    <div id="cropIndicatorAmbientes" class="crop-indicator hidden">
+                        ✂️ Selecione a área para recortar
+                    </div>
+                </div>
                 <button id="clearPhotoBtnAmbientes" class="btn-clear">✕</button>
+                <button id="resetImageBtnAmbientes" class="btn-reset-icon hidden" title="Voltar à Original">↩️</button>
+                <button id="adjustImageBtnAmbientes" class="btn-crop-icon" title="Ajustar Imagem">✂️</button>
             </div>
 
             <!-- Botão de Captura -->
-            <div class="capture-section">
+            <div id="captureSectionAmbientes" class="capture-section">
                 <input type="file" id="fileInputAmbientes" accept="image/*" hidden>
                 <button id="captureBtnAmbientes" class="btn btn-capture">
                     <span class="camera-icon">📷</span>
-                    Escolher Imagem
+                    Escolher/Tirar Foto
                 </button>
             </div>
 
@@ -442,15 +613,123 @@
     </div>
 
     <!-- Tela de Histórico -->
+    <!-- Tela de Histórico de Uso (Admin) -->
     <div id="historyScreen" class="screen">
         <div class="container">
             <div class="header">
-                <button id="backBtn" class="btn-icon">← Voltar</button>
-                <h1>Histórico de Fotos</h1>
+                <button id="backFromHistoryBtn" class="btn-icon">← Voltar</button>
+                <h1>Histórico de Uso</h1>
             </div>
 
-            <div id="historyList" class="history-list">
-                <p class="loading">Carregando...</p>
+            <!-- Abas para alternar entre visualizações -->
+            <div class="history-tabs">
+                <button id="allUsersTab" class="history-tab active">Todos os Usuários</button>
+                <button id="myHistoryTab" class="history-tab">Meu Histórico</button>
+            </div>
+
+            <!-- Lista de Todos os Usuários (Admin) -->
+            <div id="allUsersView" class="history-view active">
+                <!-- Campo de Busca -->
+                <div class="search-box">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" id="searchUsersInput" class="search-input" placeholder="Buscar por nome ou email...">
+                </div>
+
+                <!-- Botões de Visualização -->
+                <div class="view-toggle-container">
+                    <button id="cardViewBtn" class="view-toggle-btn active">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                        </svg>
+                        Cards
+                    </button>
+                    <button id="tableViewBtn" class="view-toggle-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        Tabela
+                    </button>
+                </div>
+
+                <div id="usersStatsList" class="users-stats-list">
+                    <p class="loading">Carregando estatísticas...</p>
+                </div>
+
+                <!-- Visualização em Tabela -->
+                <div id="usersStatsTable" class="users-stats-table hidden">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Email</th>
+                                    <th>Total Logins</th>
+                                    <th>Ambientes</th>
+                                    <th>Primeiro Acesso</th>
+                                    <th>Último Acesso</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <tr>
+                                    <td colspan="7" class="loading">Carregando estatísticas...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <!-- Meu Histórico (Usuário comum) -->
+            <div id="myHistoryView" class="history-view">
+                <!-- Estatísticas do Usuário -->
+                <div id="myStatsCard" class="stats-card">
+                    <h3>Minhas Estatísticas</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="myTotalLogins">-</div>
+                            <div class="stat-label">Total de Logins</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="myTotalAmbientes">-</div>
+                            <div class="stat-label">Ambientes Gerados</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="myFirstAccess">-</div>
+                            <div class="stat-label">Primeiro Acesso</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="myLastAccess">-</div>
+                            <div class="stat-label">Último Acesso</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Abas de Histórico -->
+                <div class="sub-tabs">
+                    <button id="myLoginsTabBtn" class="sub-tab active">Logins</button>
+                    <button id="myAmbientesTabBtn" class="sub-tab">Ambientes</button>
+                </div>
+
+                <!-- Lista de Logins -->
+                <div id="myLoginsList" class="history-list active">
+                    <p class="loading">Carregando logins...</p>
+                </div>
+
+                <!-- Lista de Ambientes -->
+                <div id="myAmbientesList" class="history-list">
+                    <p class="loading">Carregando ambientes...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -517,8 +796,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="newUsername">Nome de Usuário</label>
-                    <input type="text" id="newUsername" name="newUsername" required minlength="3" placeholder="Ex: joao">
+                    <label for="newUsername">E-mail do Usuário</label>
+                    <input type="email" id="newUsername" name="newUsername" required placeholder="Ex: joao@example.com">
                 </div>
 
                 <div class="form-group">
@@ -526,10 +805,119 @@
                     <input type="text" id="newNomeCompleto" name="newNomeCompleto" required placeholder="Ex: João Silva">
                 </div>
 
+                <div class="form-group">
+                    <label for="newUserExpiracao">Data de Expiração (opcional)</label>
+                    <input type="datetime-local" id="newUserExpiracao" name="newUserExpiracao">
+                    <small style="color: #6b7280; display: block; margin-top: 5px;">
+                        Deixe em branco para acesso ilimitado
+                    </small>
+                </div>
+
                 <button type="submit" class="btn btn-primary">Criar Usuário</button>
 
                 <div id="addUserMessage" class="message hidden"></div>
             </form>
+        </div>
+    </div>
+
+    <!-- Tela de Solicitações Pendentes (Apenas Admin) -->
+    <div id="pendingUsersScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backFromPendingBtn" class="btn-icon">← Voltar</button>
+                <h1>Solicitações Pendentes</h1>
+            </div>
+
+            <div class="info-box">
+                <p><strong>⏳ Usuários Aguardando Aprovação</strong></p>
+                <p>Usuários que confirmaram o email e aguardam sua aprovação para ter acesso à plataforma.</p>
+            </div>
+
+            <div id="pendingUsersList" class="users-list">
+                <p class="loading">Carregando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Aprovação -->
+    <div id="approveModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Aprovar Usuário</h2>
+            <p id="approveUserName"></p>
+
+            <div class="form-group">
+                <label for="dataExpiracao">Data de Expiração (opcional)</label>
+                <input type="datetime-local" id="dataExpiracao" name="dataExpiracao">
+                <small style="color: #6b7280; display: block; margin-top: 5px;">
+                    Deixe em branco para acesso ilimitado
+                </small>
+            </div>
+
+            <div class="modal-actions">
+                <button id="confirmApproveBtn" class="btn btn-primary">✅ Aprovar</button>
+                <button id="cancelApproveBtn" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Rejeição -->
+    <div id="rejectModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Rejeitar Usuário</h2>
+            <p id="rejectUserName"></p>
+
+            <div class="form-group">
+                <label for="motivoRejeicao">Motivo (opcional)</label>
+                <textarea id="motivoRejeicao" name="motivoRejeicao" rows="3" placeholder="Ex: Dados incompletos, email inválido..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button id="confirmRejectBtn" class="btn btn-danger">❌ Rejeitar</button>
+                <button id="cancelRejectBtn" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Reativação -->
+    <div id="reactivateModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Reativar Usuário</h2>
+            <p id="reactivateUserName"></p>
+
+            <div class="form-group">
+                <label for="dataExpiracaoReativar">Data de Expiração (opcional)</label>
+                <input type="datetime-local" id="dataExpiracaoReativar" name="dataExpiracaoReativar">
+                <small style="color: #6b7280; display: block; margin-top: 5px;">
+                    Deixe em branco para acesso ilimitado
+                </small>
+            </div>
+
+            <div class="modal-actions">
+                <button id="confirmReactivateBtn" class="btn btn-primary">✅ Reativar</button>
+                <button id="cancelReactivateBtn" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Verificação de Email -->
+    <div id="emailVerificationModal" class="modal hidden">
+        <div class="modal-content email-verification-modal">
+            <div class="modal-logo-container">
+                <img src="images/logo.png" alt="PicStone Mobile" class="modal-logo">
+            </div>
+            <h2 class="modal-title">Bem-vindo ao PicStone Mobile!</h2>
+            <p class="modal-message">Sua conta foi criada com sucesso.</p>
+            <div class="modal-highlight">
+                <svg class="modal-icon-inline" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <strong>Confirme seu email para começar</strong>
+            </div>
+            <p class="modal-submessage">
+                Enviamos um link de verificação para o seu email. Clique no link para ativar sua conta e começar a usar o PicStone Mobile.
+            </p>
+            <button id="closeEmailModalBtn" class="btn btn-primary btn-full">Entendi</button>
         </div>
     </div>
 
@@ -542,6 +930,8 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=20251110100000"></script>
+    <script src="bookmatch.js?v=20251108190000"></script>
+    <script src="history.js?v=20251109230000"></script>
 </body>
 </html>

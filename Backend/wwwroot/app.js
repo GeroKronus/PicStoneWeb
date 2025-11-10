@@ -38,6 +38,15 @@ const state = {
         endY: 0,
         originalImageSrc: null,
         canvasRect: null
+    },
+    // Estado compartilhado de imagem entre todos os cards
+    sharedImageState: {
+        originalImage: null,      // Base64 da imagem original
+        currentImage: null,       // Base64 da imagem atual (pode ter crop)
+        fileName: null,           // Nome do arquivo
+        file: null,               // File object
+        lastUpdated: null,        // Timestamp
+        source: null              // 'integracao', 'ambientes', ou 'bookmatch'
     }
 };
 
@@ -53,6 +62,10 @@ const elements = {
     ambienteResultScreen: document.getElementById('ambienteResultScreen'),
     loginForm: document.getElementById('loginForm'),
     loginError: document.getElementById('loginError'),
+    loginTab: document.getElementById('loginTab'),
+    registerTab: document.getElementById('registerTab'),
+    registerForm: document.getElementById('registerForm'),
+    registerMessage: document.getElementById('registerMessage'),
     // Botões principais
     integracaoCard: document.getElementById('integracaoCard'),
     ambientesCard: document.getElementById('ambientesCard'),
@@ -65,6 +78,7 @@ const elements = {
     adjustImageBtnIntegracao: document.getElementById('adjustImageBtnIntegracao'),
     resetImageBtnIntegracao: document.getElementById('resetImageBtnIntegracao'),
     cropOverlayIntegracao: document.getElementById('cropOverlayIntegracao'),
+    cropIndicatorIntegracao: document.getElementById('cropIndicatorIntegracao'),
     backToMainFromIntegracaoBtn: document.getElementById('backToMainFromIntegracaoBtn'),
     // Ambientes
     captureBtnAmbientes: document.getElementById('captureBtnAmbientes'),
@@ -72,6 +86,11 @@ const elements = {
     photoPreviewAmbientes: document.getElementById('photoPreviewAmbientes'),
     previewImageAmbientes: document.getElementById('previewImageAmbientes'),
     clearPhotoBtnAmbientes: document.getElementById('clearPhotoBtnAmbientes'),
+    adjustImageBtnAmbientes: document.getElementById('adjustImageBtnAmbientes'),
+    resetImageBtnAmbientes: document.getElementById('resetImageBtnAmbientes'),
+    cropOverlayAmbientes: document.getElementById('cropOverlayAmbientes'),
+    cropIndicatorAmbientes: document.getElementById('cropIndicatorAmbientes'),
+    captureSectionAmbientes: document.getElementById('captureSectionAmbientes'),
     backToMainFromAmbientesBtn: document.getElementById('backToMainFromAmbientesBtn'),
     ambienteOptions: document.getElementById('ambienteOptions'),
     // Formulário (apenas na Integração)
@@ -212,6 +231,82 @@ function iniciarVerificacaoToken() {
     }
 }
 
+// ========== GERENCIAMENTO DE IMAGEM COMPARTILHADA ==========
+
+/**
+ * Salva imagem no estado compartilhado
+ * @param {string} originalImage - Base64 da imagem original
+ * @param {string} currentImage - Base64 da imagem atual (pode ter crop)
+ * @param {string} fileName - Nome do arquivo
+ * @param {File} file - Objeto File
+ * @param {string} source - Origem ('integracao', 'ambientes', 'bookmatch')
+ */
+function saveSharedImage(originalImage, currentImage, fileName, file, source) {
+    state.sharedImageState = {
+        originalImage: originalImage,
+        currentImage: currentImage,
+        fileName: fileName,
+        file: file,
+        lastUpdated: Date.now(),
+        source: source
+    };
+    console.log(`📸 SAVE: Imagem salva no estado compartilhado (origem: ${source})`, {
+        hasOriginal: !!originalImage,
+        hasCurrent: !!currentImage,
+        fileName: fileName
+    });
+}
+
+/**
+ * Carrega imagem do estado compartilhado para o card atual
+ * @param {string} targetCard - Card de destino ('integracao', 'ambientes', 'bookmatch')
+ * @returns {object|null} Objeto com os dados da imagem ou null se não houver
+ */
+function loadSharedImage(targetCard) {
+    if (!state.sharedImageState.originalImage) {
+        console.log(`⚠️ LOAD: Nenhuma imagem compartilhada disponível para ${targetCard}`);
+        return null;
+    }
+
+    console.log(`📸 LOAD: Carregando imagem para ${targetCard} (origem: ${state.sharedImageState.source})`, {
+        hasOriginal: !!state.sharedImageState.originalImage,
+        hasCurrent: !!state.sharedImageState.currentImage,
+        fileName: state.sharedImageState.fileName
+    });
+    return {
+        originalImage: state.sharedImageState.originalImage,
+        currentImage: state.sharedImageState.currentImage,
+        fileName: state.sharedImageState.fileName,
+        file: state.sharedImageState.file
+    };
+}
+
+/**
+ * Verifica se existe imagem compartilhada disponível
+ * @returns {boolean}
+ */
+function hasSharedImage() {
+    return state.sharedImageState.originalImage !== null;
+}
+
+/**
+ * Limpa o estado compartilhado de imagem
+ */
+function clearSharedImage() {
+    console.log('🗑️ CLEAR: Limpando estado compartilhado de imagem', {
+        tinha: !!state.sharedImageState.originalImage,
+        source: state.sharedImageState.source
+    });
+    state.sharedImageState = {
+        originalImage: null,
+        currentImage: null,
+        fileName: null,
+        file: null,
+        lastUpdated: null,
+        source: null
+    };
+}
+
 // ========== INICIALIZAÇÃO ==========
 document.addEventListener('DOMContentLoaded', () => {
     if (state.token) {
@@ -227,6 +322,41 @@ document.addEventListener('DOMContentLoaded', () => {
 // ========== EVENT LISTENERS ==========
 function setupEventListeners() {
     elements.loginForm.addEventListener('submit', handleLogin);
+    elements.registerForm.addEventListener('submit', handleRegister);
+
+    // Tab switching
+    elements.loginTab.addEventListener('click', () => {
+        elements.loginTab.classList.add('active');
+        elements.registerTab.classList.remove('active');
+        elements.loginForm.classList.add('active');
+        elements.registerForm.classList.remove('active');
+    });
+
+    elements.registerTab.addEventListener('click', () => {
+        elements.registerTab.classList.add('active');
+        elements.loginTab.classList.remove('active');
+        elements.registerForm.classList.add('active');
+        elements.loginForm.classList.remove('active');
+    });
+
+    // Modal de verificação de email
+    const closeEmailModalBtn = document.getElementById('closeEmailModalBtn');
+    const emailVerificationModal = document.getElementById('emailVerificationModal');
+    if (closeEmailModalBtn && emailVerificationModal) {
+        closeEmailModalBtn.addEventListener('click', () => {
+            emailVerificationModal.classList.add('hidden');
+            // Volta para a aba de login
+            elements.loginTab.click();
+        });
+
+        // Fechar modal clicando fora do conteúdo
+        emailVerificationModal.addEventListener('click', (e) => {
+            if (e.target === emailVerificationModal) {
+                emailVerificationModal.classList.add('hidden');
+                elements.loginTab.click();
+            }
+        });
+    }
 
     // Navegação principal
     elements.integracaoCard.addEventListener('click', showIntegracaoScreen);
@@ -251,6 +381,19 @@ function setupEventListeners() {
     elements.fileInputAmbientes.addEventListener('change', handleFileSelectAmbientes);
     elements.fileInputAmbientes.addEventListener('input', handleFileSelectAmbientes);
     elements.clearPhotoBtnAmbientes.addEventListener('click', clearPhotoAmbientes);
+
+    // Crop de Ambientes
+    if (elements.adjustImageBtnAmbientes) {
+        elements.adjustImageBtnAmbientes.addEventListener('click', ativarCropOverlayAmbientes);
+    }
+    if (elements.resetImageBtnAmbientes) {
+        elements.resetImageBtnAmbientes.addEventListener('click', resetarParaOriginalAmbientes);
+    }
+    // Event listeners para crop de Ambientes (no canvas)
+    if (elements.cropOverlayAmbientes) {
+        elements.cropOverlayAmbientes.addEventListener('mousedown', iniciarSelecaoCrop);
+        elements.cropOverlayAmbientes.addEventListener('touchstart', iniciarSelecaoCropTouch, { passive: false });
+    }
 
     // Formulário de upload (só na Integração)
     elements.uploadForm.addEventListener('submit', handleUpload);
@@ -332,6 +475,10 @@ function setupEventListeners() {
         elements.userMenuDropdown.classList.add('hidden');
         showUsersScreen();
     });
+    elements.historyBtn.addEventListener('click', () => {
+        elements.userMenuDropdown.classList.add('hidden');
+        showHistoryScreen();
+    });
     elements.backFromPasswordBtn.addEventListener('click', showMainScreen);
     elements.backFromUsersBtn.addEventListener('click', showMainScreen);
     elements.backFromAddUserBtn.addEventListener('click', showUsersScreen);
@@ -346,9 +493,15 @@ function setupEventListeners() {
             await deactivateUser(userId);
         } else if (e.target.classList.contains('btn-reactivate-user')) {
             const userId = e.target.dataset.userId;
-            await reactivateUser(userId);
+            const userName = e.target.dataset.userName;
+            await reactivateUser(userId, userName);
         }
     });
+
+    // Inicializa módulo de histórico se disponível
+    if (typeof initHistory === 'function') {
+        initHistory();
+    }
 }
 
 // ========== AUTENTICAÇÃO ==========
@@ -383,6 +536,53 @@ async function handleLogin(e) {
     } catch (error) {
         elements.loginError.textContent = error.message;
         elements.loginError.classList.remove('hidden');
+    }
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+
+    const nomeCompleto = document.getElementById('registerNomeCompleto').value;
+    const email = document.getElementById('registerEmail').value;
+    const senha = document.getElementById('registerSenha').value;
+    const confirmarSenha = document.getElementById('registerConfirmarSenha').value;
+
+    // Validação de senhas
+    if (senha !== confirmarSenha) {
+        elements.registerMessage.textContent = 'As senhas não coincidem';
+        elements.registerMessage.classList.remove('hidden', 'success');
+        elements.registerMessage.classList.add('error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nomeCompleto, email, senha })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Erro ao criar conta');
+        }
+
+        const data = await response.json();
+
+        // Limpar formulário
+        elements.registerForm.reset();
+
+        // Esconder mensagem antiga (se estiver visível)
+        elements.registerMessage.classList.add('hidden');
+
+        // Mostrar modal de sucesso
+        const modal = document.getElementById('emailVerificationModal');
+        modal.classList.remove('hidden');
+
+    } catch (error) {
+        elements.registerMessage.textContent = error.message;
+        elements.registerMessage.classList.remove('hidden', 'success');
+        elements.registerMessage.classList.add('error');
     }
 }
 
@@ -442,11 +642,19 @@ async function showMainScreen() {
     elements.userInitials.textContent = initials;
 
     // Mostra botão de gerenciar usuários apenas para admin
-    if (state.username === 'admin') {
-        elements.manageUsersBtn.classList.remove('hidden');
+    if (state.username === 'rogerio@picstone.com.br') {
+        if (elements.manageUsersBtn) elements.manageUsersBtn.classList.remove('hidden');
+        if (elements.pendingUsersBtn) elements.pendingUsersBtn.classList.remove('hidden');
+        // Salva no localStorage para uso no history.js
+        localStorage.setItem('isAdmin', 'true');
     } else {
-        elements.manageUsersBtn.classList.add('hidden');
+        if (elements.manageUsersBtn) elements.manageUsersBtn.classList.add('hidden');
+        if (elements.pendingUsersBtn) elements.pendingUsersBtn.classList.add('hidden');
+        localStorage.setItem('isAdmin', 'false');
     }
+
+    // Mostra botão de histórico para todos os usuários
+    if (elements.historyBtn) elements.historyBtn.classList.remove('hidden');
 
     await loadMaterials();
 }
@@ -471,7 +679,7 @@ function showChangePasswordScreen() {
 }
 
 async function showUsersScreen() {
-    if (state.username !== 'admin') {
+    if (state.username !== 'rogerio@picstone.com.br') {
         alert('Acesso negado. Apenas admin pode gerenciar usuários.');
         return;
     }
@@ -486,13 +694,53 @@ function showAddUserScreen() {
 }
 
 function showIntegracaoScreen() {
+    console.log('🔄 SHOW: Abrindo tela Integração', { hasSharedImage: hasSharedImage() });
     showScreen(elements.integracaoScreen);
-    clearPhotoIntegracao();
+
+    // Carrega automaticamente imagem compartilhada se existir
+    if (hasSharedImage()) {
+        console.log('✅ SHOW: Tem imagem compartilhada em Integração, vou carregar...');
+        const sharedImage = loadSharedImage('integracao');
+        if (sharedImage) {
+            state.originalPhoto = new Image();
+            state.originalPhoto.src = sharedImage.originalImage;
+            state.currentPhotoFile = sharedImage.file;
+            elements.previewImageIntegracao.src = sharedImage.currentImage;
+            elements.photoPreviewIntegracao.classList.remove('hidden');
+            elements.submitBtn.disabled = false;
+            console.log('✅ SHOW: Imagem compartilhada carregada em Integração');
+        }
+    } else {
+        console.log('❌ SHOW: Não tem imagem compartilhada em Integração, vou limpar...');
+        clearPhotoIntegracao();
+    }
 }
 
 function showAmbientesScreen() {
+    console.log('🔄 SHOW: Abrindo tela Ambientes', { hasSharedImage: hasSharedImage() });
     showScreen(elements.ambientesScreen);
-    clearPhotoAmbientes();
+
+    // Carrega automaticamente imagem compartilhada se existir
+    if (hasSharedImage()) {
+        console.log('✅ SHOW: Tem imagem compartilhada, vou carregar...');
+        const sharedImage = loadSharedImage('ambientes');
+        if (sharedImage) {
+            state.originalPhoto = new Image();
+            state.originalPhoto.src = sharedImage.originalImage;
+            state.currentPhotoFile = sharedImage.file;
+            state.cropOverlayState.originalImageSrc = sharedImage.currentImage;
+            elements.previewImageAmbientes.src = sharedImage.currentImage;
+            elements.photoPreviewAmbientes.classList.remove('hidden');
+            if (elements.captureSectionAmbientes) {
+                elements.captureSectionAmbientes.classList.add('hidden');
+            }
+            elements.ambienteOptions.classList.remove('hidden');
+            console.log('✅ SHOW: Imagem compartilhada carregada em Ambientes');
+        }
+    } else {
+        console.log('❌ SHOW: Não tem imagem compartilhada, vou limpar card...');
+        clearPhotoAmbientes();
+    }
 }
 
 // ========== MATERIAIS ==========
@@ -624,6 +872,7 @@ function clearPhotoState() {
 
 // ========== INTEGRAÇÃO - CAPTURA DE FOTO ==========
 function handleFileSelectIntegracao(e) {
+    console.log('📥 INTEGRAÇÃO: Arquivo selecionado');
     const file = e.target.files[0];
     if (!file) return;
 
@@ -637,43 +886,56 @@ function handleFileSelectIntegracao(e) {
         return;
     }
 
+    console.log('📥 INTEGRAÇÃO: Iniciando leitura do arquivo', file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
+        console.log('📥 INTEGRAÇÃO: Arquivo lido, criando imagem');
         const img = new Image();
         img.onload = () => {
+            console.log('📥 INTEGRAÇÃO: Imagem carregada');
             state.originalPhoto = img;
-            compressAndPreviewImageIntegracao(file);
+            const imageData = e.target.result;
+
+            // SALVA IMEDIATAMENTE no estado compartilhado
+            console.log('📥 INTEGRAÇÃO: Salvando no estado compartilhado ANTES da compressão');
+            saveSharedImage(imageData, imageData, file.name, file, 'integracao');
+
+            // Depois comprime e faz preview
+            compressAndPreviewImageIntegracao(file, imageData);
         };
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
 
-function compressAndPreviewImageIntegracao(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
+function compressAndPreviewImageIntegracao(file, imageData) {
+    console.log('🗜️ INTEGRAÇÃO: Comprimindo imagem para preview');
+    const img = new Image();
+    img.onload = () => {
+        console.log('🗜️ INTEGRAÇÃO: Desenhando no canvas');
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
 
-            canvas.toBlob((blob) => {
-                state.currentPhotoFile = new File([blob], file.name, {
-                    type: 'image/jpeg',
-                    lastModified: Date.now()
-                });
+        console.log('🗜️ INTEGRAÇÃO: Gerando blob para File');
+        canvas.toBlob((blob) => {
+            console.log('🗜️ INTEGRAÇÃO: Blob gerado, criando File');
+            state.currentPhotoFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+            });
 
-                elements.previewImageIntegracao.src = canvas.toDataURL('image/jpeg', 0.85);
-                elements.photoPreviewIntegracao.classList.remove('hidden');
-                elements.submitBtn.disabled = false;
-            }, 'image/jpeg', 0.95);
-        };
-        img.src = e.target.result;
+            const currentImageData = canvas.toDataURL('image/jpeg', 0.85);
+            elements.previewImageIntegracao.src = currentImageData;
+            elements.photoPreviewIntegracao.classList.remove('hidden');
+            elements.submitBtn.disabled = false;
+
+            console.log('✅ INTEGRAÇÃO: Preview atualizado, processo completo!');
+        }, 'image/jpeg', 0.95);
     };
-    reader.readAsDataURL(file);
+    img.src = imageData;
 }
 
 function clearPhotoIntegracao() {
@@ -688,34 +950,48 @@ function clearPhotoIntegracao() {
     state.cropOverlayState.originalImageSrc = null;
     elements.cropOverlayIntegracao.classList.add('hidden');
     elements.resetImageBtnIntegracao.classList.add('hidden');
+    // Nota: NÃO limpa estado compartilhado aqui, pois outras telas podem estar usando
 }
 
 // ========== INTEGRAÇÃO - CROP OVERLAY ==========
-function ativarCropOverlayIntegracao() {
-    if (!elements.previewImageIntegracao.src) return;
+
+// Função genérica para ativar crop overlay (usada por BookMatch, Ambientes, etc.)
+function ativarCropOverlay(imgElement, canvasElement, resetBtnElement, onCropComplete, indicatorElement = null) {
+    if (!imgElement || !imgElement.src) return;
 
     // Store original image if not already stored
     if (!state.cropOverlayState.originalImageSrc) {
-        state.cropOverlayState.originalImageSrc = elements.previewImageIntegracao.src;
+        state.cropOverlayState.originalImageSrc = imgElement.src;
     }
 
-    // Get image dimensions and position
-    const img = elements.previewImageIntegracao;
+    // Configurar elementos atuais
+    state.cropOverlayState.currentCanvas = canvasElement;
+    state.cropOverlayState.currentImage = imgElement;
+    state.cropOverlayState.currentResetBtn = resetBtnElement;
+    state.cropOverlayState.currentIndicator = indicatorElement;
+    state.cropOverlayState.onCropComplete = onCropComplete;
 
     // Setup canvas to match image EXACTLY
-    const canvas = elements.cropOverlayIntegracao;
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
+    canvasElement.width = imgElement.naturalWidth;
+    canvasElement.height = imgElement.naturalHeight;
 
     // Style to match displayed size
-    canvas.style.width = img.offsetWidth + 'px';
-    canvas.style.height = img.offsetHeight + 'px';
-    canvas.style.top = '0';
-    canvas.style.left = '0';
+    canvasElement.style.width = imgElement.offsetWidth + 'px';
+    canvasElement.style.height = imgElement.offsetHeight + 'px';
+    canvasElement.style.top = '0';
+    canvasElement.style.left = '0';
 
     // Show canvas overlay
-    canvas.classList.remove('hidden');
+    canvasElement.classList.remove('hidden');
     state.cropOverlayState.isActive = true;
+
+    // Mostrar indicador visual APENAS em mobile (se fornecido)
+    if (indicatorElement) {
+        const isMobile = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+        if (isMobile) {
+            indicatorElement.classList.remove('hidden');
+        }
+    }
 
     // Reset state
     state.cropOverlayState.isDragging = false;
@@ -726,12 +1002,51 @@ function ativarCropOverlayIntegracao() {
 
     // Update canvas rect AFTER showing it
     setTimeout(() => {
-        state.cropOverlayState.canvasRect = canvas.getBoundingClientRect();
+        state.cropOverlayState.canvasRect = canvasElement.getBoundingClientRect();
     }, 10);
 
     // Clear canvas
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const ctx = canvasElement.getContext('2d');
+    ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+}
+
+// Wrapper para compatibilidade com código legado da Integração
+function ativarCropOverlayIntegracao() {
+    ativarCropOverlay(
+        elements.previewImageIntegracao,
+        elements.cropOverlayIntegracao,
+        elements.resetImageBtnIntegracao,
+        (croppedBase64, croppedFile) => {
+            state.currentPhotoFile = croppedFile;
+            elements.previewImageIntegracao.src = croppedBase64;
+        },
+        elements.cropIndicatorIntegracao
+    );
+}
+
+// Wrapper para Ambientes
+function ativarCropOverlayAmbientes() {
+    ativarCropOverlay(
+        elements.previewImageAmbientes,
+        elements.cropOverlayAmbientes,
+        elements.resetImageBtnAmbientes,
+        (croppedBase64, croppedFile) => {
+            state.currentPhotoFile = croppedFile;
+            elements.previewImageAmbientes.src = croppedBase64;
+        },
+        elements.cropIndicatorAmbientes
+    );
+}
+
+function resetarParaOriginalAmbientes() {
+    if (state.cropOverlayState.originalImageSrc) {
+        elements.previewImageAmbientes.src = state.cropOverlayState.originalImageSrc;
+        state.currentPhotoFile = null; // Reset to original file
+        elements.resetImageBtnAmbientes.classList.add('hidden');
+        elements.cropOverlayAmbientes.classList.add('hidden');
+        elements.cropIndicatorAmbientes.classList.add('hidden');
+        state.cropOverlayState.originalImageSrc = null;
+    }
 }
 
 function iniciarSelecaoCrop(e) {
@@ -740,8 +1055,13 @@ function iniciarSelecaoCrop(e) {
     e.preventDefault();
     state.cropOverlayState.isDragging = true;
 
+    // Esconde o indicador visual quando o usuário começa a selecionar
+    if (state.cropOverlayState.currentIndicator) {
+        state.cropOverlayState.currentIndicator.classList.add('hidden');
+    }
+
     const rect = state.cropOverlayState.canvasRect;
-    const canvas = elements.cropOverlayIntegracao;
+    const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
 
     // Get click position relative to canvas
     const scaleX = canvas.width / canvas.offsetWidth;
@@ -763,7 +1083,7 @@ function atualizarSelecaoCrop(e) {
     e.preventDefault();
 
     const rect = state.cropOverlayState.canvasRect;
-    const canvas = elements.cropOverlayIntegracao;
+    const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
     const ctx = canvas.getContext('2d');
 
     // Get current position with scaling
@@ -813,46 +1133,53 @@ function finalizarEAplicarCrop(e) {
     // Check if selection is valid (minimum 10x10 pixels)
     if (width < 10 || height < 10) {
         // Selection too small, just hide overlay
-        elements.cropOverlayIntegracao.classList.add('hidden');
+        const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
+        canvas.classList.add('hidden');
         state.cropOverlayState.isActive = false;
         return;
     }
 
     // Apply crop automatically
-    aplicarCropIntegracao(x, y, width, height);
+    aplicarCropGenerico(x, y, width, height);
 }
 
-function aplicarCropIntegracao(x, y, width, height) {
-    // Create temp canvas to crop image
+// Função genérica para aplicar crop (usada por todas as features)
+function aplicarCropGenerico(x, y, width, height) {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
     tempCanvas.height = height;
     const ctx = tempCanvas.getContext('2d');
 
-    // Load current image
     const img = new Image();
     img.onload = () => {
-        // Draw cropped portion
         ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
 
-        // Convert to blob and update preview
         tempCanvas.toBlob((blob) => {
-            state.currentPhotoFile = new File([blob], 'cropped.jpg', {
+            const croppedFile = new File([blob], 'cropped.jpg', {
                 type: 'image/jpeg',
                 lastModified: Date.now()
             });
+            const croppedBase64 = tempCanvas.toDataURL('image/jpeg', 0.95);
 
-            // Update preview with cropped image
-            elements.previewImageIntegracao.src = tempCanvas.toDataURL('image/jpeg', 0.85);
-
-            // Hide overlay and show reset button
-            elements.cropOverlayIntegracao.classList.add('hidden');
+            // Hide overlay
+            const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
+            canvas.classList.add('hidden');
             state.cropOverlayState.isActive = false;
-            elements.resetImageBtnIntegracao.classList.remove('hidden');
+
+            // Show reset button (se fornecido)
+            if (state.cropOverlayState.currentResetBtn) {
+                state.cropOverlayState.currentResetBtn.classList.remove('hidden');
+            }
+
+            // Call callback (se fornecido)
+            if (state.cropOverlayState.onCropComplete) {
+                state.cropOverlayState.onCropComplete(croppedBase64, croppedFile);
+            }
 
         }, 'image/jpeg', 0.95);
     };
-    img.src = elements.previewImageIntegracao.src;
+    const imgSrc = state.cropOverlayState.currentImage ? state.cropOverlayState.currentImage.src : elements.previewImageIntegracao.src;
+    img.src = imgSrc;
 }
 
 function iniciarSelecaoCropTouch(e) {
@@ -862,8 +1189,13 @@ function iniciarSelecaoCropTouch(e) {
     const touch = e.touches[0];
     state.cropOverlayState.isDragging = true;
 
+    // Esconde o indicador visual quando o usuário começa a selecionar
+    if (state.cropOverlayState.currentIndicator) {
+        state.cropOverlayState.currentIndicator.classList.add('hidden');
+    }
+
     const rect = state.cropOverlayState.canvasRect;
-    const canvas = elements.cropOverlayIntegracao;
+    const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
 
     const scaleX = canvas.width / canvas.offsetWidth;
     const scaleY = canvas.height / canvas.offsetHeight;
@@ -885,7 +1217,7 @@ function atualizarSelecaoCropTouch(e) {
     const touch = e.touches[0];
 
     const rect = state.cropOverlayState.canvasRect;
-    const canvas = elements.cropOverlayIntegracao;
+    const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
     const ctx = canvas.getContext('2d');
 
     const scaleX = canvas.width / canvas.offsetWidth;
@@ -934,7 +1266,7 @@ function finalizarEAplicarCropTouch(e) {
     }
 
     // Apply crop automatically
-    aplicarCropIntegracao(x, y, width, height);
+    aplicarCropGenerico(x, y, width, height);
 }
 
 function resetarParaOriginalIntegracao() {
@@ -1009,11 +1341,25 @@ function compressAndPreviewImageAmbientes(file) {
                     lastModified: Date.now()
                 });
 
-                elements.previewImageAmbientes.src = canvas.toDataURL('image/jpeg', 0.85);
+                const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                elements.previewImageAmbientes.src = imageDataUrl;
+
+                // Salva imagem original para crop
+                state.cropOverlayState.originalImageSrc = imageDataUrl;
+
                 elements.photoPreviewAmbientes.classList.remove('hidden');
+
+                // Esconde botão "Escolher/Tirar Foto"
+                if (elements.captureSectionAmbientes) {
+                    elements.captureSectionAmbientes.classList.add('hidden');
+                }
 
                 // Mostra opções de ambiente
                 elements.ambienteOptions.classList.remove('hidden');
+
+                // Salva imagem no estado compartilhado
+                const originalImageData = state.originalPhoto ? state.originalPhoto.src : imageDataUrl;
+                saveSharedImage(originalImageData, imageDataUrl, file.name, state.currentPhotoFile, 'ambientes');
             }, 'image/jpeg', 0.95);
         };
         img.src = e.target.result;
@@ -1028,6 +1374,26 @@ function clearPhotoAmbientes() {
     elements.photoPreviewAmbientes.classList.add('hidden');
     elements.fileInputAmbientes.value = '';
     elements.ambienteOptions.classList.add('hidden');
+
+    // Reset crop state
+    state.cropOverlayState.originalImageSrc = null;
+    if (elements.resetImageBtnAmbientes) {
+        elements.resetImageBtnAmbientes.classList.add('hidden');
+    }
+    if (elements.cropOverlayAmbientes) {
+        elements.cropOverlayAmbientes.classList.add('hidden');
+    }
+    if (elements.cropIndicatorAmbientes) {
+        elements.cropIndicatorAmbientes.classList.add('hidden');
+    }
+
+    // Mostra botão "Escolher/Tirar Foto" novamente
+    if (elements.captureSectionAmbientes) {
+        elements.captureSectionAmbientes.classList.remove('hidden');
+    }
+
+    // Limpa estado compartilhado
+    clearSharedImage();
 }
 
 // ========== UPLOAD ==========
@@ -1750,6 +2116,12 @@ function startAmbienteFlow() {
 }
 
 function abrirCropParaAmbiente() {
+    // Verifica se tem imagem disponível
+    if (!state.currentPhotoFile) {
+        showMessage('Por favor, selecione uma foto primeiro', 'error');
+        return;
+    }
+
     // Captura configuração de fundo
     const fundoSelecionado = document.querySelector('input[name="fundoCavalete"]:checked');
     state.ambienteConfig.fundo = fundoSelecionado ? fundoSelecionado.value : 'claro';
@@ -1763,10 +2135,8 @@ function abrirCropParaAmbiente() {
     state.countertopState.selectedType = null;
     state.countertopState.flip = false;
 
-    // Carrega imagem original no crop
-    state.cropData.image = state.originalPhoto;
-    initializeCropCanvas();
-    showCropScreen();
+    // Gera ambiente direto com a imagem atual (cropada ou original)
+    gerarAmbiente(state.currentPhotoFile);
 }
 
 async function gerarAmbiente(imagemCropada) {
@@ -1954,11 +2324,11 @@ function showAmbienteMessage(message, type) {
 // ========== UNIFIED COUNTERTOP FLOW ==========
 
 /**
- * Passo 1: Inicia o flow de countertop - vai direto para o crop
+ * Passo 1: Inicia o flow de countertop - mostra tela de seleção de tipo
  */
 function startCountertopFlow() {
-    if (!state.originalPhoto) {
-        showMessage('Nenhuma foto disponível para ambiente de bancada', 'error');
+    if (!state.currentPhotoFile) {
+        showMessage('Por favor, selecione uma foto primeiro', 'error');
         return;
     }
 
@@ -1967,16 +2337,20 @@ function startCountertopFlow() {
     state.countertopState.selectedType = null;
     state.countertopState.flip = false;
 
-    // Marca que estamos no flow de countertop (para confirmCrop saber)
+    // Marca que estamos no flow de countertop
     state.ambienteConfig.tipo = 'countertop';
-    state.ambienteMode = false; // Não queremos gerar ainda, só fazer crop
+    state.ambienteMode = false;
 
-    // Carrega imagem original no crop
-    state.cropData.image = state.originalPhoto;
-    initializeCropCanvas();
+    // Salva a imagem atual (cropada ou original) no state de countertop
+    state.countertopState.croppedImage = state.currentPhotoFile;
 
-    // Vai direto para crop
-    showScreen(elements.cropScreen);
+    // Vai direto para seleção de tipo de bancada
+    showScreen(elements.countertopSelectionScreen);
+
+    // Reset checkbox de flip
+    if (elements.flipCountertop) {
+        elements.flipCountertop.checked = false;
+    }
 }
 
 /**
@@ -2230,7 +2604,7 @@ async function loadUsers() {
                                 Desativar
                             </button>
                         ` : `
-                            <button class="btn btn-primary btn-reactivate-user" data-user-id="${user.id}">
+                            <button class="btn btn-primary btn-reactivate-user" data-user-id="${user.id}" data-user-name="${user.nomeCompleto}">
                                 Reativar
                             </button>
                         `}
@@ -2252,6 +2626,17 @@ async function handleAddUser(e) {
 
     const username = document.getElementById('newUsername').value.trim();
     const nomeCompleto = document.getElementById('newNomeCompleto').value.trim();
+    const dataExpiracao = document.getElementById('newUserExpiracao').value;
+
+    const requestBody = {
+        username,
+        nomeCompleto
+    };
+
+    // Adiciona data de expiração se foi preenchida
+    if (dataExpiracao) {
+        requestBody.dataExpiracao = new Date(dataExpiracao).toISOString();
+    }
 
     try {
         const response = await fetch(`${API_URL}/api/auth/users`, {
@@ -2260,10 +2645,7 @@ async function handleAddUser(e) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${state.token}`
             },
-            body: JSON.stringify({
-                username,
-                nomeCompleto
-            })
+            body: JSON.stringify(requestBody)
         });
 
         const data = await response.json();
@@ -2320,27 +2702,71 @@ async function deactivateUser(userId) {
 }
 
 /**
- * Reativa usuário (apenas admin)
+ * Reativa usuário (apenas admin) - Mostra modal
  */
-async function reactivateUser(userId) {
-    try {
-        const response = await fetch(`${API_URL}/api/auth/users/${userId}/reactivate`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${state.token}`
-            }
-        });
+async function reactivateUser(userId, userName) {
+    // Referência aos elementos do modal
+    const modal = document.getElementById('reactivateModal');
+    const userNameDisplay = document.getElementById('reactivateUserName');
+    const dataExpiracaoInput = document.getElementById('dataExpiracaoReativar');
+    const confirmBtn = document.getElementById('confirmReactivateBtn');
+    const cancelBtn = document.getElementById('cancelReactivateBtn');
 
-        if (response.ok) {
-            await loadUsers(); // Recarrega lista
-        } else {
-            const data = await response.json();
-            alert(data.mensagem || 'Erro ao reativar usuário');
+    // Define nome do usuário
+    userNameDisplay.textContent = `Usuário: ${userName}`;
+
+    // Limpa campo de data
+    dataExpiracaoInput.value = '';
+
+    // Mostra modal
+    modal.classList.remove('hidden');
+
+    // Remove event listeners anteriores (evita duplicação)
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+    // Handler para confirmar reativação
+    newConfirmBtn.addEventListener('click', async () => {
+        try {
+            const dataExpiracao = dataExpiracaoInput.value || null;
+
+            const response = await fetch(`${API_URL}/api/auth/users/${userId}/reactivate`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${state.token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ dataExpiracao })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert(data.mensagem || 'Usuário reativado com sucesso!');
+                modal.classList.add('hidden');
+                await loadUsers(); // Recarrega lista
+            } else {
+                const data = await response.json();
+                alert(data.mensagem || 'Erro ao reativar usuário');
+            }
+        } catch (error) {
+            console.error('Erro ao reativar usuário:', error);
+            alert('Erro ao reativar usuário');
         }
-    } catch (error) {
-        console.error('Erro ao reativar usuário:', error);
-        alert('Erro ao reativar usuário');
-    }
+    });
+
+    // Handler para cancelar
+    newCancelBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+
+    // Fecha modal ao clicar fora
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
 }
 
 // ========== SERVICE WORKER (para PWA futuro) ==========

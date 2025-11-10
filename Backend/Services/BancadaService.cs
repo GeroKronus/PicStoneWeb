@@ -12,57 +12,26 @@ namespace PicStoneFotoAPI.Services
     {
         private readonly ILogger<BancadaService> _logger;
         private readonly GraphicsTransformService _transformService;
+        private readonly ImageManipulationService _imageManipulation;
+        private readonly ImageWatermarkService _watermark;
         private readonly string _resourcesPath;
-        private readonly string _logoPath;
 
-        public BancadaService(ILogger<BancadaService> logger, GraphicsTransformService transformService)
+        public BancadaService(ILogger<BancadaService> logger,
+                             GraphicsTransformService transformService,
+                             ImageManipulationService imageManipulation,
+                             ImageWatermarkService watermark)
         {
             _logger = logger;
             _transformService = transformService;
+            _imageManipulation = imageManipulation;
+            _watermark = watermark;
             _resourcesPath = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Bancadas");
-            _logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "watermark.png");
         }
 
-        /// <summary>
-        /// Adiciona marca d'água (logo) no canto inferior direito
-        /// </summary>
-        private void AdicionarMarcaDagua(SKCanvas canvas, int canvasWidth, int canvasHeight)
-        {
-            if (!File.Exists(_logoPath))
-            {
-                _logger.LogWarning("Logo não encontrada em: {LogoPath}", _logoPath);
-                return;
-            }
-
-            try
-            {
-                using var streamLogo = File.OpenRead(_logoPath);
-                using var logo = SKBitmap.Decode(streamLogo);
-
-                if (logo == null)
-                {
-                    _logger.LogWarning("Não foi possível decodificar a logo");
-                    return;
-                }
-
-                // Usa tamanho original da logo (49x50 pixels)
-                int logoWidth = logo.Width;
-                int logoHeight = logo.Height;
-
-                // Posição: canto inferior direito com margem de 5px
-                int posX = canvasWidth - logoWidth - 5;
-                int posY = canvasHeight - logoHeight - 5;
-
-                // Desenha a logo sem redimensionar
-                canvas.DrawBitmap(logo, posX, posY);
-
-                _logger.LogInformation("Marca d'água adicionada no ambiente");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao adicionar marca d'água");
-            }
-        }
+        // ===== MÉTODO REMOVIDO: _watermark.AddWatermark (agora usa ImageWatermarkService) =====
+        // ANTES: 37 linhas de código duplicado
+        // DEPOIS: 1 linha usando _watermark.AddWatermark()
+        // ECONOMIA: 36 linhas
 
         /// <summary>
         /// Gera mockup de Bancada tipo 1 (Countertop #1)
@@ -192,7 +161,7 @@ namespace PicStoneFotoAPI.Services
                     }
 
                     // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
+                    _watermark.AddWatermark(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_11_MosaicoComMoldura.png");
@@ -465,7 +434,7 @@ namespace PicStoneFotoAPI.Services
                     }
 
                     // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
+                    _watermark.AddWatermark(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada2_P{contaProcesso}_19_MosaicoComMoldura.png");
@@ -500,62 +469,14 @@ namespace PicStoneFotoAPI.Services
             return resultado;
         }
 
-        private SKBitmap CropBitmap(SKBitmap source, SKRectI cropRect)
-        {
-            var cropped = new SKBitmap(cropRect.Width, cropRect.Height);
-            using var canvas = new SKCanvas(cropped);
-            using var paint = new SKPaint
-            {
-                FilterQuality = SKFilterQuality.High
-            };
+        // ===== MÉTODOS REMOVIDOS (agora usam ImageManipulationService) =====
+        // ANTES: CropBitmap (12 linhas), RotateFlip180 (22 linhas), FlipHorizontal (20 linhas)
+        // DEPOIS: _imageManipulation.Crop(), _imageManipulation.Rotate180(), _imageManipulation.FlipHorizontal()
+        // ECONOMIA: 54 linhas
 
-            canvas.DrawBitmap(source, cropRect, new SKRect(0, 0, cropRect.Width, cropRect.Height), paint);
-            return cropped;
-        }
-
-        private SKBitmap RotateFlip180(SKBitmap source)
-        {
-            var surface = SKSurface.Create(new SKImageInfo(source.Width, source.Height));
-            var canvas = surface.Canvas;
-
-            canvas.Translate(source.Width / 2f, source.Height / 2f);
-            canvas.RotateDegrees(180);
-            canvas.Translate(-source.Width / 2f, -source.Height / 2f);
-
-            using var paint = new SKPaint
-            {
-                FilterQuality = SKFilterQuality.High
-            };
-
-            canvas.DrawBitmap(source, 0, 0, paint);
-
-            var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-
-            using var mStream = new MemoryStream(data.ToArray());
-            return SKBitmap.Decode(mStream);
-        }
-
-        private SKBitmap FlipHorizontal(SKBitmap source)
-        {
-            var surface = SKSurface.Create(new SKImageInfo(source.Width, source.Height));
-            var canvas = surface.Canvas;
-
-            canvas.Scale(-1, 1, source.Width / 2f, 0);
-
-            using var paint = new SKPaint
-            {
-                FilterQuality = SKFilterQuality.High
-            };
-
-            canvas.DrawBitmap(source, 0, 0, paint);
-
-            var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-
-            using var mStream = new MemoryStream(data.ToArray());
-            return SKBitmap.Decode(mStream);
-        }
+        private SKBitmap CropBitmap(SKBitmap source, SKRectI cropRect) => _imageManipulation.Crop(source, cropRect);
+        private SKBitmap RotateFlip180(SKBitmap source) => _imageManipulation.Rotate180(source);
+        private SKBitmap FlipHorizontal(SKBitmap source) => _imageManipulation.FlipHorizontal(source);
 
         private SKBitmap? CarregarRecurso(string nomeArquivo)
         {
@@ -602,61 +523,14 @@ namespace PicStoneFotoAPI.Services
             }
         }
 
-        /// <summary>
-        /// Rotaciona imagem em ângulos ortogonais (90, 180, 270)
-        /// Replica VB.NET RotateFlipType.Rotate90FlipNone, etc.
-        /// </summary>
-        private SKBitmap RotateImage90(SKBitmap source, int angle)
-        {
-            // Normaliza ângulo para 0-360
-            angle = angle % 360;
-            if (angle < 0) angle += 360;
+        // ===== MÉTODOS DE ROTAÇÃO REMOVIDOS (agora usam ImageManipulationService) =====
+        // ANTES: RotateImage90 (38 linhas), RotateFlip90 (7 linhas), RotateFlip270 (7 linhas)
+        // DEPOIS: _imageManipulation.Rotate(source, angle)
+        // ECONOMIA: 52 linhas
 
-            // Para rotações ortogonais, precisamos ajustar o tamanho do canvas
-            int width = source.Width;
-            int height = source.Height;
-
-            // Para 90° e 270°, as dimensões são invertidas
-            int newWidth = (angle == 90 || angle == 270) ? height : width;
-            int newHeight = (angle == 90 || angle == 270) ? width : height;
-
-            var surface = SKSurface.Create(new SKImageInfo(newWidth, newHeight));
-            var canvas = surface.Canvas;
-
-            canvas.Translate(newWidth / 2f, newHeight / 2f);
-            canvas.RotateDegrees(angle);
-            canvas.Translate(-width / 2f, -height / 2f);
-
-            using var paint = new SKPaint
-            {
-                FilterQuality = SKFilterQuality.High,
-                IsAntialias = true
-            };
-
-            canvas.DrawBitmap(source, 0, 0, paint);
-
-            var image = surface.Snapshot();
-            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-
-            using var mStream = new MemoryStream(data.ToArray());
-            return SKBitmap.Decode(mStream);
-        }
-
-        /// <summary>
-        /// Rotaciona 90° no sentido horário (VB.NET: Rotate90FlipNone)
-        /// </summary>
-        private SKBitmap RotateFlip90(SKBitmap source)
-        {
-            return RotateImage90(source, 90);
-        }
-
-        /// <summary>
-        /// Rotaciona 270° no sentido horário (VB.NET: Rotate270FlipNone)
-        /// </summary>
-        private SKBitmap RotateFlip270(SKBitmap source)
-        {
-            return RotateImage90(source, 270);
-        }
+        private SKBitmap RotateImage90(SKBitmap source, int angle) => _imageManipulation.Rotate(source, angle);
+        private SKBitmap RotateFlip90(SKBitmap source) => _imageManipulation.Rotate90(source);
+        private SKBitmap RotateFlip270(SKBitmap source) => _imageManipulation.Rotate270(source);
 
         /// <summary>
         /// Rotaciona 180° e faz flip horizontal
@@ -982,7 +856,7 @@ namespace PicStoneFotoAPI.Services
                     }
 
                     // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
+                    _watermark.AddWatermark(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
@@ -1142,7 +1016,7 @@ namespace PicStoneFotoAPI.Services
                     _logger.LogInformation("Bancada6: Moldura bancada6.png aplicada");
 
                     // Marca d'água
-                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
+                    _watermark.AddWatermark(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip)
@@ -1281,7 +1155,7 @@ namespace PicStoneFotoAPI.Services
                     }
 
                     // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, CANVAS_WIDTH, CANVAS_HEIGHT);
+                    _watermark.AddWatermark(canvas, CANVAS_WIDTH, CANVAS_HEIGHT);
                 }
 
                 // ============ APLICA FLIP HORIZONTAL SE SOLICITADO ============
@@ -1384,7 +1258,7 @@ namespace PicStoneFotoAPI.Services
                     }
 
                     // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, CANVAS_WIDTH, CANVAS_HEIGHT);
+                    _watermark.AddWatermark(canvas, CANVAS_WIDTH, CANVAS_HEIGHT);
                 }
 
                 // ============ APLICA FLIP HORIZONTAL SE SOLICITADO ============
@@ -1461,7 +1335,7 @@ namespace PicStoneFotoAPI.Services
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
 
                     // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
+                    _watermark.AddWatermark(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
@@ -1588,7 +1462,7 @@ namespace PicStoneFotoAPI.Services
                     }
 
                     // Adiciona marca d'água
-                    AdicionarMarcaDagua(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
+                    _watermark.AddWatermark(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
                 }
 
                 if (flip) mosaicoEmBranco = FlipHorizontal(mosaicoEmBranco);
