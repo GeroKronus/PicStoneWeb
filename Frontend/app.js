@@ -201,10 +201,8 @@ async function renovarTokenAutomaticamente() {
             const data = await response.json();
             state.token = data.token;
             localStorage.setItem('token', data.token);
-            console.log('✅ Token renovado automaticamente');
         } else if (response.status === 401) {
             // Token expirado ou inválido - redireciona para login
-            console.log('⚠️ Token expirado, redirecionando para login...');
             logout();
         }
     } catch (error) {
@@ -219,14 +217,12 @@ function iniciarVerificacaoToken() {
     // Verifica a cada 30 minutos
     setInterval(() => {
         if (state.token && tokenExpiresInLessThanOneHour(state.token)) {
-            console.log('⏰ Token expirando em menos de 1 hora, renovando...');
             renovarTokenAutomaticamente();
         }
     }, 30 * 60 * 1000); // 30 minutos
 
     // Também verifica imediatamente ao iniciar
     if (state.token && tokenExpiresInLessThanOneHour(state.token)) {
-        console.log('⏰ Token expirando em menos de 1 hora, renovando...');
         renovarTokenAutomaticamente();
     }
 }
@@ -250,11 +246,6 @@ function saveSharedImage(originalImage, currentImage, fileName, file, source) {
         lastUpdated: Date.now(),
         source: source
     };
-    console.log(`📸 SAVE: Imagem salva no estado compartilhado (origem: ${source})`, {
-        hasOriginal: !!originalImage,
-        hasCurrent: !!currentImage,
-        fileName: fileName
-    });
 }
 
 /**
@@ -264,15 +255,9 @@ function saveSharedImage(originalImage, currentImage, fileName, file, source) {
  */
 function loadSharedImage(targetCard) {
     if (!state.sharedImageState.originalImage) {
-        console.log(`⚠️ LOAD: Nenhuma imagem compartilhada disponível para ${targetCard}`);
         return null;
     }
 
-    console.log(`📸 LOAD: Carregando imagem para ${targetCard} (origem: ${state.sharedImageState.source})`, {
-        hasOriginal: !!state.sharedImageState.originalImage,
-        hasCurrent: !!state.sharedImageState.currentImage,
-        fileName: state.sharedImageState.fileName
-    });
     return {
         originalImage: state.sharedImageState.originalImage,
         currentImage: state.sharedImageState.currentImage,
@@ -633,48 +618,24 @@ async function showMainScreen() {
     elements.userInitials.textContent = initials;
 
     // Mostra botão de gerenciar usuários apenas para admin
-    console.log('🔍 [DEBUG HISTÓRICO] Verificando permissões para:', state.username);
     if (state.username === 'rogerio@picstone.com.br') {
-        console.log('✅ [DEBUG HISTÓRICO] Usuário é ADMIN');
         if (elements.manageUsersBtn) {
             elements.manageUsersBtn.classList.remove('hidden');
-            console.log('✅ Botão Gerenciar Usuários mostrado');
         }
         if (elements.pendingUsersBtn) {
             elements.pendingUsersBtn.classList.remove('hidden');
-            console.log('✅ Botão Solicitações Pendentes mostrado');
         }
         // Salva no localStorage para uso no history.js
         localStorage.setItem('isAdmin', 'true');
-        console.log('✅ localStorage.isAdmin = true');
     } else {
-        console.log('ℹ️ [DEBUG HISTÓRICO] Usuário NÃO é admin');
         if (elements.manageUsersBtn) elements.manageUsersBtn.classList.add('hidden');
         if (elements.pendingUsersBtn) elements.pendingUsersBtn.classList.add('hidden');
         localStorage.setItem('isAdmin', 'false');
     }
 
     // Mostra botão de histórico para todos os usuários
-    console.log('🔍 [DEBUG HISTÓRICO] Verificando botão historyBtn...');
-    console.log('🔍 elements.historyBtn existe?', !!elements.historyBtn);
-    console.log('🔍 Elemento HTML:', elements.historyBtn);
     if (elements.historyBtn) {
         elements.historyBtn.classList.remove('hidden');
-        console.log('✅ [DEBUG HISTÓRICO] Botão HISTÓRICO mostrado! Classes finais:', elements.historyBtn.className);
-        console.log('✅ [DEBUG HISTÓRICO] Botão está visível?', !elements.historyBtn.classList.contains('hidden'));
-    } else {
-        console.error('❌ [DEBUG HISTÓRICO] ERRO CRÍTICO: elements.historyBtn é NULL/undefined!');
-        console.log('🔍 [DEBUG HISTÓRICO] Tentando buscar diretamente no DOM...');
-        const historyBtnDirect = document.getElementById('historyBtn');
-        if (historyBtnDirect) {
-            console.warn('⚠️ [DEBUG HISTÓRICO] Elemento EXISTE no DOM mas NÃO foi capturado em elements!');
-            console.log('🔍 Elemento encontrado:', historyBtnDirect);
-            console.log('🔍 Parent:', historyBtnDirect.parentElement);
-            console.log('🔍 Classes:', historyBtnDirect.className);
-        } else {
-            console.error('❌ [DEBUG HISTÓRICO] Elemento #historyBtn NÃO EXISTE no HTML!');
-            console.log('🔍 Todos os elementos com "history":', document.querySelectorAll('[id*="history"]'));
-        }
     }
 
     await loadMaterials();
@@ -715,12 +676,10 @@ function showAddUserScreen() {
 }
 
 function showIntegracaoScreen() {
-    console.log('🔄 SHOW: Abrindo tela Integração', { hasSharedImage: hasSharedImage() });
     showScreen(elements.integracaoScreen);
 
     // Carrega automaticamente imagem compartilhada se existir
     if (hasSharedImage()) {
-        console.log('✅ SHOW: Tem imagem compartilhada em Integração, vou carregar...');
         const sharedImage = loadSharedImage('integracao');
         if (sharedImage) {
             state.originalPhoto = new Image();
@@ -729,21 +688,17 @@ function showIntegracaoScreen() {
             elements.previewImageIntegracao.src = sharedImage.currentImage;
             elements.photoPreviewIntegracao.classList.remove('hidden');
             elements.submitBtn.disabled = false;
-            console.log('✅ SHOW: Imagem compartilhada carregada em Integração');
         }
     } else {
-        console.log('❌ SHOW: Não tem imagem compartilhada em Integração, vou limpar...');
         clearPhotoIntegracao();
     }
 }
 
 function showAmbientesScreen() {
-    console.log('🔄 SHOW: Abrindo tela Ambientes', { hasSharedImage: hasSharedImage() });
     showScreen(elements.ambientesScreen);
 
     // Carrega automaticamente imagem compartilhada se existir
     if (hasSharedImage()) {
-        console.log('✅ SHOW: Tem imagem compartilhada, vou carregar...');
         const sharedImage = loadSharedImage('ambientes');
         if (sharedImage) {
             state.originalPhoto = new Image();
@@ -756,10 +711,8 @@ function showAmbientesScreen() {
                 elements.captureSectionAmbientes.classList.add('hidden');
             }
             elements.ambienteOptions.classList.remove('hidden');
-            console.log('✅ SHOW: Imagem compartilhada carregada em Ambientes');
         }
     } else {
-        console.log('❌ SHOW: Não tem imagem compartilhada, vou limpar card...');
         clearPhotoAmbientes();
     }
 }
@@ -1592,13 +1545,6 @@ function initializeCropCanvas() {
     state.cropData.scaleX = img.width / width;
     state.cropData.scaleY = img.height / height;
 
-    console.log('=== DEBUG INITIALIZE CROP ===');
-    console.log('Imagem original:', img.width, 'x', img.height);
-    console.log('Canvas final:', width, 'x', height);
-    console.log('ScaleX calculado:', state.cropData.scaleX);
-    console.log('ScaleY calculado:', state.cropData.scaleY);
-    console.log('=============================');
-
     // Desenha imagem
     ctx.drawImage(img, 0, 0, width, height);
 
@@ -1794,24 +1740,11 @@ function confirmCrop() {
     const canvas = elements.cropCanvas;
     const img = state.cropData.image;
 
-    console.log('=== DEBUG CROP ===');
-    console.log('Imagem original:', img.width, 'x', img.height);
-    console.log('Canvas:', canvas.width, 'x', canvas.height);
-    console.log('ScaleX:', state.cropData.scaleX, 'ScaleY:', state.cropData.scaleY);
-    console.log('Seleção no canvas - startX:', state.cropData.startX, 'startY:', state.cropData.startY);
-    console.log('Seleção no canvas - endX:', state.cropData.endX, 'endY:', state.cropData.endY);
-    console.log('Largura seleção canvas:', Math.abs(state.cropData.endX - state.cropData.startX));
-    console.log('Altura seleção canvas:', Math.abs(state.cropData.endY - state.cropData.startY));
-
     // Calcula coordenadas na imagem original usando escalas separadas para X e Y
     const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scaleX;
     const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scaleY;
     const width = Math.abs(state.cropData.endX - state.cropData.startX) * state.cropData.scaleX;
     const height = Math.abs(state.cropData.endY - state.cropData.startY) * state.cropData.scaleY;
-
-    console.log('Crop na imagem original - X:', x, 'Y:', y);
-    console.log('Crop na imagem original - Width:', width, 'Height:', height);
-    console.log('==================');
 
     // Cria canvas temporário para crop
     const tempCanvas = document.createElement('canvas');
@@ -1916,13 +1849,6 @@ function initializeCropCanvasIntegracao() {
     canvas.height = canvasHeight;
 
     state.cropData.scale = canvasWidth / img.width;
-
-    console.log('=== DEBUG INITIALIZE CROP INTEGRAÇÃO ===');
-    console.log('Imagem original:', img.width, 'x', img.height);
-    console.log('Canvas final:', canvasWidth, 'x', canvasHeight);
-    console.log('ScaleX calculado:', state.cropData.scale);
-    console.log('ScaleY calculado:', state.cropData.scale);
-    console.log('=============================');
 
     // Desenha imagem
     ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
@@ -2182,10 +2108,6 @@ async function gerarAmbiente(imagemCropada) {
         });
 
         const data = await response.json();
-
-        console.log('=== DEBUG MOCKUP RESPONSE ===');
-        console.log('Response OK:', response.ok);
-        console.log('Data:', data);
 
         if (!response.ok) {
             throw new Error(data.mensagem || 'Erro ao gerar ambiente');
