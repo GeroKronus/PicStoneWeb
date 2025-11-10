@@ -172,6 +172,94 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Envia email de aviso de expiração de acesso
+        /// </summary>
+        public async Task<bool> SendExpirationWarningEmailAsync(string email, string nome, DateTime dataExpiracao, int diasRestantes)
+        {
+            try
+            {
+                var appUrl = _configuration["NEXTAUTH_URL"] ?? "http://localhost:5000";
+                var loginUrl = $"{appUrl}";
+
+                var dataFormatada = dataExpiracao.ToString("dd/MM/yyyy 'às' HH:mm");
+
+                var corAlerta = diasRestantes <= 2 ? "#ef4444" : "#f59e0b"; // Vermelho se <=2 dias, laranja se >2 dias
+                var tituloAlerta = diasRestantes == 1 ? "Seu acesso expira AMANHÃ!" : $"Seu acesso expira em {diasRestantes} dias";
+
+                var htmlBody = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: linear-gradient(135deg, {corAlerta} 0%, {corAlerta} 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+        .alert-box {{ background: #fff3cd; border-left: 4px solid {corAlerta}; padding: 15px; margin: 20px 0; border-radius: 5px; }}
+        .button {{ display: inline-block; padding: 15px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }}
+        .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 12px; }}
+        .highlight {{ font-size: 24px; font-weight: bold; color: {corAlerta}; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='margin: 0 0 10px 0; font-size: 32px;'>PicStone Mobile</h1>
+            <h2 style='margin: 10px 0 5px 0;'>⚠️ Aviso de Expiração</h2>
+        </div>
+        <div class='content'>
+            <h2>Olá, {nome}!</h2>
+
+            <div class='alert-box'>
+                <p class='highlight' style='margin: 0;'>{tituloAlerta}</p>
+            </div>
+
+            <p>Este é um aviso importante sobre o seu acesso à plataforma <strong>PicStone Mobile</strong>.</p>
+
+            <p><strong>Data de expiração:</strong> {dataFormatada}</p>
+            <p><strong>Dias restantes:</strong> {diasRestantes} dia{(diasRestantes != 1 ? "s" : "")}</p>
+
+            <p>Após esta data, você não conseguirá mais fazer login no sistema.</p>
+
+            <p><strong>O que fazer?</strong></p>
+            <ul>
+                <li>Entre em contato com o administrador para renovar seu acesso</li>
+                <li>Salve ou baixe qualquer trabalho importante antes da data de expiração</li>
+            </ul>
+
+            <div style='text-align: center;'>
+                <a href='{loginUrl}' class='button'>Acessar Plataforma</a>
+            </div>
+
+            <p style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; color: #666; font-size: 14px;'>
+                Se você já solicitou a renovação, desconsidere este aviso.
+            </p>
+        </div>
+        <div class='footer'>
+            <p>&copy; 2025 PicStone Mobile. Todos os direitos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+                await SendEmailAsync(
+                    to: email,
+                    subject: $"⚠️ Aviso: Seu acesso expira em {diasRestantes} dia{(diasRestantes != 1 ? "s" : "")} - PicStone Mobile",
+                    htmlBody: htmlBody
+                );
+
+                _logger.LogInformation($"Email de aviso de expiração enviado para: {email} ({diasRestantes} dias restantes)");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao enviar email de aviso de expiração para: {email}");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Envia email de rejeição
         /// </summary>
         public async Task<bool> SendRejectionEmailAsync(string email, string nome, string? motivo = null)

@@ -23,5 +23,10 @@ namespace PicStoneFotoAPI.Models
         public string Username { get; set; } = string.Empty;
         public DateTime ExpiresAt { get; set; }
         public bool IsAdmin { get; set; }
+
+        // Informações de expiração de acesso
+        public DateTime? DataExpiracao { get; set; }
+        public int? DiasRestantes { get; set; }
+        public bool ExpiracaoProxima { get; set; } = false;
     }
 }

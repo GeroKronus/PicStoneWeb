@@ -506,6 +506,13 @@ async function handleLogin(e) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('username', data.username);
 
+        // Verificar aviso de expiração
+        if (data.expiracaoProxima && data.diasRestantes) {
+            mostrarBannerExpiracao(data.diasRestantes, data.dataExpiracao);
+        } else {
+            esconderBannerExpiracao();
+        }
+
         showMainScreen();
         iniciarVerificacaoToken(); // Inicia verificação automática do token
         elements.loginError.classList.add('hidden');
@@ -2693,6 +2700,53 @@ async function reactivateUser(userId, userName) {
             modal.classList.add('hidden');
         }
     });
+}
+
+// ========== BANNER DE EXPIRAÇÃO ==========
+function mostrarBannerExpiracao(diasRestantes, dataExpiracao) {
+    const banner = document.getElementById('expirationBanner');
+    if (!banner) return;
+
+    const mensagemElement = document.getElementById('expirationMessage');
+    const diasElement = document.getElementById('expirationDays');
+
+    // Formata a data de expiração
+    let dataFormatada = '';
+    if (dataExpiracao) {
+        const data = new Date(dataExpiracao);
+        dataFormatada = data.toLocaleDateString('pt-BR');
+    }
+
+    // Define a mensagem baseada nos dias restantes
+    let mensagem = '';
+    if (diasRestantes === 1) {
+        mensagem = `Seu acesso expira AMANHÃ (${dataFormatada}). Entre em contato com o administrador para renovar.`;
+    } else {
+        mensagem = `Seu acesso expira em ${diasRestantes} dias (${dataFormatada}). Entre em contato com o administrador para renovar.`;
+    }
+
+    mensagemElement.textContent = mensagem;
+    diasElement.textContent = diasRestantes;
+
+    // Altera cor do banner conforme urgência
+    if (diasRestantes <= 2) {
+        banner.classList.add('urgent'); // Vermelho
+    } else {
+        banner.classList.remove('urgent'); // Laranja
+    }
+
+    banner.classList.remove('hidden');
+}
+
+function esconderBannerExpiracao() {
+    const banner = document.getElementById('expirationBanner');
+    if (banner) {
+        banner.classList.add('hidden');
+    }
+}
+
+function fecharBannerExpiracao() {
+    esconderBannerExpiracao();
 }
 
 // ========== SERVICE WORKER (para PWA futuro) ==========

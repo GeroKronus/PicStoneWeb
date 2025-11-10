@@ -16,12 +16,14 @@ namespace PicStoneFotoAPI.Services
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthService> _logger;
+        private readonly EmailService _emailService;
 
-        public AuthService(AppDbContext context, IConfiguration configuration, ILogger<AuthService> logger)
+        public AuthService(AppDbContext context, IConfiguration configuration, ILogger<AuthService> logger, EmailService emailService)
         {
             _context = context;
             _configuration = configuration;
             _logger = logger;
+            _emailService = emailService;
         }
 
         /// <summary>
@@ -48,6 +50,62 @@ namespace PicStoneFotoAPI.Services
                     return null;
                 }
 
+                // ===== VERIFICAÇÃO DE EXPIRAÇÃO =====
+                DateTime? dataExpiracao = null;
+                int? diasRestantes = null;
+                bool expiracaoProxima = false;
+
+                if (usuario.DataExpiracao.HasValue)
+                {
+                    dataExpiracao = usuario.DataExpiracao.Value;
+                    var hoje = DateTime.Now;
+
+                    // Verifica se JÁ EXPIROU
+                    if (dataExpiracao.Value <= hoje)
+                    {
+                        _logger.LogWarning("Tentativa de login com acesso expirado: {Username} (expirou em {DataExpiracao})",
+                            request.Username, dataExpiracao.Value);
+
+                        // Marca usuário como expirado se ainda não estiver
+                        if (usuario.Status != StatusUsuario.Expirado)
+                        {
+                            usuario.Status = StatusUsuario.Expirado;
+                            usuario.Ativo = false;
+                            await _context.SaveChangesAsync();
+                        }
+
+                        return null; // BLOQUEIA LOGIN
+                    }
+
+                    // Calcula dias restantes
+                    var timeSpan = dataExpiracao.Value - hoje;
+                    diasRestantes = (int)Math.Ceiling(timeSpan.TotalDays);
+
+                    // Verifica se está PRÓXIMO de expirar (5 dias ou menos)
+                    if (diasRestantes <= 5)
+                    {
+                        expiracaoProxima = true;
+
+                        // Envia email de aviso (não bloqueia se falhar)
+                        try
+                        {
+                            await _emailService.SendExpirationWarningEmailAsync(
+                                usuario.Email,
+                                usuario.NomeCompleto,
+                                dataExpiracao.Value,
+                                diasRestantes.Value
+                            );
+                            _logger.LogInformation("Email de aviso de expiração enviado para: {Username} ({Dias} dias restantes)",
+                                request.Username, diasRestantes);
+                        }
+                        catch (Exception emailEx)
+                        {
+                            _logger.LogError(emailEx, "Erro ao enviar email de aviso de expiração para: {Username}", request.Username);
+                            // Não bloqueia login se email falhar
+                        }
+                    }
+                }
+
                 // Gera token JWT
                 var token = GerarTokenJWT(usuario);
                 var expiresAt = DateTime.UtcNow.AddYears(100);
@@ -60,7 +118,10 @@ namespace PicStoneFotoAPI.Services
                     Token = token,
                     Username = usuario.Username,
                     ExpiresAt = expiresAt,
-                    IsAdmin = isAdmin
+                    IsAdmin = isAdmin,
+                    DataExpiracao = dataExpiracao,
+                    DiasRestantes = diasRestantes,
+                    ExpiracaoProxima = expiracaoProxima
                 };
             }
             catch (Exception ex)

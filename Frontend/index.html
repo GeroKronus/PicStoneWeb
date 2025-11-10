@@ -5,9 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PicStone® mobile</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="style.css?v=20251110190000">
+    <link rel="stylesheet" href="style.css?v=20251110210000">
 </head>
 <body>
+    <!-- Banner de Aviso de Expiração -->
+    <div id="expirationBanner" class="expiration-banner hidden">
+        <div class="expiration-content">
+            <span class="expiration-icon">⚠️</span>
+            <span id="expirationMessage" class="expiration-message"></span>
+            <button onclick="fecharBannerExpiracao()" class="expiration-close">×</button>
+        </div>
+    </div>
+
     <!-- Tela de Login/Cadastro -->
     <div id="loginScreen" class="screen active">
         <div class="container">
