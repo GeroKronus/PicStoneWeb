@@ -216,7 +216,7 @@ async function generateBookmatch() {
     }
 
     const loadingOverlay = document.getElementById('loadingOverlay');
-    if (loadingOverlay) loadingOverlay.classList.add('active');
+    if (loadingOverlay) loadingOverlay.classList.remove('hidden');
 
     try {
         // Obter dimensões da imagem atual
@@ -265,7 +265,7 @@ async function generateBookmatch() {
         console.error('Erro ao gerar BookMatch:', error);
         alert('Erro ao gerar BookMatch: ' + error.message);
     } finally {
-        if (loadingOverlay) loadingOverlay.classList.remove('active');
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
     }
 }
 
