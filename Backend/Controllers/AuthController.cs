@@ -540,6 +540,43 @@ namespace PicStoneFotoAPI.Controllers
                 return StatusCode(500, new { mensagem = "Erro ao rejeitar usuário" });
             }
         }
+
+        /// <summary>
+        /// GET /api/auth/force-create-admin
+        /// Força criação do usuário admin (público, use apenas uma vez)
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("force-create-admin")]
+        public async Task<IActionResult> ForceCreateAdmin()
+        {
+            try
+            {
+                _logger.LogInformation("Tentando criar usuário admin forçadamente...");
+                await _authService.CriarUsuarioInicialAsync();
+
+                var adminExists = await _authService.CheckAdminExistsAsync();
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    mensagem = "Processo de criação do admin executado",
+                    adminExiste = adminExists,
+                    detalhes = adminExists
+                        ? "Admin já existe ou foi criado agora"
+                        : "Erro ao criar admin - verifique logs do servidor"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao forçar criação do admin");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    erro = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
+            }
+        }
     }
 
     /// <summary>
