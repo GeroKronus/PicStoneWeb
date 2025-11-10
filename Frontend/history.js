@@ -532,10 +532,10 @@ function renderUsersStatsTable(users) {
     usersTableBody.innerHTML = users.map(user => {
         const nome = escapeHtml(user.nomeCompleto || 'Sem nome');
         const email = escapeHtml(user.username || 'Sem email');
-        const totalLogins = user.totalLogins || 0;
-        const totalAmbientes = user.totalAmbientes || 0;
-        const primeiroAcesso = user.primeiroAcesso ? formatDateTime(user.primeiroAcesso, 'short') : '-';
-        const ultimoAcesso = user.ultimoAcesso ? formatDateTime(user.ultimoAcesso, 'short') : '-';
+        const totalLogins = (user.stats && user.stats.totalLogins) || 0;
+        const totalAmbientes = (user.stats && user.stats.totalAmbientesGerados) || 0;
+        const primeiroAcesso = (user.stats && user.stats.primeiroAcesso) ? formatDateTime(user.stats.primeiroAcesso, 'short') : '-';
+        const ultimoAcesso = (user.stats && user.stats.ultimoAcesso) ? formatDateTime(user.stats.ultimoAcesso, 'short') : '-';
 
         return `
             <tr>
@@ -546,7 +546,7 @@ function renderUsersStatsTable(users) {
                 <td>${primeiroAcesso}</td>
                 <td>${ultimoAcesso}</td>
                 <td>
-                    <button class="btn-small" onclick="showUserDetailsModal(${user.id})">
+                    <button class="btn-small" onclick="showUserDetails(${user.id}, '${escapeHtml(user.nomeCompleto)}')">
                         Ver Detalhes
                     </button>
                 </td>
