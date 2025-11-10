@@ -374,5 +374,52 @@ namespace PicStoneFotoAPI.Services
             }
         }
 
+        /// <summary>
+        /// Envia email de teste para verificar configuração SMTP
+        /// </summary>
+        public async Task SendTestEmailAsync(string to)
+        {
+            var htmlBody = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='margin: 0;'>PicStone Mobile</h1>
+            <h2 style='margin: 10px 0 0 0;'>Teste de Configuração SMTP</h2>
+        </div>
+        <div class='content'>
+            <h3>✅ Configuração SMTP funcionando corretamente!</h3>
+            <p>Este é um email de teste enviado pelo sistema PicStone Mobile.</p>
+            <p><strong>Data/Hora:</strong> " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") + @"</p>
+            <p>Se você recebeu este email, significa que:</p>
+            <ul>
+                <li>✅ As variáveis SMTP estão configuradas corretamente</li>
+                <li>✅ O servidor de email está acessível</li>
+                <li>✅ A autenticação está funcionando</li>
+                <li>✅ O sistema está pronto para enviar emails</li>
+            </ul>
+            <p style='margin-top: 30px;'>Atenciosamente,<br><strong>Equipe PicStone Mobile</strong></p>
+        </div>
+        <div class='footer'>
+            <p>Este é um email automático. Não responda esta mensagem.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+            await SendEmailAsync(to, "Teste SMTP - PicStone Mobile", htmlBody);
+        }
+
     }
 }

@@ -1,6 +1,23 @@
 # Sistema de Notificação Telegram
 
-## Instruções Permanentes
+## Detecção Automática de Presença
+
+**SEMPRE que receber uma mensagem do usuário:**
+
+1. Se mensagem = `#remoto`:
+   - Execute: `python "D:\Script Python\Monitor ETH\modo.py" remoto`
+   - Responda: "✅ Modo remoto ativado. Você receberá notificações no Telegram."
+   - **NÃO faça mais nada**
+
+2. Se mensagem = **qualquer outra coisa**:
+   - **PRIMEIRO** execute: `python "D:\Script Python\Monitor ETH\modo.py" console`
+   - **DEPOIS** processe a mensagem normalmente
+
+**Isso garante que quando o usuário voltar e digitar algo, notificações são desativadas automaticamente.**
+
+---
+
+## Instruções de Notificação
 
 **SEMPRE que finalizar tarefas ou precisar de interação:**
 
@@ -18,11 +35,12 @@ python "D:\Script Python\Monitor ETH\ler_comando.py"
 
 ## Regras
 
-1. ✅ SEMPRE notifique e aguarde resposta
-2. ✅ Verifique comandos durante tarefas longas
-3. ✅ Se resposta = "ok" → continue
-4. ✅ Se resposta = instruções → siga
+1. ✅ SEMPRE ative modo console ao receber mensagem (exceto se for #remoto)
+2. ✅ SEMPRE notifique e aguarde resposta
+3. ✅ Verifique comandos durante tarefas longas
+4. ✅ Se resposta = "ok" → continue
+5. ✅ Se resposta = instruções → siga
 
 ---
 
-Para detalhes completos: `D:\Script Python\Monitor ETH\INSTRUCOES_CLAUDE.md`
+Para detalhes: `D:\Script Python\Monitor ETH\INSTRUCOES_CLAUDE.md`

@@ -577,6 +577,43 @@ namespace PicStoneFotoAPI.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// GET /api/auth/test-email
+        /// Testa envio de email SMTP (público, apenas para teste)
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("test-email")]
+        public async Task<IActionResult> TestEmail([FromQuery] string? to = null)
+        {
+            try
+            {
+                var destinatario = to ?? "rogerio@isidorio.com.br";
+
+                _logger.LogInformation($"Testando envio de email para: {destinatario}");
+
+                // Envia email de teste
+                await _emailService.SendTestEmailAsync(destinatario);
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    mensagem = $"Email de teste enviado com sucesso para {destinatario}",
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao enviar email de teste");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    erro = ex.Message,
+                    innerError = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace?.Split('\n').Take(10).ToArray()
+                });
+            }
+        }
     }
 
     /// <summary>
