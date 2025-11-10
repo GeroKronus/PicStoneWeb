@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PicStoneFotoAPI.Models;
 using PicStoneFotoAPI.Services;
 using SkiaSharp;
+using System.Security.Claims;
 
 namespace PicStoneFotoAPI.Controllers
 {
@@ -14,14 +15,16 @@ namespace PicStoneFotoAPI.Controllers
         private readonly MockupService _mockupService;
         private readonly NichoService _nichoService;
         private readonly BancadaService _bancadaService;
+        private readonly HistoryService _historyService;
         private readonly ILogger<MockupController> _logger;
         private readonly string _uploadsPath;
 
-        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, ILogger<MockupController> logger)
+        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, HistoryService historyService, ILogger<MockupController> logger)
         {
             _mockupService = mockupService;
             _nichoService = nichoService;
             _bancadaService = bancadaService;
+            _historyService = historyService;
             _logger = logger;
             _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
             Directory.CreateDirectory(_uploadsPath);
@@ -61,6 +64,15 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation("Mockup gerado com sucesso! Caminhos: {Caminhos}",
                     string.Join(", ", response.CaminhosGerados));
+
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Cavalete",
+                    detalhes: $"{{\"tipo\":\"{request.TipoCavalete}\",\"fundo\":\"{request.Fundo}\"}}",
+                    quantidadeImagens: response.CaminhosGerados.Count
+                );
 
                 return Ok(response);
             }
@@ -153,6 +165,15 @@ namespace PicStoneFotoAPI.Controllers
                     mockup.Dispose();
                 }
 
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Nicho",
+                    detalhes: $"{{\"fundo\":\"{(fundoEscuro ? "escuro" : "claro")}\",\"shampoo\":{incluirShampoo.ToString().ToLower()},\"sabonete\":{incluirSabonete.ToString().ToLower()}}}",
+                    quantidadeImagens: mockups.Count
+                );
+
                 return Ok(new
                 {
                     mensagem = "Mockups de nicho gerados com sucesso!",
@@ -241,6 +262,15 @@ namespace PicStoneFotoAPI.Controllers
                     mockup.Dispose();
                 }
 
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Bancada1",
+                    detalhes: $"{{\"flip\":{flip.ToString().ToLower()}}}",
+                    quantidadeImagens: mockups.Count
+                );
+
                 return Ok(new
                 {
                     mensagem = "Mockups de bancada gerados com sucesso!",
@@ -328,6 +358,15 @@ namespace PicStoneFotoAPI.Controllers
                 {
                     mockup.Dispose();
                 }
+
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Bancada2",
+                    detalhes: $"{{\"flip\":{flip.ToString().ToLower()}}}",
+                    quantidadeImagens: mockups.Count
+                );
 
                 return Ok(new
                 {
@@ -537,6 +576,15 @@ namespace PicStoneFotoAPI.Controllers
                     mockup.Dispose();
                 }
 
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Bancada5",
+                    detalhes: $"{{\"flip\":{flip.ToString().ToLower()}}}",
+                    quantidadeImagens: mockups.Count
+                );
+
                 // 4. Retorna resposta com URLs dos mockups E URLs das imagens de análise
                 return Ok(new
                 {
@@ -658,6 +706,15 @@ namespace PicStoneFotoAPI.Controllers
                 {
                     mockup.Dispose();
                 }
+
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: $"Bancada{numeroBancada}",
+                    detalhes: $"{{\"flip\":{flip.ToString().ToLower()}}}",
+                    quantidadeImagens: mockups.Count
+                );
 
                 return Ok(new
                 {
