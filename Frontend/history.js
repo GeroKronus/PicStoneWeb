@@ -199,6 +199,9 @@ async function loadAllUsersStats() {
         allUsersData = usersWithStats;
         renderUsersStatsCards(usersWithStats);
 
+        // Também renderiza a tabela para que esteja pronta quando o usuário trocar de visualização
+        renderUsersStatsTable(usersWithStats);
+
     } catch (error) {
         console.error('Erro ao carregar estatísticas:', error);
         usersStatsList.innerHTML = '<p class="loading">Erro ao carregar estatísticas</p>';
