@@ -135,15 +135,20 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
-        /// Cria usuário inicial para testes (rogerio@picstone.com.br/123456)
+        /// Cria usuário admin se não existir (rogerio@picstone.com.br/123456)
+        /// Sempre garante que o admin existe, independente de outros usuários
         /// </summary>
         public async Task CriarUsuarioInicialAsync()
         {
             try
             {
-                // Verifica se já existe algum usuário
-                if (await _context.Usuarios.AnyAsync())
+                // Verifica se o admin já existe
+                var adminExistente = await _context.Usuarios
+                    .FirstOrDefaultAsync(u => u.Username == "rogerio@picstone.com.br");
+
+                if (adminExistente != null)
                 {
+                    _logger.LogInformation("Usuário admin já existe");
                     return;
                 }
 
@@ -163,11 +168,11 @@ namespace PicStoneFotoAPI.Services
                 _context.Usuarios.Add(adminUser);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Usuário inicial 'rogerio@picstone.com.br' criado com sucesso");
+                _logger.LogInformation("Usuário admin 'rogerio@picstone.com.br' criado com sucesso");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao criar usuário inicial");
+                _logger.LogError(ex, "Erro ao criar usuário admin");
             }
         }
 
