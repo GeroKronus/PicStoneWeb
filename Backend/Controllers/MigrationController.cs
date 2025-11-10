@@ -411,6 +411,122 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// GET /api/migration/fix-duplicate-emails-and-create-admin
+        /// Corrige emails duplicados vazios e cria o índice único, depois cria admin
+        /// </summary>
+        [HttpGet("fix-duplicate-emails-and-create-admin")]
+        public async Task<IActionResult> FixDuplicateEmailsAndCreateAdmin()
+        {
+            try
+            {
+                _logger.LogInformation("=== CORRIGINDO EMAILS DUPLICADOS E CRIANDO ADMIN ===");
+
+                // Verifica conexão
+                var canConnect = await _context.Database.CanConnectAsync();
+                if (!canConnect)
+                {
+                    return StatusCode(500, new
+                    {
+                        sucesso = false,
+                        mensagem = "Não foi possível conectar ao banco de dados"
+                    });
+                }
+
+                var results = new List<object>();
+
+                // 1. Atualizar usuários com Email vazio para ter emails únicos temporários
+                try
+                {
+                    var updateSql = @"
+                        UPDATE ""Usuarios""
+                        SET ""Email"" = 'temp_' || ""Id"" || '@picstone.local'
+                        WHERE ""Email"" = '' OR ""Email"" IS NULL";
+
+                    await _context.Database.ExecuteSqlRawAsync(updateSql);
+                    _logger.LogInformation("Emails vazios atualizados com valores temporários únicos");
+                    results.Add(new { passo = "1. Atualizar emails vazios", sucesso = true, erro = (string)null });
+                }
+                catch (Exception ex1)
+                {
+                    _logger.LogError(ex1, "Erro ao atualizar emails vazios");
+                    results.Add(new { passo = "1. Atualizar emails vazios", sucesso = false, erro = ex1.Message });
+                }
+
+                // 2. Remover índice antigo se existir
+                try
+                {
+                    var dropIndexSql = @"DROP INDEX IF EXISTS ""IX_Usuarios_Email""";
+                    await _context.Database.ExecuteSqlRawAsync(dropIndexSql);
+                    _logger.LogInformation("Índice antigo removido");
+                    results.Add(new { passo = "2. Remover índice antigo", sucesso = true, erro = (string)null });
+                }
+                catch (Exception ex2)
+                {
+                    _logger.LogError(ex2, "Erro ao remover índice antigo");
+                    results.Add(new { passo = "2. Remover índice antigo", sucesso = false, erro = ex2.Message });
+                }
+
+                // 3. Criar índice único no Email
+                try
+                {
+                    var createIndexSql = @"CREATE UNIQUE INDEX ""IX_Usuarios_Email"" ON ""Usuarios"" (""Email"")";
+                    await _context.Database.ExecuteSqlRawAsync(createIndexSql);
+                    _logger.LogInformation("Índice único criado com sucesso");
+                    results.Add(new { passo = "3. Criar índice único", sucesso = true, erro = (string)null });
+                }
+                catch (Exception ex3)
+                {
+                    _logger.LogError(ex3, "Erro ao criar índice único");
+                    results.Add(new { passo = "3. Criar índice único", sucesso = false, erro = ex3.Message });
+                }
+
+                // 4. Criar usuário admin
+                try
+                {
+                    await _authService.CriarUsuarioInicialAsync();
+                    _logger.LogInformation("Tentativa de criação do admin executada");
+
+                    var adminExists = await _authService.CheckAdminExistsAsync();
+                    results.Add(new {
+                        passo = "4. Criar usuário admin",
+                        sucesso = adminExists,
+                        erro = adminExists ? null : "Admin não foi criado - verifique logs"
+                    });
+                }
+                catch (Exception ex4)
+                {
+                    _logger.LogError(ex4, "Erro ao criar admin");
+                    results.Add(new { passo = "4. Criar usuário admin", sucesso = false, erro = ex4.Message });
+                }
+
+                var sucessos = results.Count(r => (bool)r.GetType().GetProperty("sucesso").GetValue(r));
+                var adminCriado = await _authService.CheckAdminExistsAsync();
+
+                return Ok(new
+                {
+                    sucesso = sucessos == results.Count,
+                    mensagem = "Processo de correção concluído",
+                    adminCriado = adminCriado,
+                    totalPassos = results.Count,
+                    sucessos = sucessos,
+                    passos = results,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao corrigir emails duplicados");
+                return StatusCode(500, new
+                {
+                    sucesso = false,
+                    mensagem = "Erro ao corrigir emails duplicados",
+                    erro = ex.Message,
+                    stackTrace = ex.StackTrace
+                });
+            }
+        }
+
+        /// <summary>
         /// GET /api/migration/populate-materials
         /// Cria tabela e popula com lista de materiais
         /// </summary>
