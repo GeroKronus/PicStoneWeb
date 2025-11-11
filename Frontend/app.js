@@ -476,6 +476,14 @@ function setupEventListeners() {
     elements.usersCardViewBtn.addEventListener('click', () => switchUsersViewMode('cards'));
     elements.usersTableViewBtn.addEventListener('click', () => switchUsersViewMode('table'));
 
+    // Event listener para busca de usuários
+    const searchUsersManagementInput = document.getElementById('searchUsersManagementInput');
+    if (searchUsersManagementInput) {
+        searchUsersManagementInput.addEventListener('input', (e) => {
+            filterUsersManagement(e.target.value);
+        });
+    }
+
     // Event delegation para botões de gerenciar usuários (Cards)
     elements.usersList.addEventListener('click', async (e) => {
         if (e.target.classList.contains('btn-deactivate-user')) {
@@ -2667,6 +2675,50 @@ function switchUsersViewMode(mode) {
     } else {
         // Se não há dados, recarrega
         loadUsers();
+    }
+}
+
+/**
+ * Filtra usuários baseado no texto de busca
+ */
+function filterUsersManagement(searchText) {
+    if (!allUsersManagementData || allUsersManagementData.length === 0) {
+        return;
+    }
+
+    const search = searchText.toLowerCase().trim();
+
+    // Se não há texto de busca, mostra todos
+    if (!search) {
+        if (currentUsersViewMode === 'cards') {
+            renderUsersCards(allUsersManagementData);
+        } else {
+            renderUsersTable(allUsersManagementData);
+        }
+        return;
+    }
+
+    // Filtra usuários por nome ou email
+    const filtered = allUsersManagementData.filter(user => {
+        const nome = (user.nomeCompleto || '').toLowerCase();
+        const email = (user.username || '').toLowerCase();
+        return nome.includes(search) || email.includes(search);
+    });
+
+    // Renderiza lista filtrada
+    if (currentUsersViewMode === 'cards') {
+        renderUsersCards(filtered);
+    } else {
+        renderUsersTable(filtered);
+    }
+
+    // Se não encontrou nenhum usuário
+    if (filtered.length === 0) {
+        if (currentUsersViewMode === 'cards') {
+            elements.usersList.innerHTML = '<p class="empty">Nenhum usuário encontrado</p>';
+        } else {
+            elements.usersManagementTableBody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum usuário encontrado</td></tr>';
+        }
     }
 }
 
