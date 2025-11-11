@@ -505,12 +505,12 @@ function switchViewMode(mode) {
         cardViewBtn.classList.add('active');
         tableViewBtn.classList.remove('active');
         usersStatsList.classList.remove('hidden');
-        usersStatsTable.classList.add('hidden');
+        usersStatsTable.classList.remove('active');
     } else {
         tableViewBtn.classList.add('active');
         cardViewBtn.classList.remove('active');
         usersStatsList.classList.add('hidden');
-        usersStatsTable.classList.remove('hidden');
+        usersStatsTable.classList.add('active');
     }
 
     // Re-renderiza com os dados atuais
