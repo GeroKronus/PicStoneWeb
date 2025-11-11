@@ -5,9 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PicStone® mobile</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="style.css?v=20251109230000">
+    <link rel="stylesheet" href="style.css?v=20251111000000">
 </head>
 <body>
+    <!-- Banner de Aviso de Expiração -->
+    <div id="expirationBanner" class="expiration-banner hidden">
+        <div class="expiration-content">
+            <span class="expiration-icon">⚠️</span>
+            <span id="expirationMessage" class="expiration-message"></span>
+            <button onclick="fecharBannerExpiracao()" class="expiration-close">×</button>
+        </div>
+    </div>
+
     <!-- Tela de Login/Cadastro -->
     <div id="loginScreen" class="screen active">
         <div class="container">
@@ -141,6 +150,11 @@
                                 </svg>
                                 Histórico de Uso
                             </button>
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-version">
+                                <span class="version-label">Versão</span>
+                                <span id="appVersion" class="version-number">Carregando...</span>
+                            </div>
                             <div class="dropdown-divider"></div>
                             <button id="logoutBtn" class="dropdown-item danger">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -519,56 +533,56 @@
                     <div class="countertop-options">
                         <div class="countertop-card" data-type="bancada1">
                             <div class="countertop-preview" data-type="bancada1">
-                                <img src="/images/thumb-bancada1.png" alt="Preview Bancada #1">
+                                <img src="/images/thumb-bancada1.webp" alt="Preview Bancada #1" loading="lazy" width="256" height="256">
                             </div>
                             <h4>Bancada #1</h4>
                         </div>
 
                         <div class="countertop-card" data-type="bancada2">
                             <div class="countertop-preview" data-type="bancada2">
-                                <img src="/images/thumb-bancada2.png" alt="Preview Bancada #2">
+                                <img src="/images/thumb-bancada2.webp" alt="Preview Bancada #2" loading="lazy" width="256" height="256">
                             </div>
                             <h4>Bancada #2</h4>
                         </div>
 
                         <div class="countertop-card" data-type="bancada3">
                             <div class="countertop-preview" data-type="bancada3">
-                                <img src="/images/thumb-bancada3.png" alt="Preview Bancada #3">
+                                <img src="/images/thumb-bancada3.webp" alt="Preview Bancada #3" loading="lazy" width="256" height="256">
                             </div>
                             <h4>Bancada #3</h4>
                         </div>
 
                         <div class="countertop-card" data-type="bancada4">
                             <div class="countertop-preview" data-type="bancada4">
-                                <img src="/images/thumb-bancada4.png" alt="Preview Bancada #4">
+                                <img src="/images/thumb-bancada4.webp" alt="Preview Bancada #4" loading="lazy" width="256" height="256">
                             </div>
                             <h4>Bancada #4</h4>
                         </div>
 
                         <div class="countertop-card" data-type="bancada5">
                             <div class="countertop-preview" data-type="bancada5">
-                                <img src="/images/thumb-bancada5.png" alt="Preview Bancada #5">
+                                <img src="/images/thumb-bancada5.webp" alt="Preview Bancada #5" loading="lazy" width="256" height="256">
                             </div>
                             <h4>Bancada #5</h4>
                         </div>
 
                         <div class="countertop-card" data-type="bancada6">
                             <div class="countertop-preview" data-type="bancada6">
-                                <img src="/images/thumb-bancada6.png" alt="Preview Bancada #6">
+                                <img src="/images/thumb-bancada6.webp" alt="Preview Bancada #6" loading="lazy" width="256" height="256">
                             </div>
                             <h4>Bancada #6</h4>
                         </div>
 
                         <div class="countertop-card" data-type="bancada7">
                             <div class="countertop-preview" data-type="bancada7">
-                                <img src="/images/thumb-bancada7.png" alt="Preview Bancada #7">
+                                <img src="/images/thumb-bancada7.webp" alt="Preview Bancada #7" loading="lazy" width="256" height="256">
                             </div>
                             <h4>Bancada #7</h4>
                         </div>
 
                         <div class="countertop-card" data-type="bancada8">
                             <div class="countertop-preview" data-type="bancada8">
-                                <img src="/images/thumb-bancada8.png" alt="Preview Bancada #8">
+                                <img src="/images/thumb-bancada8.webp" alt="Preview Bancada #8" loading="lazy" width="256" height="256">
                             </div>
                             <h4>Bancada #8</h4>
                         </div>
@@ -667,7 +681,7 @@
                 </div>
 
                 <!-- Visualização em Tabela -->
-                <div id="usersStatsTable" class="users-stats-table hidden">
+                <div id="usersStatsTable" class="users-stats-table">
                     <div class="table-responsive">
                         <table class="data-table">
                             <thead>
@@ -796,21 +810,13 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="newUsername">E-mail do Usuário</label>
-                    <input type="email" id="newUsername" name="newUsername" required placeholder="Ex: joao@example.com">
+                    <label for="newUsername">Nome de Usuário</label>
+                    <input type="text" id="newUsername" name="newUsername" required minlength="3" placeholder="Ex: joao">
                 </div>
 
                 <div class="form-group">
                     <label for="newNomeCompleto">Nome Completo</label>
                     <input type="text" id="newNomeCompleto" name="newNomeCompleto" required placeholder="Ex: João Silva">
-                </div>
-
-                <div class="form-group">
-                    <label for="newUserExpiracao">Data de Expiração (opcional)</label>
-                    <input type="datetime-local" id="newUserExpiracao" name="newUserExpiracao">
-                    <small style="color: #6b7280; display: block; margin-top: 5px;">
-                        Deixe em branco para acesso ilimitado
-                    </small>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Criar Usuário</button>
@@ -930,8 +936,8 @@
         </div>
     </div>
 
-    <script src="app.js?v=20251110100000"></script>
-    <script src="bookmatch.js?v=20251108190000"></script>
-    <script src="history.js?v=20251109230000"></script>
+    <script src="app.js?v=20251111000000"></script>
+    <script src="bookmatch.js?v=20251110190000"></script>
+    <script src="history.js?v=20251111120000"></script>
 </body>
 </html>

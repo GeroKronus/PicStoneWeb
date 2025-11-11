@@ -166,38 +166,23 @@ async function loadAllUsersStats() {
     try {
         usersStatsList.innerHTML = '<p class="loading">Carregando estatísticas...</p>';
 
-        // Busca lista de usuários
-        const usersResponse = await fetch('/api/auth/users', {
+        // [OTIMIZADO] 1 única requisição que retorna todos os usuários COM estatísticas
+        // Antes: 1 + N requests (N = número de usuários)
+        // Agora: 1 request apenas! 🚀
+        const response = await fetch('/api/history/admin/all-users-stats', {
             headers: { 'Authorization': `Bearer ${getToken()}` }
         });
 
-        if (!usersResponse.ok) throw new Error('Erro ao carregar usuários');
+        if (!response.ok) throw new Error('Erro ao carregar usuários');
 
-        const users = await usersResponse.json();
-
-        // Carrega estatísticas de cada usuário
-        const usersWithStats = await Promise.all(
-            users.map(async (user) => {
-                try {
-                    const statsResponse = await fetch(`/api/history/admin/user/${user.id}/stats`, {
-                        headers: { 'Authorization': `Bearer ${getToken()}` }
-                    });
-
-                    if (statsResponse.ok) {
-                        const stats = await statsResponse.json();
-                        return { ...user, stats };
-                    }
-                } catch (err) {
-                    console.error(`Erro ao carregar stats do usuário ${user.id}:`, err);
-                }
-
-                return { ...user, stats: { totalLogins: 0, totalAmbientesGerados: 0 } };
-            })
-        );
+        const usersWithStats = await response.json();
 
         // Armazena dados para filtro e renderiza cards de usuários
         allUsersData = usersWithStats;
         renderUsersStatsCards(usersWithStats);
+
+        // Também renderiza a tabela para que esteja pronta quando o usuário trocar de visualização
+        renderUsersStatsTable(usersWithStats);
 
     } catch (error) {
         console.error('Erro ao carregar estatísticas:', error);
@@ -497,17 +482,17 @@ function parseUserAgent(userAgent) {
 function switchViewMode(mode) {
     currentViewMode = mode;
 
-    // Atualiza estado dos botões
+    // Atualiza estado dos botões e visualizações
     if (mode === 'cards') {
         cardViewBtn.classList.add('active');
         tableViewBtn.classList.remove('active');
         usersStatsList.classList.remove('hidden');
-        usersStatsTable.classList.add('hidden');
+        usersStatsTable.classList.remove('active');
     } else {
         tableViewBtn.classList.add('active');
         cardViewBtn.classList.remove('active');
         usersStatsList.classList.add('hidden');
-        usersStatsTable.classList.remove('hidden');
+        usersStatsTable.classList.add('active');
     }
 
     // Re-renderiza com os dados atuais
@@ -532,10 +517,10 @@ function renderUsersStatsTable(users) {
     usersTableBody.innerHTML = users.map(user => {
         const nome = escapeHtml(user.nomeCompleto || 'Sem nome');
         const email = escapeHtml(user.username || 'Sem email');
-        const totalLogins = user.totalLogins || 0;
-        const totalAmbientes = user.totalAmbientes || 0;
-        const primeiroAcesso = user.primeiroAcesso ? formatDateTime(user.primeiroAcesso, 'short') : '-';
-        const ultimoAcesso = user.ultimoAcesso ? formatDateTime(user.ultimoAcesso, 'short') : '-';
+        const totalLogins = (user.stats && user.stats.totalLogins) || 0;
+        const totalAmbientes = (user.stats && user.stats.totalAmbientesGerados) || 0;
+        const primeiroAcesso = (user.stats && user.stats.primeiroAcesso) ? formatDateShort(user.stats.primeiroAcesso) : '-';
+        const ultimoAcesso = (user.stats && user.stats.ultimoAcesso) ? formatDateShort(user.stats.ultimoAcesso) : '-';
 
         return `
             <tr>
@@ -546,7 +531,7 @@ function renderUsersStatsTable(users) {
                 <td>${primeiroAcesso}</td>
                 <td>${ultimoAcesso}</td>
                 <td>
-                    <button class="btn-small" onclick="showUserDetailsModal(${user.id})">
+                    <button class="btn-small" onclick="showUserDetails(${user.id}, '${escapeHtml(user.nomeCompleto)}')">
                         Ver Detalhes
                     </button>
                 </td>
