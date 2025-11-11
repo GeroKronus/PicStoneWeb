@@ -143,7 +143,7 @@ namespace PicStoneFotoAPI.Services
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_10_MosaicoAntesMoldura.png");
 
-                // Adiciona moldura bancada1.png
+                // Adiciona moldura bancada1.webp
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint
@@ -152,15 +152,15 @@ namespace PicStoneFotoAPI.Services
                         IsAntialias = true
                     };
 
-                    var moldura = CarregarRecurso("bancada1.png");
+                    var moldura = CarregarRecurso("bancada1.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Moldura bancada1.png aplicada");
+                        _logger.LogInformation("Moldura bancada1.webp aplicada");
                     }
                     else
                     {
-                        _logger.LogWarning("Moldura bancada1.png NÃO foi carregada!");
+                        _logger.LogWarning("Moldura bancada1.webp NÃO foi carregada!");
                     }
 
                     // Adiciona marca d'água
@@ -416,7 +416,7 @@ namespace PicStoneFotoAPI.Services
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada2_P{contaProcesso}_18_MosaicoAntesMoldura.png");
 
-                // Adiciona moldura bancada2.png
+                // Adiciona moldura bancada2.webp
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint
@@ -425,15 +425,15 @@ namespace PicStoneFotoAPI.Services
                         IsAntialias = true
                     };
 
-                    var moldura = CarregarRecurso("bancada2.png");
+                    var moldura = CarregarRecurso("bancada2.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Moldura bancada2.png aplicada");
+                        _logger.LogInformation("Moldura bancada2.webp aplicada");
                     }
                     else
                     {
-                        _logger.LogWarning("Moldura bancada2.png NÃO foi carregada!");
+                        _logger.LogWarning("Moldura bancada2.webp NÃO foi carregada!");
                     }
 
                     // Adiciona marca d'água
@@ -854,7 +854,7 @@ namespace PicStoneFotoAPI.Services
                     _logger.LogInformation("4. faixaInferiorTransformada desenhada at (0, 0)");
 
                     // 5. Moldura vazada - OVERLAY (por cima do mármore)
-                    var moldura = CarregarRecurso("bancada3.png");
+                    var moldura = CarregarRecurso("bancada3.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
@@ -954,7 +954,7 @@ namespace PicStoneFotoAPI.Services
                 _logger.LogInformation($"Bancada6: FaixaSup={imagemFaixaSuperior.Width}x{imagemFaixaSuperior.Height}, FaixaInf={imagemFaixaInferior.Width}x{imagemFaixaInferior.Height}");
 
                 // ============ TRANSFORMAÇÕES DE PERSPECTIVA - BANCADA 6 ============
-                // Canvas da moldura bancada6.png: 2500x1632
+                // Canvas da moldura bancada6.webp: 2500x1632
                 const int canvasBancada6Width = 2500;
                 const int canvasBancada6Height = 1632;
 
@@ -992,11 +992,11 @@ namespace PicStoneFotoAPI.Services
                 _logger.LogInformation($"Bancada6: Transformações aplicadas - Topo, Pé, FaixaSuperior, FaixaInferior");
 
                 // ============ MONTAGEM FINAL: Usa tamanho da moldura ============
-                var moldura = CarregarRecurso("bancada6.png");
+                var moldura = CarregarRecurso("bancada6.webp");
                 if (moldura == null)
                 {
-                    _logger.LogError("Bancada6: ERRO ao carregar moldura bancada6.png");
-                    throw new Exception("Moldura bancada6.png não encontrada");
+                    _logger.LogError("Bancada6: ERRO ao carregar moldura bancada6.webp");
+                    throw new Exception("Moldura bancada6.webp não encontrada");
                 }
 
                 int larguraMoldura = moldura.Width;
@@ -1019,7 +1019,7 @@ namespace PicStoneFotoAPI.Services
 
                     // 5. Moldura vazada - OVERLAY
                     canvas.DrawBitmap(moldura, 0, 0, paint);
-                    _logger.LogInformation("Bancada6: Moldura bancada6.png aplicada");
+                    _logger.LogInformation("Bancada6: Moldura bancada6.webp aplicada");
 
                     // Marca d'água
                     _watermark.AddWatermark(canvas, mosaicoEmBranco.Width, mosaicoEmBranco.Height);
@@ -1149,15 +1149,15 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada7.png");
+                    var moldura = CarregarRecurso("bancada7.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Moldura bancada7.png sobreposta");
+                        _logger.LogInformation("Moldura bancada7.webp sobreposta");
                     }
                     else
                     {
-                        _logger.LogWarning("Moldura bancada7.png NÃO encontrada!");
+                        _logger.LogWarning("Moldura bancada7.webp NÃO encontrada!");
                     }
 
                     // Adiciona marca d'água
@@ -1252,15 +1252,15 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada8.png");
+                    var moldura = CarregarRecurso("bancada8.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Moldura bancada8.png sobreposta");
+                        _logger.LogInformation("Moldura bancada8.webp sobreposta");
                     }
                     else
                     {
-                        _logger.LogWarning("Moldura bancada8.png NÃO encontrada!");
+                        _logger.LogWarning("Moldura bancada8.webp NÃO encontrada!");
                     }
 
                     // Adiciona marca d'água
@@ -1337,7 +1337,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada4.png");
+                    var moldura = CarregarRecurso("bancada4.webp");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
 
                     // Adiciona marca d'água
@@ -1456,15 +1456,15 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada5.png");
+                    var moldura = CarregarRecurso("bancada5.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Moldura bancada5.png aplicada");
+                        _logger.LogInformation("Moldura bancada5.webp aplicada");
                     }
                     else
                     {
-                        _logger.LogWarning("Moldura bancada5.png NÃO encontrada!");
+                        _logger.LogWarning("Moldura bancada5.webp NÃO encontrada!");
                     }
 
                     // Adiciona marca d'água

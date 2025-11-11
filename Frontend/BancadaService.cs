@@ -171,7 +171,7 @@ namespace PicStoneFotoAPI.Services
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada1_P{contaProcesso}_10_MosaicoAntesMoldura.png");
 
-                // Adiciona moldura bancada1.png
+                // Adiciona moldura bancada1.webp
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint
@@ -180,15 +180,15 @@ namespace PicStoneFotoAPI.Services
                         IsAntialias = true
                     };
 
-                    var moldura = CarregarRecurso("bancada1.png");
+                    var moldura = CarregarRecurso("bancada1.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Moldura bancada1.png aplicada");
+                        _logger.LogInformation("Moldura bancada1.webp aplicada");
                     }
                     else
                     {
-                        _logger.LogWarning("Moldura bancada1.png NÃO foi carregada!");
+                        _logger.LogWarning("Moldura bancada1.webp NÃO foi carregada!");
                     }
 
                     // Adiciona marca d'água
@@ -444,7 +444,7 @@ namespace PicStoneFotoAPI.Services
 
                 SalvarDebug(mosaicoEmBranco, $"DEBUG_Bancada2_P{contaProcesso}_18_MosaicoAntesMoldura.png");
 
-                // Adiciona moldura bancada2.png
+                // Adiciona moldura bancada2.webp
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint
@@ -453,15 +453,15 @@ namespace PicStoneFotoAPI.Services
                         IsAntialias = true
                     };
 
-                    var moldura = CarregarRecurso("bancada2.png");
+                    var moldura = CarregarRecurso("bancada2.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Moldura bancada2.png aplicada");
+                        _logger.LogInformation("Moldura bancada2.webp aplicada");
                     }
                     else
                     {
-                        _logger.LogWarning("Moldura bancada2.png NÃO foi carregada!");
+                        _logger.LogWarning("Moldura bancada2.webp NÃO foi carregada!");
                     }
 
                     // Adiciona marca d'água
@@ -974,7 +974,7 @@ namespace PicStoneFotoAPI.Services
                     _logger.LogInformation("4. faixaInferiorTransformada desenhada at (0, 0)");
 
                     // 5. Moldura vazada - OVERLAY (por cima do mármore)
-                    var moldura = CarregarRecurso("bancada3.png");
+                    var moldura = CarregarRecurso("bancada3.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
@@ -1120,15 +1120,15 @@ namespace PicStoneFotoAPI.Services
                     canvas.DrawBitmap(faixaInferiorTransformada, 0, 0, paint);  // 4. Faixa inferior
 
                     // 5. Moldura vazada - OVERLAY
-                    var moldura = CarregarRecurso("bancada6.png");
+                    var moldura = CarregarRecurso("bancada6.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Bancada6: Moldura bancada6.png aplicada");
+                        _logger.LogInformation("Bancada6: Moldura bancada6.webp aplicada");
                     }
                     else
                     {
-                        _logger.LogError("Bancada6: ERRO ao carregar moldura bancada6.png");
+                        _logger.LogError("Bancada6: ERRO ao carregar moldura bancada6.webp");
                     }
 
                     // Marca d'água
@@ -1216,7 +1216,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada4.png");
+                    var moldura = CarregarRecurso("bancada4.webp");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
 
                     // Adiciona marca d'água
@@ -1335,15 +1335,15 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada5.png");
+                    var moldura = CarregarRecurso("bancada5.webp");
                     if (moldura != null)
                     {
                         canvas.DrawBitmap(moldura, 0, 0, paint);
-                        _logger.LogInformation("Moldura bancada5.png aplicada");
+                        _logger.LogInformation("Moldura bancada5.webp aplicada");
                     }
                     else
                     {
-                        _logger.LogWarning("Moldura bancada5.png NÃO encontrada!");
+                        _logger.LogWarning("Moldura bancada5.webp NÃO encontrada!");
                     }
 
                     // Adiciona marca d'água
@@ -1406,7 +1406,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada6.png");
+                    var moldura = CarregarRecurso("bancada6.webp");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
 
                     // Adiciona marca d'água
@@ -1462,7 +1462,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada7.png");
+                    var moldura = CarregarRecurso("bancada7.webp");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
 
                     // Adiciona marca d'água
@@ -1521,7 +1521,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
-                    var moldura = CarregarRecurso("bancada8.png");
+                    var moldura = CarregarRecurso("bancada8.webp");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
 
                     // Adiciona marca d'água
