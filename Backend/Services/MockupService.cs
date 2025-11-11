@@ -93,8 +93,8 @@ namespace PicStoneFotoAPI.Services
         {
             // Nome do arquivo de moldura
             var nomeMoldura = fundo.ToLower() == "claro"
-                ? "CAVALETE SIMPLES.png"
-                : "CAVALETE SIMPLES Cinza.png";
+                ? "CAVALETE SIMPLES.webp"
+                : "CAVALETE SIMPLES Cinza.webp";
 
             var caminhoMoldura = Path.Combine(_moldurasPath, nomeMoldura);
 
@@ -173,8 +173,8 @@ namespace PicStoneFotoAPI.Services
         {
             // Nome do arquivo de moldura
             var nomeMoldura = fundo.ToLower() == "claro"
-                ? "CAVALETE BASE.png"
-                : "CAVALETE BASE Cinza.png";
+                ? "CAVALETE BASE.webp"
+                : "CAVALETE BASE Cinza.webp";
 
             var caminhoMoldura = Path.Combine(_moldurasPath, nomeMoldura);
 
