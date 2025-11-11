@@ -519,8 +519,8 @@ function renderUsersStatsTable(users) {
         const email = escapeHtml(user.username || 'Sem email');
         const totalLogins = (user.stats && user.stats.totalLogins) || 0;
         const totalAmbientes = (user.stats && user.stats.totalAmbientesGerados) || 0;
-        const primeiroAcesso = (user.stats && user.stats.primeiroAcesso) ? formatDateTime(user.stats.primeiroAcesso, 'short') : '-';
-        const ultimoAcesso = (user.stats && user.stats.ultimoAcesso) ? formatDateTime(user.stats.ultimoAcesso, 'short') : '-';
+        const primeiroAcesso = (user.stats && user.stats.primeiroAcesso) ? formatDateShort(user.stats.primeiroAcesso) : '-';
+        const ultimoAcesso = (user.stats && user.stats.ultimoAcesso) ? formatDateShort(user.stats.ultimoAcesso) : '-';
 
         return `
             <tr>
