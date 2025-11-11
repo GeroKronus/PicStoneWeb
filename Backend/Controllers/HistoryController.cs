@@ -165,5 +165,26 @@ namespace PicStoneFotoAPI.Controllers
                 return StatusCode(500, new { message = "Erro ao buscar estatísticas" });
             }
         }
+
+        /// <summary>
+        /// GET /api/history/admin/all-users-stats
+        /// [ADMIN ONLY] [OTIMIZADO] Retorna TODOS os usuários com suas estatísticas em 1 única requisição
+        /// Performance: 1 request + 1 query SQL vs N requests + N*4 queries SQL (muito mais rápido!)
+        /// </summary>
+        [HttpGet("admin/all-users-stats")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllUsersWithStats()
+        {
+            try
+            {
+                var usersWithStats = await _historyService.GetAllUsersWithStatsAsync();
+                return Ok(usersWithStats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao buscar usuários com estatísticas");
+                return StatusCode(500, new { message = "Erro ao buscar dados" });
+            }
+        }
     }
 }

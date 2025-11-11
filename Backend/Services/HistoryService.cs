@@ -154,5 +154,49 @@ namespace PicStoneFotoAPI.Services
                 UltimoAcesso = ultimoAcesso
             };
         }
+
+        /// <summary>
+        /// [OTIMIZADO] Retorna TODOS os usuários com suas estatísticas em 1 única query SQL
+        /// Performance: 1 query vs N*4 queries (onde N = número de usuários)
+        /// </summary>
+        public async Task<List<UserWithStatsDto>> GetAllUsersWithStatsAsync()
+        {
+            var result = await _context.Usuarios
+                .Select(u => new UserWithStatsDto
+                {
+                    Id = u.Id,
+                    Username = u.Username,
+                    Email = u.Email,
+                    NomeCompleto = u.NomeCompleto,
+                    Ativo = u.Ativo,
+                    Status = u.Status,
+                    DataExpiracao = u.DataExpiracao,
+                    Stats = new UserStats
+                    {
+                        TotalLogins = u.Logins.Count(),
+                        TotalAmbientesGerados = u.AmbientesGerados.Count(),
+                        PrimeiroAcesso = u.Logins.OrderBy(l => l.DataHora).Select(l => l.DataHora).FirstOrDefault(),
+                        UltimoAcesso = u.UltimoAcesso
+                    }
+                })
+                .ToListAsync();
+
+            return result;
+        }
+    }
+
+    /// <summary>
+    /// DTO para retornar usuário com estatísticas
+    /// </summary>
+    public class UserWithStatsDto
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string NomeCompleto { get; set; } = string.Empty;
+        public bool Ativo { get; set; }
+        public StatusUsuario Status { get; set; }
+        public DateTime? DataExpiracao { get; set; }
+        public UserStats Stats { get; set; } = new UserStats();
     }
 }

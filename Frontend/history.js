@@ -166,34 +166,16 @@ async function loadAllUsersStats() {
     try {
         usersStatsList.innerHTML = '<p class="loading">Carregando estatísticas...</p>';
 
-        // Busca lista de usuários
-        const usersResponse = await fetch('/api/auth/users', {
+        // [OTIMIZADO] 1 única requisição que retorna todos os usuários COM estatísticas
+        // Antes: 1 + N requests (N = número de usuários)
+        // Agora: 1 request apenas! 🚀
+        const response = await fetch('/api/history/admin/all-users-stats', {
             headers: { 'Authorization': `Bearer ${getToken()}` }
         });
 
-        if (!usersResponse.ok) throw new Error('Erro ao carregar usuários');
+        if (!response.ok) throw new Error('Erro ao carregar usuários');
 
-        const users = await usersResponse.json();
-
-        // Carrega estatísticas de cada usuário
-        const usersWithStats = await Promise.all(
-            users.map(async (user) => {
-                try {
-                    const statsResponse = await fetch(`/api/history/admin/user/${user.id}/stats`, {
-                        headers: { 'Authorization': `Bearer ${getToken()}` }
-                    });
-
-                    if (statsResponse.ok) {
-                        const stats = await statsResponse.json();
-                        return { ...user, stats };
-                    }
-                } catch (err) {
-                    console.error(`Erro ao carregar stats do usuário ${user.id}:`, err);
-                }
-
-                return { ...user, stats: { totalLogins: 0, totalAmbientesGerados: 0 } };
-            })
-        );
+        const usersWithStats = await response.json();
 
         // Armazena dados para filtro e renderiza cards de usuários
         allUsersData = usersWithStats;
