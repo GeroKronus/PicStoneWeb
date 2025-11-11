@@ -86,23 +86,26 @@ namespace PicStoneFotoAPI.Services
                     {
                         expiracaoProxima = true;
 
-                        // Envia email de aviso (não bloqueia se falhar)
-                        try
+                        // 🚀 OTIMIZAÇÃO: Envia email em background (não bloqueia login)
+                        _ = Task.Run(async () =>
                         {
-                            await _emailService.SendExpirationWarningEmailAsync(
-                                usuario.Email,
-                                usuario.NomeCompleto,
-                                dataExpiracao.Value,
-                                diasRestantes.Value
-                            );
-                            _logger.LogInformation("Email de aviso de expiração enviado para: {Username} ({Dias} dias restantes)",
-                                request.Username, diasRestantes);
-                        }
-                        catch (Exception emailEx)
-                        {
-                            _logger.LogError(emailEx, "Erro ao enviar email de aviso de expiração para: {Username}", request.Username);
-                            // Não bloqueia login se email falhar
-                        }
+                            try
+                            {
+                                await _emailService.SendExpirationWarningEmailAsync(
+                                    usuario.Email,
+                                    usuario.NomeCompleto,
+                                    dataExpiracao.Value,
+                                    diasRestantes.Value
+                                );
+                                _logger.LogInformation("Email de aviso de expiração enviado para: {Username} ({Dias} dias restantes)",
+                                    request.Username, diasRestantes);
+                            }
+                            catch (Exception emailEx)
+                            {
+                                _logger.LogError(emailEx, "Erro ao enviar email de aviso de expiração para: {Username}", request.Username);
+                                // Não bloqueia login se email falhar
+                            }
+                        });
                     }
                 }
 
@@ -454,8 +457,18 @@ namespace PicStoneFotoAPI.Services
 
                 await _context.SaveChangesAsync();
 
-                // Envia email de aprovação
-                await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+                // 🚀 OTIMIZAÇÃO: Envia email em background (não bloqueia)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Erro ao enviar email de reativação para: {Email}", usuario.Email);
+                    }
+                });
 
                 _logger.LogInformation($"Usuário reativado: {usuario.Email}");
 
@@ -510,8 +523,18 @@ namespace PicStoneFotoAPI.Services
                 _context.Usuarios.Add(usuario);
                 await _context.SaveChangesAsync();
 
-                // Envia email de verificação com o endereço base do request
-                await emailService.SendVerificationEmailAsync(usuario.Email, usuario.NomeCompleto, token, baseUrl);
+                // 🚀 OTIMIZAÇÃO: Envia email em background (não bloqueia cadastro)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await emailService.SendVerificationEmailAsync(usuario.Email, usuario.NomeCompleto, token, baseUrl);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Erro ao enviar email de verificação para: {Email}", usuario.Email);
+                    }
+                });
 
                 _logger.LogInformation($"Novo usuário registrado: {usuario.Email} (username: {usuario.Username})");
 
@@ -552,8 +575,18 @@ namespace PicStoneFotoAPI.Services
 
                 await _context.SaveChangesAsync();
 
-                // Notifica admin sobre nova solicitação
-                await emailService.SendAdminNotificationAsync(usuario.NomeCompleto, usuario.Email);
+                // 🚀 OTIMIZAÇÃO: Notifica admin em background (não bloqueia verificação)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await emailService.SendAdminNotificationAsync(usuario.NomeCompleto, usuario.Email);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Erro ao enviar notificação para admin sobre: {Email}", usuario.Email);
+                    }
+                });
 
                 _logger.LogInformation($"Email verificado: {usuario.Email}");
 
@@ -625,8 +658,18 @@ namespace PicStoneFotoAPI.Services
 
                 await _context.SaveChangesAsync();
 
-                // Envia email de aprovação
-                await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+                // 🚀 OTIMIZAÇÃO: Envia email em background (não bloqueia aprovação)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Erro ao enviar email de aprovação para: {Email}", usuario.Email);
+                    }
+                });
 
                 _logger.LogInformation($"Usuário aprovado: {usuario.Email}");
 
@@ -665,8 +708,18 @@ namespace PicStoneFotoAPI.Services
 
                 await _context.SaveChangesAsync();
 
-                // Envia email de rejeição
-                await emailService.SendRejectionEmailAsync(usuario.Email, usuario.NomeCompleto, motivo);
+                // 🚀 OTIMIZAÇÃO: Envia email em background (não bloqueia rejeição)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await emailService.SendRejectionEmailAsync(usuario.Email, usuario.NomeCompleto, motivo);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Erro ao enviar email de rejeição para: {Email}", usuario.Email);
+                    }
+                });
 
                 _logger.LogInformation($"Usuário rejeitado: {usuario.Email}");
 

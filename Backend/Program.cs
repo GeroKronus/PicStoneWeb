@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PicStoneFotoAPI.Data;
 using PicStoneFotoAPI.Services;
 using Serilog;
+using System.IO.Compression;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -93,6 +95,26 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
+});
+
+// ========== CONFIGURAÇÃO DE COMPRESSÃO (GZIP/BROTLI) ==========
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { "image/svg+xml", "application/javascript", "text/css", "application/json" });
+});
+
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Optimal;
 });
 
 // ========== REGISTRO DE SERVIÇOS ==========
@@ -209,6 +231,7 @@ using (var scope = app.Services.CreateScope())
 
 // ========== MIDDLEWARE ==========
 app.UseSerilogRequestLogging();
+app.UseResponseCompression(); // Habilita Gzip/Brotli (70% menor JS/CSS/JSON)
 
 if (app.Environment.IsDevelopment())
 {

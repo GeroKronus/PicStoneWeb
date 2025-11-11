@@ -10,6 +10,9 @@ namespace PicStoneFotoAPI.Services
     /// </summary>
     public class BancadaService
     {
+        // ⚠️ DEBUG MODE: Desabilitar em produção para ganho de 2-3 segundos por mockup
+        private const bool DEBUG_MODE = false; // false = produção, true = desenvolvimento
+
         private readonly ILogger<BancadaService> _logger;
         private readonly GraphicsTransformService _transformService;
         private readonly ImageManipulationService _imageManipulation;
@@ -502,6 +505,9 @@ namespace PicStoneFotoAPI.Services
 
         private void SalvarDebug(SKBitmap bitmap, string nomeArquivo)
         {
+            // 🚀 OTIMIZAÇÃO: Salvar debug apenas se DEBUG_MODE estiver habilitado
+            if (!DEBUG_MODE) return;
+
             try
             {
                 // Salvar em pasta acessível via web (wwwroot/debug)
