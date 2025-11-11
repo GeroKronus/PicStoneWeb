@@ -789,8 +789,54 @@
 
             <button id="addUserBtn" class="btn btn-primary">+ Adicionar Usuário</button>
 
+            <!-- Botões de Visualização -->
+            <div class="view-toggle-container">
+                <button id="usersCardViewBtn" class="view-toggle-btn active">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                    </svg>
+                    Cards
+                </button>
+                <button id="usersTableViewBtn" class="view-toggle-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                    Tabela
+                </button>
+            </div>
+
             <div id="usersList" class="users-list">
                 <p class="loading">Carregando...</p>
+            </div>
+
+            <!-- Visualização em Tabela -->
+            <div id="usersTable" class="users-stats-table">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Data Criação</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersManagementTableBody">
+                            <tr>
+                                <td colspan="5" class="loading">Carregando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -936,7 +982,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=20251111000000"></script>
+    <script src="app.js?v=20251111130000"></script>
     <script src="bookmatch.js?v=20251110190000"></script>
     <script src="history.js?v=20251111120000"></script>
 </body>

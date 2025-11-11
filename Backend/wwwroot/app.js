@@ -50,6 +50,10 @@ const state = {
     }
 };
 
+// Modo de visualização para gerenciar usuários
+let currentUsersViewMode = 'cards';
+let allUsersManagementData = [];
+
 // Elementos DOM
 const elements = {
     loginScreen: document.getElementById('loginScreen'),
@@ -142,7 +146,12 @@ const elements = {
     addUserForm: document.getElementById('addUserForm'),
     addUserMessage: document.getElementById('addUserMessage'),
     backFromAddUserBtn: document.getElementById('backFromAddUserBtn'),
-    loadingOverlay: document.getElementById('loadingOverlay')
+    loadingOverlay: document.getElementById('loadingOverlay'),
+    // Visualização Cards/Tabela em Gerenciar Usuários
+    usersCardViewBtn: document.getElementById('usersCardViewBtn'),
+    usersTableViewBtn: document.getElementById('usersTableViewBtn'),
+    usersTable: document.getElementById('usersTable'),
+    usersManagementTableBody: document.getElementById('usersManagementTableBody')
 };
 
 // ========== AUTO-RENOVAÇÃO DE TOKEN ==========
@@ -201,10 +210,8 @@ async function renovarTokenAutomaticamente() {
             const data = await response.json();
             state.token = data.token;
             localStorage.setItem('token', data.token);
-            console.log('✅ Token renovado automaticamente');
         } else if (response.status === 401) {
             // Token expirado ou inválido - redireciona para login
-            console.log('⚠️ Token expirado, redirecionando para login...');
             logout();
         }
     } catch (error) {
@@ -219,14 +226,12 @@ function iniciarVerificacaoToken() {
     // Verifica a cada 30 minutos
     setInterval(() => {
         if (state.token && tokenExpiresInLessThanOneHour(state.token)) {
-            console.log('⏰ Token expirando em menos de 1 hora, renovando...');
             renovarTokenAutomaticamente();
         }
     }, 30 * 60 * 1000); // 30 minutos
 
     // Também verifica imediatamente ao iniciar
     if (state.token && tokenExpiresInLessThanOneHour(state.token)) {
-        console.log('⏰ Token expirando em menos de 1 hora, renovando...');
         renovarTokenAutomaticamente();
     }
 }
@@ -250,11 +255,6 @@ function saveSharedImage(originalImage, currentImage, fileName, file, source) {
         lastUpdated: Date.now(),
         source: source
     };
-    console.log(`📸 SAVE: Imagem salva no estado compartilhado (origem: ${source})`, {
-        hasOriginal: !!originalImage,
-        hasCurrent: !!currentImage,
-        fileName: fileName
-    });
 }
 
 /**
@@ -264,15 +264,9 @@ function saveSharedImage(originalImage, currentImage, fileName, file, source) {
  */
 function loadSharedImage(targetCard) {
     if (!state.sharedImageState.originalImage) {
-        console.log(`⚠️ LOAD: Nenhuma imagem compartilhada disponível para ${targetCard}`);
         return null;
     }
 
-    console.log(`📸 LOAD: Carregando imagem para ${targetCard} (origem: ${state.sharedImageState.source})`, {
-        hasOriginal: !!state.sharedImageState.originalImage,
-        hasCurrent: !!state.sharedImageState.currentImage,
-        fileName: state.sharedImageState.fileName
-    });
     return {
         originalImage: state.sharedImageState.originalImage,
         currentImage: state.sharedImageState.currentImage,
@@ -293,10 +287,6 @@ function hasSharedImage() {
  * Limpa o estado compartilhado de imagem
  */
 function clearSharedImage() {
-    console.log('🗑️ CLEAR: Limpando estado compartilhado de imagem', {
-        tinha: !!state.sharedImageState.originalImage,
-        source: state.sharedImageState.source
-    });
     state.sharedImageState = {
         originalImage: null,
         currentImage: null,
@@ -475,16 +465,16 @@ function setupEventListeners() {
         elements.userMenuDropdown.classList.add('hidden');
         showUsersScreen();
     });
-    elements.historyBtn.addEventListener('click', () => {
-        elements.userMenuDropdown.classList.add('hidden');
-        showHistoryScreen();
-    });
     elements.backFromPasswordBtn.addEventListener('click', showMainScreen);
     elements.backFromUsersBtn.addEventListener('click', showMainScreen);
     elements.backFromAddUserBtn.addEventListener('click', showUsersScreen);
     elements.changePasswordForm.addEventListener('submit', handleChangePassword);
     elements.addUserBtn.addEventListener('click', showAddUserScreen);
     elements.addUserForm.addEventListener('submit', handleAddUser);
+
+    // Event listeners para alternância de visualização (Cards/Tabela)
+    elements.usersCardViewBtn.addEventListener('click', () => switchUsersViewMode('cards'));
+    elements.usersTableViewBtn.addEventListener('click', () => switchUsersViewMode('table'));
 
     // Event delegation para botões de gerenciar usuários
     elements.usersList.addEventListener('click', async (e) => {
@@ -497,11 +487,6 @@ function setupEventListeners() {
             await reactivateUser(userId, userName);
         }
     });
-
-    // Inicializa módulo de histórico se disponível
-    if (typeof initHistory === 'function') {
-        initHistory();
-    }
 }
 
 // ========== AUTENTICAÇÃO ==========
@@ -529,6 +514,13 @@ async function handleLogin(e) {
 
         localStorage.setItem('token', data.token);
         localStorage.setItem('username', data.username);
+
+        // Verificar aviso de expiração
+        if (data.expiracaoProxima && data.diasRestantes) {
+            mostrarBannerExpiracao(data.diasRestantes, data.dataExpiracao);
+        } else {
+            esconderBannerExpiracao();
+        }
 
         showMainScreen();
         iniciarVerificacaoToken(); // Inicia verificação automática do token
@@ -643,8 +635,12 @@ async function showMainScreen() {
 
     // Mostra botão de gerenciar usuários apenas para admin
     if (state.username === 'rogerio@picstone.com.br') {
-        if (elements.manageUsersBtn) elements.manageUsersBtn.classList.remove('hidden');
-        if (elements.pendingUsersBtn) elements.pendingUsersBtn.classList.remove('hidden');
+        if (elements.manageUsersBtn) {
+            elements.manageUsersBtn.classList.remove('hidden');
+        }
+        if (elements.pendingUsersBtn) {
+            elements.pendingUsersBtn.classList.remove('hidden');
+        }
         // Salva no localStorage para uso no history.js
         localStorage.setItem('isAdmin', 'true');
     } else {
@@ -654,7 +650,9 @@ async function showMainScreen() {
     }
 
     // Mostra botão de histórico para todos os usuários
-    if (elements.historyBtn) elements.historyBtn.classList.remove('hidden');
+    if (elements.historyBtn) {
+        elements.historyBtn.classList.remove('hidden');
+    }
 
     await loadMaterials();
 }
@@ -694,12 +692,10 @@ function showAddUserScreen() {
 }
 
 function showIntegracaoScreen() {
-    console.log('🔄 SHOW: Abrindo tela Integração', { hasSharedImage: hasSharedImage() });
     showScreen(elements.integracaoScreen);
 
     // Carrega automaticamente imagem compartilhada se existir
     if (hasSharedImage()) {
-        console.log('✅ SHOW: Tem imagem compartilhada em Integração, vou carregar...');
         const sharedImage = loadSharedImage('integracao');
         if (sharedImage) {
             state.originalPhoto = new Image();
@@ -708,21 +704,17 @@ function showIntegracaoScreen() {
             elements.previewImageIntegracao.src = sharedImage.currentImage;
             elements.photoPreviewIntegracao.classList.remove('hidden');
             elements.submitBtn.disabled = false;
-            console.log('✅ SHOW: Imagem compartilhada carregada em Integração');
         }
     } else {
-        console.log('❌ SHOW: Não tem imagem compartilhada em Integração, vou limpar...');
         clearPhotoIntegracao();
     }
 }
 
 function showAmbientesScreen() {
-    console.log('🔄 SHOW: Abrindo tela Ambientes', { hasSharedImage: hasSharedImage() });
     showScreen(elements.ambientesScreen);
 
     // Carrega automaticamente imagem compartilhada se existir
     if (hasSharedImage()) {
-        console.log('✅ SHOW: Tem imagem compartilhada, vou carregar...');
         const sharedImage = loadSharedImage('ambientes');
         if (sharedImage) {
             state.originalPhoto = new Image();
@@ -735,10 +727,8 @@ function showAmbientesScreen() {
                 elements.captureSectionAmbientes.classList.add('hidden');
             }
             elements.ambienteOptions.classList.remove('hidden');
-            console.log('✅ SHOW: Imagem compartilhada carregada em Ambientes');
         }
     } else {
-        console.log('❌ SHOW: Não tem imagem compartilhada, vou limpar card...');
         clearPhotoAmbientes();
     }
 }
@@ -872,7 +862,6 @@ function clearPhotoState() {
 
 // ========== INTEGRAÇÃO - CAPTURA DE FOTO ==========
 function handleFileSelectIntegracao(e) {
-    console.log('📥 INTEGRAÇÃO: Arquivo selecionado');
     const file = e.target.files[0];
     if (!file) return;
 
@@ -886,56 +875,48 @@ function handleFileSelectIntegracao(e) {
         return;
     }
 
-    console.log('📥 INTEGRAÇÃO: Iniciando leitura do arquivo', file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
-        console.log('📥 INTEGRAÇÃO: Arquivo lido, criando imagem');
         const img = new Image();
         img.onload = () => {
-            console.log('📥 INTEGRAÇÃO: Imagem carregada');
             state.originalPhoto = img;
-            const imageData = e.target.result;
-
-            // SALVA IMEDIATAMENTE no estado compartilhado
-            console.log('📥 INTEGRAÇÃO: Salvando no estado compartilhado ANTES da compressão');
-            saveSharedImage(imageData, imageData, file.name, file, 'integracao');
-
-            // Depois comprime e faz preview
-            compressAndPreviewImageIntegracao(file, imageData);
+            compressAndPreviewImageIntegracao(file);
         };
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
 }
 
-function compressAndPreviewImageIntegracao(file, imageData) {
-    console.log('🗜️ INTEGRAÇÃO: Comprimindo imagem para preview');
-    const img = new Image();
-    img.onload = () => {
-        console.log('🗜️ INTEGRAÇÃO: Desenhando no canvas');
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+function compressAndPreviewImageIntegracao(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
 
-        console.log('🗜️ INTEGRAÇÃO: Gerando blob para File');
-        canvas.toBlob((blob) => {
-            console.log('🗜️ INTEGRAÇÃO: Blob gerado, criando File');
-            state.currentPhotoFile = new File([blob], file.name, {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-            });
+            canvas.toBlob((blob) => {
+                state.currentPhotoFile = new File([blob], file.name, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
 
-            const currentImageData = canvas.toDataURL('image/jpeg', 0.85);
-            elements.previewImageIntegracao.src = currentImageData;
-            elements.photoPreviewIntegracao.classList.remove('hidden');
-            elements.submitBtn.disabled = false;
+                const currentImageData = canvas.toDataURL('image/jpeg', 0.85);
+                elements.previewImageIntegracao.src = currentImageData;
+                elements.photoPreviewIntegracao.classList.remove('hidden');
+                elements.submitBtn.disabled = false;
 
-            console.log('✅ INTEGRAÇÃO: Preview atualizado, processo completo!');
-        }, 'image/jpeg', 0.95);
+                // Salva imagem no estado compartilhado
+                const originalImageData = state.originalPhoto ? state.originalPhoto.src : currentImageData;
+                saveSharedImage(originalImageData, currentImageData, file.name, state.currentPhotoFile, 'integracao');
+            }, 'image/jpeg', 0.95);
+        };
+        img.src = e.target.result;
     };
-    img.src = imageData;
+    reader.readAsDataURL(file);
 }
 
 function clearPhotoIntegracao() {
@@ -1580,13 +1561,6 @@ function initializeCropCanvas() {
     state.cropData.scaleX = img.width / width;
     state.cropData.scaleY = img.height / height;
 
-    console.log('=== DEBUG INITIALIZE CROP ===');
-    console.log('Imagem original:', img.width, 'x', img.height);
-    console.log('Canvas final:', width, 'x', height);
-    console.log('ScaleX calculado:', state.cropData.scaleX);
-    console.log('ScaleY calculado:', state.cropData.scaleY);
-    console.log('=============================');
-
     // Desenha imagem
     ctx.drawImage(img, 0, 0, width, height);
 
@@ -1782,24 +1756,11 @@ function confirmCrop() {
     const canvas = elements.cropCanvas;
     const img = state.cropData.image;
 
-    console.log('=== DEBUG CROP ===');
-    console.log('Imagem original:', img.width, 'x', img.height);
-    console.log('Canvas:', canvas.width, 'x', canvas.height);
-    console.log('ScaleX:', state.cropData.scaleX, 'ScaleY:', state.cropData.scaleY);
-    console.log('Seleção no canvas - startX:', state.cropData.startX, 'startY:', state.cropData.startY);
-    console.log('Seleção no canvas - endX:', state.cropData.endX, 'endY:', state.cropData.endY);
-    console.log('Largura seleção canvas:', Math.abs(state.cropData.endX - state.cropData.startX));
-    console.log('Altura seleção canvas:', Math.abs(state.cropData.endY - state.cropData.startY));
-
     // Calcula coordenadas na imagem original usando escalas separadas para X e Y
     const x = Math.min(state.cropData.startX, state.cropData.endX) * state.cropData.scaleX;
     const y = Math.min(state.cropData.startY, state.cropData.endY) * state.cropData.scaleY;
     const width = Math.abs(state.cropData.endX - state.cropData.startX) * state.cropData.scaleX;
     const height = Math.abs(state.cropData.endY - state.cropData.startY) * state.cropData.scaleY;
-
-    console.log('Crop na imagem original - X:', x, 'Y:', y);
-    console.log('Crop na imagem original - Width:', width, 'Height:', height);
-    console.log('==================');
 
     // Cria canvas temporário para crop
     const tempCanvas = document.createElement('canvas');
@@ -1904,13 +1865,6 @@ function initializeCropCanvasIntegracao() {
     canvas.height = canvasHeight;
 
     state.cropData.scale = canvasWidth / img.width;
-
-    console.log('=== DEBUG INITIALIZE CROP INTEGRAÇÃO ===');
-    console.log('Imagem original:', img.width, 'x', img.height);
-    console.log('Canvas final:', canvasWidth, 'x', canvasHeight);
-    console.log('ScaleX calculado:', state.cropData.scale);
-    console.log('ScaleY calculado:', state.cropData.scale);
-    console.log('=============================');
 
     // Desenha imagem
     ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
@@ -2170,10 +2124,6 @@ async function gerarAmbiente(imagemCropada) {
         });
 
         const data = await response.json();
-
-        console.log('=== DEBUG MOCKUP RESPONSE ===');
-        console.log('Response OK:', response.ok);
-        console.log('Data:', data);
 
         if (!response.ok) {
             throw new Error(data.mensagem || 'Erro ao gerar ambiente');
@@ -2567,6 +2517,7 @@ async function handleChangePassword(e) {
  */
 async function loadUsers() {
     elements.usersList.innerHTML = '<p class="loading">Carregando...</p>';
+    elements.usersManagementTableBody.innerHTML = '<tr><td colspan="5" class="loading">Carregando...</td></tr>';
 
     try {
         const response = await fetch(`${API_URL}/api/auth/users`, {
@@ -2580,41 +2531,126 @@ async function loadUsers() {
         }
 
         const usuarios = await response.json();
+        allUsersManagementData = usuarios; // Armazena dados para alternância
 
         if (usuarios.length === 0) {
             elements.usersList.innerHTML = '<p class="empty">Nenhum usuário encontrado</p>';
+            elements.usersManagementTableBody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum usuário encontrado</td></tr>';
             return;
         }
 
-        // Renderiza lista de usuários
-        elements.usersList.innerHTML = usuarios.map(user => `
-            <div class="user-card ${!user.ativo ? 'inactive' : ''}">
-                <div class="user-info">
-                    <strong>${user.nomeCompleto}</strong>
-                    <span class="user-username">@${user.username}</span>
-                    <small>Criado em: ${new Date(user.dataCriacao).toLocaleDateString('pt-BR')}</small>
-                    <span class="user-status ${user.ativo ? 'active' : 'inactive'}">
-                        ${user.ativo ? '● Ativo' : '○ Inativo'}
-                    </span>
-                </div>
-                <div class="user-actions">
-                    ${user.username !== 'admin' ? `
-                        ${user.ativo ? `
-                            <button class="btn btn-secondary btn-deactivate-user" data-user-id="${user.id}">
-                                Desativar
-                            </button>
-                        ` : `
-                            <button class="btn btn-primary btn-reactivate-user" data-user-id="${user.id}" data-user-name="${user.nomeCompleto}">
-                                Reativar
-                            </button>
-                        `}
-                    ` : '<span class="admin-badge">Administrador</span>'}
-                </div>
-            </div>
-        `).join('');
+        // Renderiza na visualização atual
+        if (currentUsersViewMode === 'cards') {
+            renderUsersCards(usuarios);
+        } else {
+            renderUsersTable(usuarios);
+        }
     } catch (error) {
         console.error('Erro ao carregar usuários:', error);
         elements.usersList.innerHTML = '<p class="error">Erro ao carregar usuários</p>';
+        elements.usersManagementTableBody.innerHTML = '<tr><td colspan="5" class="error">Erro ao carregar usuários</td></tr>';
+    }
+}
+
+/**
+ * Renderiza usuários em cards
+ */
+function renderUsersCards(users) {
+    elements.usersList.innerHTML = users.map(user => `
+        <div class="user-card ${!user.ativo ? 'inactive' : ''}">
+            <div class="user-info">
+                <strong>${user.nomeCompleto}</strong>
+                <span class="user-username">@${user.username}</span>
+                <small>Criado em: ${new Date(user.dataCriacao).toLocaleDateString('pt-BR')}</small>
+                <span class="user-status ${user.ativo ? 'active' : 'inactive'}">
+                    ${user.ativo ? '● Ativo' : '○ Inativo'}
+                </span>
+            </div>
+            <div class="user-actions">
+                ${user.username !== 'admin' ? `
+                    ${user.ativo ? `
+                        <button class="btn btn-secondary btn-deactivate-user" data-user-id="${user.id}">
+                            Desativar
+                        </button>
+                    ` : `
+                        <button class="btn btn-primary btn-reactivate-user" data-user-id="${user.id}" data-user-name="${user.nomeCompleto}">
+                            Reativar
+                        </button>
+                    `}
+                ` : '<span class="admin-badge">Administrador</span>'}
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Renderiza usuários em tabela
+ */
+function renderUsersTable(users) {
+    if (!elements.usersManagementTableBody) {
+        return;
+    }
+
+    const html = users.map(user => {
+        const dataCriacao = new Date(user.dataCriacao).toLocaleDateString('pt-BR');
+        const status = user.ativo ? 'Ativo' : 'Inativo';
+        const statusClass = user.ativo ? 'active' : 'inactive';
+
+        return `
+            <tr class="${!user.ativo ? 'inactive' : ''}">
+                <td><strong>${user.nomeCompleto}</strong></td>
+                <td>@${user.username}</td>
+                <td>${dataCriacao}</td>
+                <td><span class="user-status ${statusClass}">${user.ativo ? '●' : '○'} ${status}</span></td>
+                <td>
+                    ${user.username !== 'admin' ? `
+                        ${user.ativo ? `
+                            <button class="btn btn-small btn-secondary btn-deactivate-user" data-user-id="${user.id}">
+                                Desativar
+                            </button>
+                        ` : `
+                            <button class="btn btn-small btn-primary btn-reactivate-user" data-user-id="${user.id}" data-user-name="${user.nomeCompleto}">
+                                Reativar
+                            </button>
+                        `}
+                    ` : '<span class="admin-badge">Admin</span>'}
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    elements.usersManagementTableBody.innerHTML = html;
+}
+
+/**
+ * Alterna entre visualização em cards e tabela
+ */
+function switchUsersViewMode(mode) {
+    currentUsersViewMode = mode;
+
+    // Atualiza estado dos botões e visualizações
+    if (mode === 'cards') {
+        elements.usersCardViewBtn.classList.add('active');
+        elements.usersTableViewBtn.classList.remove('active');
+        elements.usersList.classList.remove('hidden');
+        elements.usersTable.classList.remove('active');
+    } else {
+        elements.usersTableViewBtn.classList.add('active');
+        elements.usersCardViewBtn.classList.remove('active');
+        elements.usersList.classList.add('hidden');
+        elements.usersTable.classList.add('active');
+    }
+
+    // Re-renderiza com os dados atuais
+    if (allUsersManagementData && allUsersManagementData.length > 0) {
+        if (mode === 'cards') {
+            renderUsersCards(allUsersManagementData);
+        } else {
+            renderUsersTable(allUsersManagementData);
+        }
+    } else {
+        // Se não há dados, recarrega
+        loadUsers();
     }
 }
 
@@ -2626,17 +2662,6 @@ async function handleAddUser(e) {
 
     const username = document.getElementById('newUsername').value.trim();
     const nomeCompleto = document.getElementById('newNomeCompleto').value.trim();
-    const dataExpiracao = document.getElementById('newUserExpiracao').value;
-
-    const requestBody = {
-        username,
-        nomeCompleto
-    };
-
-    // Adiciona data de expiração se foi preenchida
-    if (dataExpiracao) {
-        requestBody.dataExpiracao = new Date(dataExpiracao).toISOString();
-    }
 
     try {
         const response = await fetch(`${API_URL}/api/auth/users`, {
@@ -2645,7 +2670,10 @@ async function handleAddUser(e) {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${state.token}`
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify({
+                username,
+                nomeCompleto
+            })
         });
 
         const data = await response.json();
@@ -2768,6 +2796,78 @@ async function reactivateUser(userId, userName) {
         }
     });
 }
+
+// ========== BANNER DE EXPIRAÇÃO ==========
+function mostrarBannerExpiracao(diasRestantes, dataExpiracao) {
+    const banner = document.getElementById('expirationBanner');
+    if (!banner) return;
+
+    const mensagemElement = document.getElementById('expirationMessage');
+    const diasElement = document.getElementById('expirationDays');
+
+    // Formata a data de expiração
+    let dataFormatada = '';
+    if (dataExpiracao) {
+        const data = new Date(dataExpiracao);
+        dataFormatada = data.toLocaleDateString('pt-BR');
+    }
+
+    // Define a mensagem baseada nos dias restantes
+    let mensagem = '';
+    if (diasRestantes === 1) {
+        mensagem = `Seu acesso expira AMANHÃ (${dataFormatada}). Entre em contato com o administrador para renovar.`;
+    } else {
+        mensagem = `Seu acesso expira em ${diasRestantes} dias (${dataFormatada}). Entre em contato com o administrador para renovar.`;
+    }
+
+    mensagemElement.textContent = mensagem;
+    diasElement.textContent = diasRestantes;
+
+    // Altera cor do banner conforme urgência
+    if (diasRestantes <= 2) {
+        banner.classList.add('urgent'); // Vermelho
+    } else {
+        banner.classList.remove('urgent'); // Laranja
+    }
+
+    banner.classList.remove('hidden');
+}
+
+function esconderBannerExpiracao() {
+    const banner = document.getElementById('expirationBanner');
+    if (banner) {
+        banner.classList.add('hidden');
+    }
+}
+
+function fecharBannerExpiracao() {
+    esconderBannerExpiracao();
+}
+
+// ========== VERSÃO DA APLICAÇÃO ==========
+async function loadAppVersion() {
+    try {
+        const response = await fetch('/api/version');
+        if (response.ok) {
+            const data = await response.json();
+            const versionElement = document.getElementById('appVersion');
+            if (versionElement) {
+                versionElement.textContent = `v${data.version}`;
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar versão:', error);
+        const versionElement = document.getElementById('appVersion');
+        if (versionElement) {
+            versionElement.textContent = 'v1.0000';
+        }
+    }
+}
+
+// Carrega versão quando página termina de carregar
+window.addEventListener('DOMContentLoaded', () => {
+    loadAppVersion();
+});
 
 // ========== SERVICE WORKER (para PWA futuro) ==========
 if ('serviceWorker' in navigator) {

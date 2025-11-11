@@ -50,6 +50,10 @@ const state = {
     }
 };
 
+// Modo de visualização para gerenciar usuários
+let currentUsersViewMode = 'cards';
+let allUsersManagementData = [];
+
 // Elementos DOM
 const elements = {
     loginScreen: document.getElementById('loginScreen'),
@@ -142,7 +146,12 @@ const elements = {
     addUserForm: document.getElementById('addUserForm'),
     addUserMessage: document.getElementById('addUserMessage'),
     backFromAddUserBtn: document.getElementById('backFromAddUserBtn'),
-    loadingOverlay: document.getElementById('loadingOverlay')
+    loadingOverlay: document.getElementById('loadingOverlay'),
+    // Visualização Cards/Tabela em Gerenciar Usuários
+    usersCardViewBtn: document.getElementById('usersCardViewBtn'),
+    usersTableViewBtn: document.getElementById('usersTableViewBtn'),
+    usersTable: document.getElementById('usersTable'),
+    usersManagementTableBody: document.getElementById('usersManagementTableBody')
 };
 
 // ========== AUTO-RENOVAÇÃO DE TOKEN ==========
@@ -462,6 +471,10 @@ function setupEventListeners() {
     elements.changePasswordForm.addEventListener('submit', handleChangePassword);
     elements.addUserBtn.addEventListener('click', showAddUserScreen);
     elements.addUserForm.addEventListener('submit', handleAddUser);
+
+    // Event listeners para alternância de visualização (Cards/Tabela)
+    elements.usersCardViewBtn.addEventListener('click', () => switchUsersViewMode('cards'));
+    elements.usersTableViewBtn.addEventListener('click', () => switchUsersViewMode('table'));
 
     // Event delegation para botões de gerenciar usuários
     elements.usersList.addEventListener('click', async (e) => {
@@ -2504,6 +2517,7 @@ async function handleChangePassword(e) {
  */
 async function loadUsers() {
     elements.usersList.innerHTML = '<p class="loading">Carregando...</p>';
+    elements.usersManagementTableBody.innerHTML = '<tr><td colspan="5" class="loading">Carregando...</td></tr>';
 
     try {
         const response = await fetch(`${API_URL}/api/auth/users`, {
@@ -2517,41 +2531,126 @@ async function loadUsers() {
         }
 
         const usuarios = await response.json();
+        allUsersManagementData = usuarios; // Armazena dados para alternância
 
         if (usuarios.length === 0) {
             elements.usersList.innerHTML = '<p class="empty">Nenhum usuário encontrado</p>';
+            elements.usersManagementTableBody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum usuário encontrado</td></tr>';
             return;
         }
 
-        // Renderiza lista de usuários
-        elements.usersList.innerHTML = usuarios.map(user => `
-            <div class="user-card ${!user.ativo ? 'inactive' : ''}">
-                <div class="user-info">
-                    <strong>${user.nomeCompleto}</strong>
-                    <span class="user-username">@${user.username}</span>
-                    <small>Criado em: ${new Date(user.dataCriacao).toLocaleDateString('pt-BR')}</small>
-                    <span class="user-status ${user.ativo ? 'active' : 'inactive'}">
-                        ${user.ativo ? '● Ativo' : '○ Inativo'}
-                    </span>
-                </div>
-                <div class="user-actions">
-                    ${user.username !== 'admin' ? `
-                        ${user.ativo ? `
-                            <button class="btn btn-secondary btn-deactivate-user" data-user-id="${user.id}">
-                                Desativar
-                            </button>
-                        ` : `
-                            <button class="btn btn-primary btn-reactivate-user" data-user-id="${user.id}" data-user-name="${user.nomeCompleto}">
-                                Reativar
-                            </button>
-                        `}
-                    ` : '<span class="admin-badge">Administrador</span>'}
-                </div>
-            </div>
-        `).join('');
+        // Renderiza na visualização atual
+        if (currentUsersViewMode === 'cards') {
+            renderUsersCards(usuarios);
+        } else {
+            renderUsersTable(usuarios);
+        }
     } catch (error) {
         console.error('Erro ao carregar usuários:', error);
         elements.usersList.innerHTML = '<p class="error">Erro ao carregar usuários</p>';
+        elements.usersManagementTableBody.innerHTML = '<tr><td colspan="5" class="error">Erro ao carregar usuários</td></tr>';
+    }
+}
+
+/**
+ * Renderiza usuários em cards
+ */
+function renderUsersCards(users) {
+    elements.usersList.innerHTML = users.map(user => `
+        <div class="user-card ${!user.ativo ? 'inactive' : ''}">
+            <div class="user-info">
+                <strong>${user.nomeCompleto}</strong>
+                <span class="user-username">@${user.username}</span>
+                <small>Criado em: ${new Date(user.dataCriacao).toLocaleDateString('pt-BR')}</small>
+                <span class="user-status ${user.ativo ? 'active' : 'inactive'}">
+                    ${user.ativo ? '● Ativo' : '○ Inativo'}
+                </span>
+            </div>
+            <div class="user-actions">
+                ${user.username !== 'admin' ? `
+                    ${user.ativo ? `
+                        <button class="btn btn-secondary btn-deactivate-user" data-user-id="${user.id}">
+                            Desativar
+                        </button>
+                    ` : `
+                        <button class="btn btn-primary btn-reactivate-user" data-user-id="${user.id}" data-user-name="${user.nomeCompleto}">
+                            Reativar
+                        </button>
+                    `}
+                ` : '<span class="admin-badge">Administrador</span>'}
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Renderiza usuários em tabela
+ */
+function renderUsersTable(users) {
+    if (!elements.usersManagementTableBody) {
+        return;
+    }
+
+    const html = users.map(user => {
+        const dataCriacao = new Date(user.dataCriacao).toLocaleDateString('pt-BR');
+        const status = user.ativo ? 'Ativo' : 'Inativo';
+        const statusClass = user.ativo ? 'active' : 'inactive';
+
+        return `
+            <tr class="${!user.ativo ? 'inactive' : ''}">
+                <td><strong>${user.nomeCompleto}</strong></td>
+                <td>@${user.username}</td>
+                <td>${dataCriacao}</td>
+                <td><span class="user-status ${statusClass}">${user.ativo ? '●' : '○'} ${status}</span></td>
+                <td>
+                    ${user.username !== 'admin' ? `
+                        ${user.ativo ? `
+                            <button class="btn btn-small btn-secondary btn-deactivate-user" data-user-id="${user.id}">
+                                Desativar
+                            </button>
+                        ` : `
+                            <button class="btn btn-small btn-primary btn-reactivate-user" data-user-id="${user.id}" data-user-name="${user.nomeCompleto}">
+                                Reativar
+                            </button>
+                        `}
+                    ` : '<span class="admin-badge">Admin</span>'}
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    elements.usersManagementTableBody.innerHTML = html;
+}
+
+/**
+ * Alterna entre visualização em cards e tabela
+ */
+function switchUsersViewMode(mode) {
+    currentUsersViewMode = mode;
+
+    // Atualiza estado dos botões e visualizações
+    if (mode === 'cards') {
+        elements.usersCardViewBtn.classList.add('active');
+        elements.usersTableViewBtn.classList.remove('active');
+        elements.usersList.classList.remove('hidden');
+        elements.usersTable.classList.remove('active');
+    } else {
+        elements.usersTableViewBtn.classList.add('active');
+        elements.usersCardViewBtn.classList.remove('active');
+        elements.usersList.classList.add('hidden');
+        elements.usersTable.classList.add('active');
+    }
+
+    // Re-renderiza com os dados atuais
+    if (allUsersManagementData && allUsersManagementData.length > 0) {
+        if (mode === 'cards') {
+            renderUsersCards(allUsersManagementData);
+        } else {
+            renderUsersTable(allUsersManagementData);
+        }
+    } else {
+        // Se não há dados, recarrega
+        loadUsers();
     }
 }
 
