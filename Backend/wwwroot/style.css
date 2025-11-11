@@ -915,6 +915,17 @@ body {
         font-size: 15px;
     }
 
+    /* Garantir que botões Cavalete e Bancadas tenham tamanho idêntico no mobile */
+    .btn-ambiente,
+    .btn-countertops {
+        font-size: 16px !important;
+        padding: 14px !important;
+        width: 100% !important;
+        display: block !important;
+        line-height: 1.5 !important;
+        text-align: center !important;
+    }
+
     .option-card {
         padding: 24px 20px;
     }
