@@ -2826,7 +2826,14 @@ async function reactivateUser(userId, userName) {
     // Handler para confirmar reativação
     newConfirmBtn.addEventListener('click', async () => {
         try {
-            const dataExpiracao = dataExpiracaoInput.value || null;
+            // Converte data para ISO format completo ou null
+            let dataExpiracao = null;
+            if (dataExpiracaoInput.value) {
+                const data = new Date(dataExpiracaoInput.value + 'T00:00:00');
+                if (!isNaN(data.getTime())) {
+                    dataExpiracao = data.toISOString();
+                }
+            }
 
             const response = await fetch(`${API_URL}/api/auth/users/${userId}/reactivate`, {
                 method: 'PUT',
