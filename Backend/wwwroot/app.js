@@ -476,8 +476,20 @@ function setupEventListeners() {
     elements.usersCardViewBtn.addEventListener('click', () => switchUsersViewMode('cards'));
     elements.usersTableViewBtn.addEventListener('click', () => switchUsersViewMode('table'));
 
-    // Event delegation para botões de gerenciar usuários
+    // Event delegation para botões de gerenciar usuários (Cards)
     elements.usersList.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('btn-deactivate-user')) {
+            const userId = e.target.dataset.userId;
+            await deactivateUser(userId);
+        } else if (e.target.classList.contains('btn-reactivate-user')) {
+            const userId = e.target.dataset.userId;
+            const userName = e.target.dataset.userName;
+            await reactivateUser(userId, userName);
+        }
+    });
+
+    // Event delegation para botões de gerenciar usuários (Tabela)
+    elements.usersTable.addEventListener('click', async (e) => {
         if (e.target.classList.contains('btn-deactivate-user')) {
             const userId = e.target.dataset.userId;
             await deactivateUser(userId);
@@ -2517,7 +2529,7 @@ async function handleChangePassword(e) {
  */
 async function loadUsers() {
     elements.usersList.innerHTML = '<p class="loading">Carregando...</p>';
-    elements.usersManagementTableBody.innerHTML = '<tr><td colspan="5" class="loading">Carregando...</td></tr>';
+    elements.usersManagementTableBody.innerHTML = '<tr><td colspan="6" class="loading">Carregando...</td></tr>';
 
     try {
         const response = await fetch(`${API_URL}/api/auth/users`, {
@@ -2535,7 +2547,7 @@ async function loadUsers() {
 
         if (usuarios.length === 0) {
             elements.usersList.innerHTML = '<p class="empty">Nenhum usuário encontrado</p>';
-            elements.usersManagementTableBody.innerHTML = '<tr><td colspan="5" class="empty">Nenhum usuário encontrado</td></tr>';
+            elements.usersManagementTableBody.innerHTML = '<tr><td colspan="6" class="empty">Nenhum usuário encontrado</td></tr>';
             return;
         }
 
@@ -2548,7 +2560,7 @@ async function loadUsers() {
     } catch (error) {
         console.error('Erro ao carregar usuários:', error);
         elements.usersList.innerHTML = '<p class="error">Erro ao carregar usuários</p>';
-        elements.usersManagementTableBody.innerHTML = '<tr><td colspan="5" class="error">Erro ao carregar usuários</td></tr>';
+        elements.usersManagementTableBody.innerHTML = '<tr><td colspan="6" class="error">Erro ao carregar usuários</td></tr>';
     }
 }
 
@@ -2593,6 +2605,9 @@ function renderUsersTable(users) {
 
     const html = users.map(user => {
         const dataCriacao = new Date(user.dataCriacao).toLocaleDateString('pt-BR');
+        const dataExpiracao = user.dataExpiracao
+            ? new Date(user.dataExpiracao).toLocaleDateString('pt-BR')
+            : 'Sem expiração';
         const status = user.ativo ? 'Ativo' : 'Inativo';
         const statusClass = user.ativo ? 'active' : 'inactive';
 
@@ -2601,6 +2616,7 @@ function renderUsersTable(users) {
                 <td><strong>${user.nomeCompleto}</strong></td>
                 <td>@${user.username}</td>
                 <td>${dataCriacao}</td>
+                <td>${dataExpiracao}</td>
                 <td><span class="user-status ${statusClass}">${user.ativo ? '●' : '○'} ${status}</span></td>
                 <td>
                     ${user.username !== 'admin' ? `
