@@ -2621,12 +2621,12 @@ function renderUsersTable(users) {
 
         return `
             <tr class="${!user.ativo ? 'inactive' : ''}">
-                <td><strong>${user.nomeCompleto}</strong></td>
-                <td>@${user.username}</td>
-                <td>${dataCriacao}</td>
-                <td>${dataExpiracao}</td>
-                <td><span class="user-status ${statusClass}">${user.ativo ? '●' : '○'} ${status}</span></td>
-                <td>
+                <td data-label="Nome"><strong>${user.nomeCompleto}</strong></td>
+                <td data-label="Email">@${user.username}</td>
+                <td data-label="Data Criação">${dataCriacao}</td>
+                <td data-label="Data Expiração">${dataExpiracao}</td>
+                <td data-label="Status"><span class="user-status ${statusClass}">${user.ativo ? '●' : '○'} ${status}</span></td>
+                <td data-label="Ações">
                     ${user.username !== 'admin' ? `
                         ${user.ativo ? `
                             <button class="btn btn-small btn-secondary btn-deactivate-user" data-user-id="${user.id}">

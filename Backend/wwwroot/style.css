@@ -2497,6 +2497,54 @@ body {
         padding: 8px 12px;
         font-size: 13px;
     }
+
+    /* Tabela responsiva com múltiplas linhas por usuário */
+    .data-table thead {
+        display: none;
+    }
+
+    .data-table tbody,
+    .data-table tr,
+    .data-table td {
+        display: block;
+    }
+
+    .data-table tr {
+        margin-bottom: 20px;
+        padding: 16px;
+        background: white;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border-color);
+    }
+
+    .data-table td {
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-color);
+        text-align: left !important;
+    }
+
+    .data-table td:last-child {
+        border-bottom: none;
+        padding-top: 12px;
+    }
+
+    /* Labels para cada campo no mobile */
+    .data-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-primary);
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Remove hover effect no mobile */
+    .data-table tbody tr:hover {
+        background: white;
+    }
 }
 
 @media (max-width: 480px) {
