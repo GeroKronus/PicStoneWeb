@@ -2745,6 +2745,31 @@ function fecharBannerExpiracao() {
     esconderBannerExpiracao();
 }
 
+// ========== VERSÃO DA APLICAÇÃO ==========
+async function loadAppVersion() {
+    try {
+        const response = await fetch('/api/version');
+        if (response.ok) {
+            const data = await response.json();
+            const versionElement = document.getElementById('appVersion');
+            if (versionElement) {
+                versionElement.textContent = `v${data.version}`;
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar versão:', error);
+        const versionElement = document.getElementById('appVersion');
+        if (versionElement) {
+            versionElement.textContent = 'v1.0000';
+        }
+    }
+}
+
+// Carrega versão quando página termina de carregar
+window.addEventListener('DOMContentLoaded', () => {
+    loadAppVersion();
+});
+
 // ========== SERVICE WORKER (para PWA futuro) ==========
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

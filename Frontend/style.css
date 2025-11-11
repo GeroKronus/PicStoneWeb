@@ -287,6 +287,28 @@ body {
     margin: 4px 0;
 }
 
+.dropdown-version {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.version-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.version-number {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    background: var(--muted);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
 .dropdown-item {
     width: 100%;
     display: flex;
