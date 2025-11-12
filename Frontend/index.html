@@ -987,8 +987,16 @@
     <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="loading-content">
             <div class="spinner"></div>
-            <p class="loading-message">Gerando ambiente...</p>
-            <p class="loading-submessage">Isso pode levar alguns segundos</p>
+            <p class="loading-message" id="loadingMessage">Gerando ambiente...</p>
+            <p class="loading-submessage" id="loadingSubmessage">Isso pode levar alguns segundos</p>
+
+            <!-- Barra de progresso (oculta por padrão) -->
+            <div id="progressContainer" class="progress-container hidden">
+                <div class="progress-bar">
+                    <div id="progressBar" class="progress-fill"></div>
+                </div>
+                <p id="progressText" class="progress-text">0 de 0 mockups prontos</p>
+            </div>
         </div>
     </div>
 

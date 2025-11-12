@@ -147,6 +147,11 @@ const elements = {
     addUserMessage: document.getElementById('addUserMessage'),
     backFromAddUserBtn: document.getElementById('backFromAddUserBtn'),
     loadingOverlay: document.getElementById('loadingOverlay'),
+    loadingMessage: document.getElementById('loadingMessage'),
+    loadingSubmessage: document.getElementById('loadingSubmessage'),
+    progressContainer: document.getElementById('progressContainer'),
+    progressBar: document.getElementById('progressBar'),
+    progressText: document.getElementById('progressText'),
     // Visualização Cards/Tabela em Gerenciar Usuários
     usersCardViewBtn: document.getElementById('usersCardViewBtn'),
     usersTableViewBtn: document.getElementById('usersTableViewBtn'),
@@ -2115,26 +2120,35 @@ function abrirCropParaAmbiente() {
 
 async function gerarAmbiente(imagemCropada) {
     try {
-        // Mostra loading overlay global (spinner)
+        // Mostra loading overlay e prepara elementos de progresso
         elements.loadingOverlay.classList.remove('hidden');
+        elements.loadingMessage.textContent = 'Gerando mockups...';
+        elements.loadingSubmessage.textContent = 'Você verá cada imagem assim que ficar pronta';
+        elements.progressContainer.classList.remove('hidden');
+        elements.progressBar.style.width = '0%';
+        elements.progressText.textContent = '0 de 0 mockups prontos';
 
-        // Verifica o tipo de ambiente
-        const isBancada1 = state.ambienteConfig.tipo === 'bancada1';
+        // Detecta tipo de ambiente e monta endpoint
+        const tipo = state.ambienteConfig.tipo; // 'simples', 'bancada1', 'bancada2', etc.
+        let endpoint, formData;
 
-        const formData = new FormData();
-        formData.append(isBancada1 ? 'imagem' : 'ImagemCropada', imagemCropada);
-
-        if (isBancada1) {
-            // Parâmetros específicos da bancada1
+        if (tipo.startsWith('bancada')) {
+            // Bancadas 1-8: /api/mockup/bancada1/progressive ... /api/mockup/bancada8/progressive
+            const bancadaNum = tipo.replace('bancada', ''); // '1', '2', etc.
+            endpoint = `/api/mockup/bancada${bancadaNum}/progressive`;
+            formData = new FormData();
+            formData.append('imagem', imagemCropada);
             formData.append('flip', state.ambienteConfig.flip || false);
         } else {
-            // Parâmetros do cavalete (simples)
-            formData.append('TipoCavalete', 'simples'); // Sempre simples por enquanto
-            formData.append('Fundo', state.ambienteConfig.fundo);
+            // Cavalete: /api/mockup/gerar/progressive
+            endpoint = '/api/mockup/gerar/progressive';
+            formData = new FormData();
+            formData.append('ImagemCropada', imagemCropada);
+            formData.append('TipoCavalete', 'simples');
+            formData.append('Fundo', state.ambienteConfig.fundo || 'claro');
         }
 
-        const endpoint = isBancada1 ? '/api/mockup/bancada1' : '/api/mockup/gerar';
-
+        // Inicia requisição SSE com fetch()
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             headers: {
@@ -2143,73 +2157,134 @@ async function gerarAmbiente(imagemCropada) {
             body: formData
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-            throw new Error(data.mensagem || 'Erro ao gerar ambiente');
+            throw new Error('Erro ao iniciar geração de mockups');
         }
 
-        // Exibe resultado (backend retorna diferente para bancada1 e cavalete)
-        const caminhos = data.caminhosGerados || data.ambientes;
+        // Prepara galeria
+        const gallery = document.getElementById('ambientesGallery');
+        gallery.innerHTML = '';
+        state.ambienteUrls = [];
 
-        if (caminhos && caminhos.length > 0) {
-            const gallery = document.getElementById('ambientesGallery');
-            gallery.innerHTML = ''; // Limpa galeria
-
-            // Labels diferentes para cada tipo
-            let labels;
-            if (isBancada1) {
-                labels = ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'];
+        // Labels para cada tipo
+        const getLabels = (tipoAmbiente) => {
+            if (tipoAmbiente === 'bancada1') {
+                return ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'];
+            } else if (tipoAmbiente.startsWith('bancada')) {
+                const num = tipoAmbiente.replace('bancada', '');
+                return [`Bancada #${num} - Variação 1`, `Bancada #${num} - Variação 2`, `Bancada #${num} - Variação 3`, `Bancada #${num} - Variação 4`];
             } else {
-                labels = [
+                return [
                     'Cavalete Duplo - Original/Espelho',
                     'Cavalete Duplo - Espelho/Original',
                     'Cavalete Simples'
                 ];
             }
+        };
 
-            caminhos.forEach((caminho, index) => {
-                // Para bancada1, caminho já vem completo; para cavalete, precisa montar
-                const ambienteUrl = isBancada1 ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
+        const labels = getLabels(tipo);
 
-                const ambienteItem = document.createElement('div');
-                ambienteItem.className = 'ambiente-item';
-                ambienteItem.innerHTML = `
-                    <h3>${labels[index] || `Ambiente ${index + 1}`}</h3>
-                    <img src="${ambienteUrl}" alt="${labels[index]}">
-                    <div class="ambiente-actions">
-                        <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${labels[index] || `Ambiente ${index + 1}`}">
-                            ⬇️ Baixar
-                        </button>
-                        <button class="btn btn-primary btn-share-single" data-url="${ambienteUrl}" data-nome="${labels[index] || `Ambiente ${index + 1}`}">
-                            📤 Compartilhar
-                        </button>
-                    </div>
-                `;
-                gallery.appendChild(ambienteItem);
-            });
+        // Lê stream SSE usando ReadableStream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let mockupCount = 0;
+        let totalMockups = 0;
 
-            // Salva URLs para download em massa
-            state.ambienteUrls = isBancada1
-                ? caminhos.map(c => `${API_URL}${c}`)
-                : caminhos.map(c => `${API_URL}/uploads/${c}`);
+        while (true) {
+            const { done, value } = await reader.read();
 
-            showScreen(elements.ambienteResultScreen);
-            showAmbienteMessage(data.mensagem, 'success');
-        } else {
-            throw new Error('Nenhum ambiente foi gerado');
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // Processa linhas completas (eventos SSE)
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Última linha pode estar incompleta
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+
+                const jsonStr = line.substring(6); // Remove "data: "
+                if (!jsonStr.trim()) continue;
+
+                try {
+                    const event = JSON.parse(jsonStr);
+
+                    if (event.type === 'start') {
+                        console.log('📌 SSE: Iniciando geração...', event.data);
+                        elements.loadingMessage.textContent = event.data.mensagem || 'Gerando mockups...';
+                    }
+                    else if (event.type === 'progress') {
+                        totalMockups = event.data.total;
+                        const currentIndex = event.data.index;
+                        console.log(`🔄 SSE: Progresso ${currentIndex + 1}/${totalMockups}`);
+                        elements.loadingMessage.textContent = event.data.mensagem || `Gerando mockup ${currentIndex + 1}/${totalMockups}...`;
+                    }
+                    else if (event.type === 'mockup') {
+                        mockupCount++;
+                        totalMockups = event.data.total;
+                        const percentage = Math.round((mockupCount / totalMockups) * 100);
+                        elements.progressBar.style.width = `${percentage}%`;
+                        elements.progressText.textContent = `${mockupCount} de ${totalMockups} mockups prontos`;
+
+                        console.log(`✅ SSE: Mockup ${mockupCount}/${totalMockups} pronto!`, event.data.url);
+
+                        // Adiciona mockup na galeria IMEDIATAMENTE
+                        const ambienteUrl = `${API_URL}${event.data.url}`;
+                        state.ambienteUrls.push(ambienteUrl);
+
+                        const ambienteItem = document.createElement('div');
+                        ambienteItem.className = 'ambiente-item';
+                        ambienteItem.innerHTML = `
+                            <h3>${labels[event.data.index] || `Mockup ${event.data.index + 1}`}</h3>
+                            <img src="${ambienteUrl}" alt="${labels[event.data.index]}">
+                            <div class="ambiente-actions">
+                                <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${labels[event.data.index] || `Mockup ${event.data.index + 1}`}">
+                                    ⬇️ Baixar
+                                </button>
+                                <button class="btn btn-primary btn-share-single" data-url="${ambienteUrl}" data-nome="${labels[event.data.index] || `Mockup ${event.data.index + 1}`}">
+                                    📤 Compartilhar
+                                </button>
+                            </div>
+                        `;
+                        gallery.appendChild(ambienteItem);
+
+                        // Mostra tela de resultado após primeiro mockup
+                        if (mockupCount === 1) {
+                            showScreen(elements.ambienteResultScreen);
+                        }
+                    }
+                    else if (event.type === 'done') {
+                        console.log('🎉 SSE: Todos os mockups foram gerados!', event.data);
+                        elements.loadingMessage.textContent = event.data.mensagem || 'Mockups gerados com sucesso!';
+                        elements.progressBar.style.width = '100%';
+                        elements.progressText.textContent = `${totalMockups} de ${totalMockups} mockups prontos`;
+                        showAmbienteMessage(event.data.mensagem || 'Mockups gerados!', 'success');
+                    }
+                    else if (event.type === 'error') {
+                        console.error('❌ SSE: Erro!', event.data);
+                        throw new Error(event.data.mensagem || 'Erro ao gerar mockup');
+                    }
+                } catch (parseError) {
+                    console.warn('⚠️ Erro ao parsear evento SSE:', jsonStr, parseError);
+                }
+            }
         }
 
         // Reseta modo ambiente
         state.ambienteMode = false;
 
     } catch (error) {
-        showAmbienteMessage(error.message, 'error');
+        console.error('❌ Erro ao gerar ambiente:', error);
+        showAmbienteMessage(error.message || 'Erro ao gerar mockups', 'error');
         state.ambienteMode = false;
         showMainScreen();
     } finally {
-        // Esconde loading overlay
+        // Esconde loading overlay e reseta progresso
         elements.loadingOverlay.classList.add('hidden');
+        elements.progressContainer.classList.add('hidden');
+        elements.progressBar.style.width = '0%';
     }
 }
 
