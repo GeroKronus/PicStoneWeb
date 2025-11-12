@@ -89,7 +89,7 @@ namespace PicStoneFotoAPI.Services
             }
         }
 
-        private async Task<string> GerarCavaleteSimples(SKBitmap chapaCropada, string fundo)
+        public async Task<string> GerarCavaleteSimples(SKBitmap chapaCropada, string fundo)
         {
             // Nome do arquivo de moldura
             var nomeMoldura = fundo.ToLower() == "claro"
@@ -169,7 +169,7 @@ namespace PicStoneFotoAPI.Services
             return nomeArquivo;
         }
 
-        private async Task<string> GerarCavaleteDuplo(SKBitmap chapaCropada, string fundo, bool inverterLados)
+        public async Task<string> GerarCavaleteDuplo(SKBitmap chapaCropada, string fundo, bool inverterLados)
         {
             // Nome do arquivo de moldura
             var nomeMoldura = fundo.ToLower() == "claro"

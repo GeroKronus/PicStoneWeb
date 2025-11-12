@@ -4,6 +4,7 @@ using PicStoneFotoAPI.Models;
 using PicStoneFotoAPI.Services;
 using SkiaSharp;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace PicStoneFotoAPI.Controllers
 {
@@ -852,6 +853,554 @@ namespace PicStoneFotoAPI.Controllers
                 _logger.LogError(ex, $"Erro ao baixar parte da Bancada 5: {parte}");
                 return StatusCode(500, new { mensagem = "Erro ao baixar arquivo: " + ex.Message });
             }
+        }
+
+        // ============================================================================
+        // ENDPOINTS SSE PROGRESSIVOS (Server-Sent Events)
+        // ============================================================================
+
+        /// <summary>
+        /// POST /api/mockup/bancada1/progressive
+        /// Gera mockup tipo Bancada1 com download progressivo via SSE
+        /// </summary>
+        [HttpPost("bancada1/progressive")]
+        public async Task GerarBancada1Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        {
+            try
+            {
+                _logger.LogInformation("=== BANCADA1 PROGRESSIVE SSE REQUEST RECEBIDO ===");
+                _logger.LogInformation($"Flip: {flip}");
+
+                // Configura response como SSE
+                Response.ContentType = "text/event-stream";
+                Response.Headers.Add("Cache-Control", "no-cache");
+                Response.Headers.Add("Connection", "keep-alive");
+
+                if (imagem == null || imagem.Length == 0)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Nenhuma imagem foi enviada" });
+                    return;
+                }
+
+                _logger.LogInformation($"Tamanho da imagem: {imagem.Length} bytes");
+
+                // Envia evento de início
+                await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de mockups..." });
+
+                // Carrega imagem do usuário
+                SKBitmap imagemOriginal;
+                using (var stream = imagem.OpenReadStream())
+                {
+                    imagemOriginal = SKBitmap.Decode(stream);
+                }
+
+                if (imagemOriginal == null)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível decodificar a imagem" });
+                    return;
+                }
+
+                _logger.LogInformation($"Imagem decodificada: {imagemOriginal.Width}x{imagemOriginal.Height}");
+
+                // Gera os mockups (2 versões)
+                var mockups = await Task.Run(() => _bancadaService.GerarBancada1(imagemOriginal, flip));
+
+                if (mockups == null || mockups.Count == 0)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Erro ao gerar mockups" });
+                    imagemOriginal.Dispose();
+                    return;
+                }
+
+                _logger.LogInformation($"Mockups gerados: {mockups.Count} imagens");
+
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var caminhos = new List<string>();
+
+                // Salva e envia cada mockup progressivamente
+                for (int i = 0; i < mockups.Count; i++)
+                {
+                    // Envia evento de progresso
+                    await EnviarEventoSSE("progress", new
+                    {
+                        index = i,
+                        total = mockups.Count,
+                        mensagem = $"Gerando mockup {i + 1}/{mockups.Count}..."
+                    });
+
+                    var sufixo = i == 0 ? "normal" : "rotacionado";
+                    var nomeArquivo = $"bancada1_{timestamp}_{sufixo}.jpg";
+                    var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
+
+                    // Salva com qualidade JPEG 95%
+                    using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
+                    {
+                        using (var image = SKImage.FromBitmap(mockups[i]))
+                        {
+                            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
+                            data.SaveTo(fileStream);
+                        }
+                    }
+
+                    var caminhoUrl = $"/uploads/mockups/{nomeArquivo}";
+                    caminhos.Add(caminhoUrl);
+
+                    _logger.LogInformation($"Mockup Bancada1 salvo: {nomeArquivo}");
+
+                    // Envia evento de mockup completo
+                    await EnviarEventoSSE("mockup", new
+                    {
+                        index = i,
+                        total = mockups.Count,
+                        url = caminhoUrl,
+                        mensagem = $"Mockup {i + 1}/{mockups.Count} pronto!"
+                    });
+                }
+
+                // Limpa bitmaps
+                imagemOriginal.Dispose();
+                foreach (var mockup in mockups)
+                {
+                    mockup.Dispose();
+                }
+
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Bancada1",
+                    detalhes: $"{{\"flip\":{flip.ToString().ToLower()}}}",
+                    quantidadeImagens: mockups.Count
+                );
+
+                // Envia evento de conclusão
+                await EnviarEventoSSE("done", new
+                {
+                    total = mockups.Count,
+                    caminhos = caminhos,
+                    mensagem = "Todos os mockups foram gerados com sucesso!"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar mockup Bancada1 Progressive");
+                await EnviarEventoSSE("error", new { mensagem = "Erro ao gerar mockup: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/mockup/gerar/progressive
+        /// Gera mockup de cavalete com SSE progressivo (3 mockups sempre)
+        /// </summary>
+        [HttpPost("gerar/progressive")]
+        public async Task GerarCavaleteProgressive([FromForm] MockupRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("=== CAVALETE PROGRESSIVE SSE REQUEST RECEBIDO ===");
+                _logger.LogInformation("TipoCavalete: {Tipo}, Fundo: {Fundo}", request.TipoCavalete, request.Fundo);
+
+                // Configura response como SSE
+                Response.ContentType = "text/event-stream";
+                Response.Headers.Add("Cache-Control", "no-cache");
+                Response.Headers.Add("Connection", "keep-alive");
+
+                if (request.ImagemCropada == null)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Imagem cropada não fornecida" });
+                    return;
+                }
+
+                // Envia evento de início
+                await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de cavaletes..." });
+
+                // Carrega a imagem cropada
+                using var streamCrop = new MemoryStream();
+                await request.ImagemCropada.CopyToAsync(streamCrop);
+                streamCrop.Position = 0;
+
+                using var bitmapCropado = SKBitmap.Decode(streamCrop);
+                if (bitmapCropado == null)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Erro ao decodificar imagem cropada" });
+                    return;
+                }
+
+                var caminhos = new List<string>();
+
+                // Gera SEMPRE os 3 mockups (como no endpoint original)
+
+                // 1. CavaletePronto - Duplo: original à esquerda, espelho à direita
+                await EnviarEventoSSE("progress", new { index = 0, total = 3, mensagem = "Gerando cavalete duplo (normal)..." });
+                var caminhoDuplo1 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, request.Fundo, inverterLados: false);
+                caminhos.Add($"/uploads/{caminhoDuplo1}");
+                await EnviarEventoSSE("mockup", new { index = 0, total = 3, url = $"/uploads/{caminhoDuplo1}", mensagem = "Cavalete duplo 1/3 pronto!" });
+
+                // 2. CavaletePronto2 - Duplo invertido: espelho à esquerda, original à direita
+                await EnviarEventoSSE("progress", new { index = 1, total = 3, mensagem = "Gerando cavalete duplo (invertido)..." });
+                var caminhoDuplo2 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, request.Fundo, inverterLados: true);
+                caminhos.Add($"/uploads/{caminhoDuplo2}");
+                await EnviarEventoSSE("mockup", new { index = 1, total = 3, url = $"/uploads/{caminhoDuplo2}", mensagem = "Cavalete duplo 2/3 pronto!" });
+
+                // 3. CavaletePronto3 - Simples
+                await EnviarEventoSSE("progress", new { index = 2, total = 3, mensagem = "Gerando cavalete simples..." });
+                var caminhoSimples = await _mockupService.GerarCavaleteSimples(bitmapCropado, request.Fundo);
+                caminhos.Add($"/uploads/{caminhoSimples}");
+                await EnviarEventoSSE("mockup", new { index = 2, total = 3, url = $"/uploads/{caminhoSimples}", mensagem = "Cavalete simples 3/3 pronto!" });
+
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Cavalete",
+                    detalhes: $"{{\"tipo\":\"{request.TipoCavalete}\",\"fundo\":\"{request.Fundo}\"}}",
+                    quantidadeImagens: caminhos.Count
+                );
+
+                // Envia evento de conclusão
+                await EnviarEventoSSE("done", new
+                {
+                    total = caminhos.Count,
+                    caminhos = caminhos,
+                    mensagem = "Todos os cavaletes foram gerados com sucesso!"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Cavalete Progressive");
+                await EnviarEventoSSE("error", new { mensagem = "Erro ao gerar cavalete: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/mockup/nicho1/progressive
+        /// Gera mockup Nicho1 com SSE progressivo (2 mockups: normal + rotacionado)
+        /// </summary>
+        [HttpPost("nicho1/progressive")]
+        public async Task GerarNicho1Progressive([FromForm] IFormFile imagem,
+                                                   [FromForm] bool fundoEscuro = false,
+                                                   [FromForm] bool incluirShampoo = false,
+                                                   [FromForm] bool incluirSabonete = false)
+        {
+            try
+            {
+                _logger.LogInformation("=== NICHO1 PROGRESSIVE SSE REQUEST RECEBIDO ===");
+                _logger.LogInformation("Fundo: {Fundo}, Shampoo: {Shampoo}, Sabonete: {Sabonete}",
+                    fundoEscuro ? "Escuro" : "Claro", incluirShampoo, incluirSabonete);
+
+                // Configura response como SSE
+                Response.ContentType = "text/event-stream";
+                Response.Headers.Add("Cache-Control", "no-cache");
+                Response.Headers.Add("Connection", "keep-alive");
+
+                if (imagem == null || imagem.Length == 0)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Nenhuma imagem foi enviada" });
+                    return;
+                }
+
+                // Envia evento de início
+                await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de nichos..." });
+
+                // Carrega imagem do usuário
+                SKBitmap imagemOriginal;
+                using (var stream = imagem.OpenReadStream())
+                {
+                    imagemOriginal = SKBitmap.Decode(stream);
+                }
+
+                if (imagemOriginal == null)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível decodificar a imagem" });
+                    return;
+                }
+
+                _logger.LogInformation("Imagem decodificada: {Width}x{Height}", imagemOriginal.Width, imagemOriginal.Height);
+
+                // Gera os mockups (2 versões)
+                var mockups = await Task.Run(() => _nichoService.GerarNicho1(imagemOriginal, fundoEscuro, incluirShampoo, incluirSabonete));
+
+                if (mockups == null || mockups.Count == 0)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Erro ao gerar mockups" });
+                    imagemOriginal.Dispose();
+                    return;
+                }
+
+                _logger.LogInformation("Mockups gerados: {Count} imagens", mockups.Count);
+
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var caminhos = new List<string>();
+
+                // Salva e envia cada mockup progressivamente
+                for (int i = 0; i < mockups.Count; i++)
+                {
+                    // Envia evento de progresso
+                    await EnviarEventoSSE("progress", new
+                    {
+                        index = i,
+                        total = mockups.Count,
+                        mensagem = $"Gerando nicho {i + 1}/{mockups.Count}..."
+                    });
+
+                    var sufixo = i == 0 ? "normal" : "rotacionado";
+                    var nomeArquivo = $"nicho1_{timestamp}_{sufixo}.jpg";
+                    var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
+
+                    // Salva com qualidade JPEG 95%
+                    using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
+                    {
+                        using (var image = SKImage.FromBitmap(mockups[i]))
+                        {
+                            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
+                            data.SaveTo(fileStream);
+                        }
+                    }
+
+                    var caminhoUrl = $"/uploads/mockups/{nomeArquivo}";
+                    caminhos.Add(caminhoUrl);
+
+                    _logger.LogInformation("Mockup Nicho1 salvo: {Caminho}", nomeArquivo);
+
+                    // Envia evento de mockup completo
+                    await EnviarEventoSSE("mockup", new
+                    {
+                        index = i,
+                        total = mockups.Count,
+                        url = caminhoUrl,
+                        mensagem = $"Nicho {i + 1}/{mockups.Count} pronto!"
+                    });
+                }
+
+                // Limpa bitmaps
+                imagemOriginal.Dispose();
+                foreach (var mockup in mockups)
+                {
+                    mockup.Dispose();
+                }
+
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Nicho",
+                    detalhes: $"{{\"fundo\":\"{(fundoEscuro ? "escuro" : "claro")}\",\"shampoo\":{incluirShampoo.ToString().ToLower()},\"sabonete\":{incluirSabonete.ToString().ToLower()}}}",
+                    quantidadeImagens: mockups.Count
+                );
+
+                // Envia evento de conclusão
+                await EnviarEventoSSE("done", new
+                {
+                    total = mockups.Count,
+                    caminhos = caminhos,
+                    mensagem = "Todos os nichos foram gerados com sucesso!"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Nicho1 Progressive");
+                await EnviarEventoSSE("error", new { mensagem = "Erro ao gerar nicho: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/mockup/bancada2/progressive
+        /// </summary>
+        [HttpPost("bancada2/progressive")]
+        public async Task GerarBancada2Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        {
+            await GerarBancadaProgressiveGenerico(imagem, flip, 2, _bancadaService.GerarBancada2);
+        }
+
+        /// <summary>
+        /// POST /api/mockup/bancada3/progressive
+        /// </summary>
+        [HttpPost("bancada3/progressive")]
+        public async Task GerarBancada3Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        {
+            await GerarBancadaProgressiveGenerico(imagem, flip, 3, _bancadaService.GerarBancada3);
+        }
+
+        /// <summary>
+        /// POST /api/mockup/bancada4/progressive
+        /// </summary>
+        [HttpPost("bancada4/progressive")]
+        public async Task GerarBancada4Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        {
+            await GerarBancadaProgressiveGenerico(imagem, flip, 4, _bancadaService.GerarBancada4);
+        }
+
+        /// <summary>
+        /// POST /api/mockup/bancada5/progressive
+        /// </summary>
+        [HttpPost("bancada5/progressive")]
+        public async Task GerarBancada5Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        {
+            await GerarBancadaProgressiveGenerico(imagem, flip, 5, _bancadaService.GerarBancada5);
+        }
+
+        /// <summary>
+        /// POST /api/mockup/bancada6/progressive
+        /// </summary>
+        [HttpPost("bancada6/progressive")]
+        public async Task GerarBancada6Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        {
+            await GerarBancadaProgressiveGenerico(imagem, flip, 6, _bancadaService.GerarBancada6);
+        }
+
+        /// <summary>
+        /// POST /api/mockup/bancada7/progressive
+        /// </summary>
+        [HttpPost("bancada7/progressive")]
+        public async Task GerarBancada7Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        {
+            await GerarBancadaProgressiveGenerico(imagem, flip, 7, _bancadaService.GerarBancada7);
+        }
+
+        /// <summary>
+        /// POST /api/mockup/bancada8/progressive
+        /// </summary>
+        [HttpPost("bancada8/progressive")]
+        public async Task GerarBancada8Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        {
+            await GerarBancadaProgressiveGenerico(imagem, flip, 8, _bancadaService.GerarBancada8);
+        }
+
+        /// <summary>
+        /// Método genérico para gerar bancadas com SSE progressivo
+        /// </summary>
+        private async Task GerarBancadaProgressiveGenerico(IFormFile imagem, bool flip, int numeroBancada, Func<SKBitmap, bool, List<SKBitmap>> gerador)
+        {
+            try
+            {
+                _logger.LogInformation($"=== BANCADA{numeroBancada} PROGRESSIVE SSE REQUEST RECEBIDO ===");
+                _logger.LogInformation($"Flip: {flip}");
+
+                // Configura response como SSE
+                Response.ContentType = "text/event-stream";
+                Response.Headers.Add("Cache-Control", "no-cache");
+                Response.Headers.Add("Connection", "keep-alive");
+
+                if (imagem == null || imagem.Length == 0)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Nenhuma imagem foi enviada" });
+                    return;
+                }
+
+                _logger.LogInformation($"Tamanho da imagem: {imagem.Length} bytes");
+
+                // Envia evento de início
+                await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de mockups..." });
+
+                // Carrega imagem do usuário
+                SKBitmap imagemOriginal;
+                using (var stream = imagem.OpenReadStream())
+                {
+                    imagemOriginal = SKBitmap.Decode(stream);
+                }
+
+                if (imagemOriginal == null)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível decodificar a imagem" });
+                    return;
+                }
+
+                _logger.LogInformation($"Imagem decodificada: {imagemOriginal.Width}x{imagemOriginal.Height}");
+
+                // Gera os mockups
+                var mockups = await Task.Run(() => gerador(imagemOriginal, flip));
+
+                if (mockups == null || mockups.Count == 0)
+                {
+                    await EnviarEventoSSE("error", new { mensagem = "Erro ao gerar mockups" });
+                    imagemOriginal.Dispose();
+                    return;
+                }
+
+                _logger.LogInformation($"Mockups gerados: {mockups.Count} imagens");
+
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var caminhos = new List<string>();
+
+                // Salva e envia cada mockup progressivamente
+                for (int i = 0; i < mockups.Count; i++)
+                {
+                    // Envia evento de progresso
+                    await EnviarEventoSSE("progress", new
+                    {
+                        index = i,
+                        total = mockups.Count,
+                        mensagem = $"Gerando mockup {i + 1}/{mockups.Count}..."
+                    });
+
+                    var sufixo = i == 0 ? "normal" : $"variacao{i}";
+                    var nomeArquivo = $"bancada{numeroBancada}_{timestamp}_{sufixo}.jpg";
+                    var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
+
+                    // Salva com qualidade JPEG 95%
+                    using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
+                    {
+                        using (var image = SKImage.FromBitmap(mockups[i]))
+                        {
+                            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
+                            data.SaveTo(fileStream);
+                        }
+                    }
+
+                    var caminhoUrl = $"/uploads/mockups/{nomeArquivo}";
+                    caminhos.Add(caminhoUrl);
+
+                    _logger.LogInformation($"Mockup Bancada{numeroBancada} salvo: {nomeArquivo}");
+
+                    // Envia evento de mockup completo
+                    await EnviarEventoSSE("mockup", new
+                    {
+                        index = i,
+                        total = mockups.Count,
+                        url = caminhoUrl,
+                        mensagem = $"Mockup {i + 1}/{mockups.Count} pronto!"
+                    });
+                }
+
+                // Limpa bitmaps
+                imagemOriginal.Dispose();
+                foreach (var mockup in mockups)
+                {
+                    mockup.Dispose();
+                }
+
+                // Registra geração no histórico
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: $"Bancada{numeroBancada}",
+                    detalhes: $"{{\"flip\":{flip.ToString().ToLower()}}}",
+                    quantidadeImagens: mockups.Count
+                );
+
+                // Envia evento de conclusão
+                await EnviarEventoSSE("done", new
+                {
+                    total = mockups.Count,
+                    caminhos = caminhos,
+                    mensagem = "Todos os mockups foram gerados com sucesso!"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao gerar mockup Bancada{numeroBancada} Progressive");
+                await EnviarEventoSSE("error", new { mensagem = "Erro ao gerar mockup: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Método auxiliar para enviar eventos SSE
+        /// </summary>
+        private async Task EnviarEventoSSE(string tipo, object dados)
+        {
+            var json = JsonSerializer.Serialize(new { type = tipo, data = dados });
+            await Response.WriteAsync($"data: {json}\n\n");
+            await Response.Body.FlushAsync();
         }
 
         /// <summary>
