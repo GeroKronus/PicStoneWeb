@@ -1448,7 +1448,7 @@ function showUploadToast() {
         `;
 
         const text = document.createElement('span');
-        text.textContent = '📤 Enviando foto... Aguarde antes de selecionar a bancada';
+        text.textContent = 'Enviando imagem. Aguarde';
 
         toast.appendChild(spinner);
         toast.appendChild(text);
