@@ -1,0 +1,161 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SkiaSharp;
+using System.Security.Claims;
+
+namespace PicStoneFotoAPI.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize]
+    public class ImageController : ControllerBase
+    {
+        private readonly ILogger<ImageController> _logger;
+        private readonly string _uploadsPath;
+
+        public ImageController(ILogger<ImageController> logger)
+        {
+            _logger = logger;
+            _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "originals");
+            Directory.CreateDirectory(_uploadsPath);
+        }
+
+        /// <summary>
+        /// POST /api/image/upload
+        /// Faz upload da imagem original e retorna um ID único para reutilização
+        /// </summary>
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadImage([FromForm] IFormFile imagem)
+        {
+            try
+            {
+                _logger.LogInformation("=== IMAGE UPLOAD REQUEST ===");
+
+                if (imagem == null || imagem.Length == 0)
+                {
+                    _logger.LogWarning("Nenhuma imagem foi enviada");
+                    return BadRequest(new { sucesso = false, mensagem = "Nenhuma imagem foi enviada" });
+                }
+
+                _logger.LogInformation($"Imagem recebida: {imagem.FileName}, Tamanho: {imagem.Length} bytes");
+
+                // Valida se é uma imagem válida
+                SKBitmap imagemBitmap;
+                using (var stream = imagem.OpenReadStream())
+                {
+                    imagemBitmap = SKBitmap.Decode(stream);
+                }
+
+                if (imagemBitmap == null)
+                {
+                    _logger.LogWarning("Não foi possível decodificar a imagem");
+                    return BadRequest(new { sucesso = false, mensagem = "Imagem inválida ou corrompida" });
+                }
+
+                _logger.LogInformation($"Imagem decodificada: {imagemBitmap.Width}x{imagemBitmap.Height}");
+
+                // Gera ID único: userId_timestamp_guid
+                var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var guid = Guid.NewGuid().ToString("N").Substring(0, 8);
+                var imageId = $"{usuarioId}_{timestamp}_{guid}.jpg";
+                var caminhoCompleto = Path.Combine(_uploadsPath, imageId);
+
+                // Salva imagem com qualidade JPEG 95%
+                using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
+                {
+                    using (var image = SKImage.FromBitmap(imagemBitmap))
+                    {
+                        var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
+                        data.SaveTo(fileStream);
+                    }
+                }
+
+                imagemBitmap.Dispose();
+
+                _logger.LogInformation($"Imagem salva com sucesso: {imageId}");
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    mensagem = "Imagem enviada com sucesso",
+                    imageId = imageId,
+                    largura = imagemBitmap.Width,
+                    altura = imagemBitmap.Height
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao fazer upload da imagem");
+                return StatusCode(500, new { sucesso = false, mensagem = $"Erro interno: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// DELETE /api/image/{imageId}
+        /// Remove a imagem original armazenada no servidor
+        /// </summary>
+        [HttpDelete("{imageId}")]
+        public IActionResult DeleteImage(string imageId)
+        {
+            try
+            {
+                _logger.LogInformation($"=== IMAGE DELETE REQUEST: {imageId} ===");
+
+                // Valida imageId para evitar path traversal
+                if (string.IsNullOrWhiteSpace(imageId) || imageId.Contains("..") || imageId.Contains("/") || imageId.Contains("\\"))
+                {
+                    _logger.LogWarning($"ImageId inválido: {imageId}");
+                    return BadRequest(new { sucesso = false, mensagem = "ID de imagem inválido" });
+                }
+
+                var caminhoCompleto = Path.Combine(_uploadsPath, imageId);
+
+                if (!System.IO.File.Exists(caminhoCompleto))
+                {
+                    _logger.LogWarning($"Imagem não encontrada: {imageId}");
+                    return NotFound(new { sucesso = false, mensagem = "Imagem não encontrada" });
+                }
+
+                // Deleta arquivo
+                System.IO.File.Delete(caminhoCompleto);
+
+                _logger.LogInformation($"Imagem deletada com sucesso: {imageId}");
+
+                return Ok(new { sucesso = true, mensagem = "Imagem removida com sucesso" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao deletar imagem: {imageId}");
+                return StatusCode(500, new { sucesso = false, mensagem = $"Erro interno: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// GET /api/image/health
+        /// Verifica status do serviço de imagens
+        /// </summary>
+        [HttpGet("health")]
+        public IActionResult GetHealth()
+        {
+            try
+            {
+                var exists = Directory.Exists(_uploadsPath);
+                var fileCount = exists ? Directory.GetFiles(_uploadsPath).Length : 0;
+
+                return Ok(new
+                {
+                    status = "ok",
+                    uploadsPath = _uploadsPath,
+                    directoryExists = exists,
+                    imageCount = fileCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao verificar health do serviço");
+                return StatusCode(500, new { status = "error", mensagem = ex.Message });
+            }
+        }
+    }
+}

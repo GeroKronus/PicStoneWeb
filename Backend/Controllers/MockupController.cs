@@ -860,43 +860,85 @@ namespace PicStoneFotoAPI.Controllers
         // ============================================================================
 
         /// <summary>
+        /// Helper: Carrega imagem do servidor (imageId) ou do upload (arquivo)
+        /// </summary>
+        private async Task<SKBitmap?> CarregarImagemAsync(string? imageId, IFormFile? imagem)
+        {
+            try
+            {
+                // Prioridade 1: Se imageId fornecido, carrega do servidor
+                if (!string.IsNullOrWhiteSpace(imageId))
+                {
+                    _logger.LogInformation($"Carregando imagem do servidor: {imageId}");
+
+                    // Valida imageId para evitar path traversal
+                    if (imageId.Contains("..") || imageId.Contains("/") || imageId.Contains("\\"))
+                    {
+                        _logger.LogWarning($"ImageId inválido detectado: {imageId}");
+                        return null;
+                    }
+
+                    var originalsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "originals");
+                    var caminhoCompleto = Path.Combine(originalsPath, imageId);
+
+                    if (!System.IO.File.Exists(caminhoCompleto))
+                    {
+                        _logger.LogWarning($"Imagem não encontrada no servidor: {imageId}");
+                        return null;
+                    }
+
+                    using var fileStream = System.IO.File.OpenRead(caminhoCompleto);
+                    var bitmap = SKBitmap.Decode(fileStream);
+                    _logger.LogInformation($"Imagem carregada do servidor: {bitmap?.Width}x{bitmap?.Height}");
+                    return bitmap;
+                }
+
+                // Prioridade 2: Se arquivo fornecido, carrega do upload
+                if (imagem != null && imagem.Length > 0)
+                {
+                    _logger.LogInformation($"Carregando imagem do upload: {imagem.FileName}, {imagem.Length} bytes");
+                    using var stream = imagem.OpenReadStream();
+                    var bitmap = SKBitmap.Decode(stream);
+                    _logger.LogInformation($"Imagem carregada do upload: {bitmap?.Width}x{bitmap?.Height}");
+                    return bitmap;
+                }
+
+                _logger.LogWarning("Nenhuma imagem fornecida (nem imageId nem arquivo)");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao carregar imagem");
+                return null;
+            }
+        }
+
+        /// <summary>
         /// POST /api/mockup/bancada1/progressive
         /// Gera mockup tipo Bancada1 com download progressivo via SSE
         /// </summary>
         [HttpPost("bancada1/progressive")]
-        public async Task GerarBancada1Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada1Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
         {
             try
             {
                 _logger.LogInformation("=== BANCADA1 PROGRESSIVE SSE REQUEST RECEBIDO ===");
-                _logger.LogInformation($"Flip: {flip}");
+                _logger.LogInformation($"ImageId: {imageId}, Flip: {flip}");
 
                 // Configura response como SSE
                 Response.ContentType = "text/event-stream";
                 Response.Headers.Add("Cache-Control", "no-cache");
                 Response.Headers.Add("Connection", "keep-alive");
 
-                if (imagem == null || imagem.Length == 0)
-                {
-                    await EnviarEventoSSE("error", new { mensagem = "Nenhuma imagem foi enviada" });
-                    return;
-                }
-
-                _logger.LogInformation($"Tamanho da imagem: {imagem.Length} bytes");
-
                 // Envia evento de início
                 await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de mockups..." });
 
-                // Carrega imagem do usuário
-                SKBitmap imagemOriginal;
-                using (var stream = imagem.OpenReadStream())
-                {
-                    imagemOriginal = SKBitmap.Decode(stream);
-                }
+                // Carrega imagem (do servidor ou do upload)
+                var imagemOriginal = await CarregarImagemAsync(imageId, imagem);
 
                 if (imagemOriginal == null)
                 {
-                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível decodificar a imagem" });
+                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível carregar a imagem" });
                     return;
                 }
 
@@ -993,36 +1035,26 @@ namespace PicStoneFotoAPI.Controllers
         /// Gera mockup de cavalete com SSE progressivo (3 mockups sempre)
         /// </summary>
         [HttpPost("gerar/progressive")]
-        public async Task GerarCavaleteProgressive([FromForm] MockupRequest request)
+        public async Task GerarCavaleteProgressive([FromForm] string? imageId, [FromForm] IFormFile? ImagemCropada, [FromForm] string? TipoCavalete, [FromForm] string? Fundo)
         {
             try
             {
                 _logger.LogInformation("=== CAVALETE PROGRESSIVE SSE REQUEST RECEBIDO ===");
-                _logger.LogInformation("TipoCavalete: {Tipo}, Fundo: {Fundo}", request.TipoCavalete, request.Fundo);
+                _logger.LogInformation("ImageId: {ImageId}, TipoCavalete: {Tipo}, Fundo: {Fundo}", imageId, TipoCavalete, Fundo);
 
                 // Configura response como SSE
                 Response.ContentType = "text/event-stream";
                 Response.Headers.Add("Cache-Control", "no-cache");
                 Response.Headers.Add("Connection", "keep-alive");
 
-                if (request.ImagemCropada == null)
-                {
-                    await EnviarEventoSSE("error", new { mensagem = "Imagem cropada não fornecida" });
-                    return;
-                }
-
                 // Envia evento de início
                 await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de cavaletes..." });
 
-                // Carrega a imagem cropada
-                using var streamCrop = new MemoryStream();
-                await request.ImagemCropada.CopyToAsync(streamCrop);
-                streamCrop.Position = 0;
-
-                using var bitmapCropado = SKBitmap.Decode(streamCrop);
+                // Carrega a imagem (do servidor ou do upload)
+                var bitmapCropado = await CarregarImagemAsync(imageId, ImagemCropada);
                 if (bitmapCropado == null)
                 {
-                    await EnviarEventoSSE("error", new { mensagem = "Erro ao decodificar imagem cropada" });
+                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível carregar a imagem" });
                     return;
                 }
 
@@ -1030,21 +1062,25 @@ namespace PicStoneFotoAPI.Controllers
 
                 // Gera SEMPRE os 3 mockups (como no endpoint original)
 
+                // Define valores padrão
+                var fundo = Fundo ?? "claro";
+                var tipoCavalete = TipoCavalete ?? "simples";
+
                 // 1. CavaletePronto - Duplo: original à esquerda, espelho à direita
                 await EnviarEventoSSE("progress", new { index = 0, total = 3, mensagem = "Gerando cavalete duplo (normal)..." });
-                var caminhoDuplo1 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, request.Fundo, inverterLados: false);
+                var caminhoDuplo1 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, fundo, inverterLados: false);
                 caminhos.Add($"/uploads/{caminhoDuplo1}");
                 await EnviarEventoSSE("mockup", new { index = 0, total = 3, url = $"/uploads/{caminhoDuplo1}", mensagem = "Cavalete duplo 1/3 pronto!" });
 
                 // 2. CavaletePronto2 - Duplo invertido: espelho à esquerda, original à direita
                 await EnviarEventoSSE("progress", new { index = 1, total = 3, mensagem = "Gerando cavalete duplo (invertido)..." });
-                var caminhoDuplo2 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, request.Fundo, inverterLados: true);
+                var caminhoDuplo2 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, fundo, inverterLados: true);
                 caminhos.Add($"/uploads/{caminhoDuplo2}");
                 await EnviarEventoSSE("mockup", new { index = 1, total = 3, url = $"/uploads/{caminhoDuplo2}", mensagem = "Cavalete duplo 2/3 pronto!" });
 
                 // 3. CavaletePronto3 - Simples
                 await EnviarEventoSSE("progress", new { index = 2, total = 3, mensagem = "Gerando cavalete simples..." });
-                var caminhoSimples = await _mockupService.GerarCavaleteSimples(bitmapCropado, request.Fundo);
+                var caminhoSimples = await _mockupService.GerarCavaleteSimples(bitmapCropado, fundo);
                 caminhos.Add($"/uploads/{caminhoSimples}");
                 await EnviarEventoSSE("mockup", new { index = 2, total = 3, url = $"/uploads/{caminhoSimples}", mensagem = "Cavalete simples 3/3 pronto!" });
 
@@ -1053,7 +1089,7 @@ namespace PicStoneFotoAPI.Controllers
                 await _historyService.RegistrarAmbienteAsync(
                     usuarioId: usuarioId,
                     tipoAmbiente: "Cavalete",
-                    detalhes: $"{{\"tipo\":\"{request.TipoCavalete}\",\"fundo\":\"{request.Fundo}\"}}",
+                    detalhes: $"{{\"tipo\":\"{tipoCavalete}\",\"fundo\":\"{fundo}\"}}",
                     quantidadeImagens: caminhos.Count
                 );
 
@@ -1077,7 +1113,8 @@ namespace PicStoneFotoAPI.Controllers
         /// Gera mockup Nicho1 com SSE progressivo (2 mockups: normal + rotacionado)
         /// </summary>
         [HttpPost("nicho1/progressive")]
-        public async Task GerarNicho1Progressive([FromForm] IFormFile imagem,
+        public async Task GerarNicho1Progressive([FromForm] string? imageId,
+                                                   [FromForm] IFormFile? imagem,
                                                    [FromForm] bool fundoEscuro = false,
                                                    [FromForm] bool incluirShampoo = false,
                                                    [FromForm] bool incluirSabonete = false)
@@ -1085,33 +1122,23 @@ namespace PicStoneFotoAPI.Controllers
             try
             {
                 _logger.LogInformation("=== NICHO1 PROGRESSIVE SSE REQUEST RECEBIDO ===");
-                _logger.LogInformation("Fundo: {Fundo}, Shampoo: {Shampoo}, Sabonete: {Sabonete}",
-                    fundoEscuro ? "Escuro" : "Claro", incluirShampoo, incluirSabonete);
+                _logger.LogInformation("ImageId: {ImageId}, Fundo: {Fundo}, Shampoo: {Shampoo}, Sabonete: {Sabonete}",
+                    imageId, fundoEscuro ? "Escuro" : "Claro", incluirShampoo, incluirSabonete);
 
                 // Configura response como SSE
                 Response.ContentType = "text/event-stream";
                 Response.Headers.Add("Cache-Control", "no-cache");
                 Response.Headers.Add("Connection", "keep-alive");
 
-                if (imagem == null || imagem.Length == 0)
-                {
-                    await EnviarEventoSSE("error", new { mensagem = "Nenhuma imagem foi enviada" });
-                    return;
-                }
-
                 // Envia evento de início
                 await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de nichos..." });
 
-                // Carrega imagem do usuário
-                SKBitmap imagemOriginal;
-                using (var stream = imagem.OpenReadStream())
-                {
-                    imagemOriginal = SKBitmap.Decode(stream);
-                }
+                // Carrega imagem (do servidor ou do upload)
+                var imagemOriginal = await CarregarImagemAsync(imageId, imagem);
 
                 if (imagemOriginal == null)
                 {
-                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível decodificar a imagem" });
+                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível carregar a imagem" });
                     return;
                 }
 
@@ -1207,101 +1234,89 @@ namespace PicStoneFotoAPI.Controllers
         /// POST /api/mockup/bancada2/progressive
         /// </summary>
         [HttpPost("bancada2/progressive")]
-        public async Task GerarBancada2Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada2Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
         {
-            await GerarBancadaProgressiveGenerico(imagem, flip, 2, _bancadaService.GerarBancada2);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 2, _bancadaService.GerarBancada2);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada3/progressive
         /// </summary>
         [HttpPost("bancada3/progressive")]
-        public async Task GerarBancada3Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada3Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
         {
-            await GerarBancadaProgressiveGenerico(imagem, flip, 3, _bancadaService.GerarBancada3);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 3, _bancadaService.GerarBancada3);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada4/progressive
         /// </summary>
         [HttpPost("bancada4/progressive")]
-        public async Task GerarBancada4Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada4Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
         {
-            await GerarBancadaProgressiveGenerico(imagem, flip, 4, _bancadaService.GerarBancada4);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 4, _bancadaService.GerarBancada4);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada5/progressive
         /// </summary>
         [HttpPost("bancada5/progressive")]
-        public async Task GerarBancada5Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada5Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
         {
-            await GerarBancadaProgressiveGenerico(imagem, flip, 5, _bancadaService.GerarBancada5);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 5, _bancadaService.GerarBancada5);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada6/progressive
         /// </summary>
         [HttpPost("bancada6/progressive")]
-        public async Task GerarBancada6Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada6Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
         {
-            await GerarBancadaProgressiveGenerico(imagem, flip, 6, _bancadaService.GerarBancada6);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 6, _bancadaService.GerarBancada6);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada7/progressive
         /// </summary>
         [HttpPost("bancada7/progressive")]
-        public async Task GerarBancada7Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada7Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
         {
-            await GerarBancadaProgressiveGenerico(imagem, flip, 7, _bancadaService.GerarBancada7);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 7, _bancadaService.GerarBancada7);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada8/progressive
         /// </summary>
         [HttpPost("bancada8/progressive")]
-        public async Task GerarBancada8Progressive([FromForm] IFormFile imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada8Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
         {
-            await GerarBancadaProgressiveGenerico(imagem, flip, 8, _bancadaService.GerarBancada8);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 8, _bancadaService.GerarBancada8);
         }
 
         /// <summary>
         /// Método genérico para gerar bancadas com SSE progressivo
         /// </summary>
-        private async Task GerarBancadaProgressiveGenerico(IFormFile imagem, bool flip, int numeroBancada, Func<SKBitmap, bool, List<SKBitmap>> gerador)
+        private async Task GerarBancadaProgressiveGenerico(string? imageId, IFormFile? imagem, bool flip, int numeroBancada, Func<SKBitmap, bool, List<SKBitmap>> gerador)
         {
             try
             {
                 _logger.LogInformation($"=== BANCADA{numeroBancada} PROGRESSIVE SSE REQUEST RECEBIDO ===");
-                _logger.LogInformation($"Flip: {flip}");
+                _logger.LogInformation($"ImageId: {imageId}, Flip: {flip}");
 
                 // Configura response como SSE
                 Response.ContentType = "text/event-stream";
                 Response.Headers.Add("Cache-Control", "no-cache");
                 Response.Headers.Add("Connection", "keep-alive");
 
-                if (imagem == null || imagem.Length == 0)
-                {
-                    await EnviarEventoSSE("error", new { mensagem = "Nenhuma imagem foi enviada" });
-                    return;
-                }
-
-                _logger.LogInformation($"Tamanho da imagem: {imagem.Length} bytes");
-
                 // Envia evento de início
                 await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de mockups..." });
 
-                // Carrega imagem do usuário
-                SKBitmap imagemOriginal;
-                using (var stream = imagem.OpenReadStream())
-                {
-                    imagemOriginal = SKBitmap.Decode(stream);
-                }
+                // Carrega imagem (do servidor ou do upload)
+                var imagemOriginal = await CarregarImagemAsync(imageId, imagem);
 
                 if (imagemOriginal == null)
                 {
-                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível decodificar a imagem" });
+                    await EnviarEventoSSE("error", new { mensagem = "Não foi possível carregar a imagem" });
                     return;
                 }
 
