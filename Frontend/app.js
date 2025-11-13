@@ -643,6 +643,9 @@ function handleBackFromResults() {
     if (state.countertopState.croppedImage) {
         // Está no flow de countertop: volta para seleção
         showScreen(elements.countertopSelectionScreen);
+    } else if (state.ambienteConfig.tipo === 'cavalete') {
+        // Está no flow de cavalete: volta para ambientes com foto
+        backToAmbientesWithPhoto();
     } else {
         // Flow normal: volta para tela principal
         showMainScreen();
