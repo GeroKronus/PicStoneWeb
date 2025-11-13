@@ -8,6 +8,7 @@ const state = {
     currentPhoto: null,
     currentPhotoFile: null,
     uploadedImageId: null, // ID da imagem armazenada no servidor
+    uploadInProgress: false, // ✨ FIX: Flag para indicar upload em andamento
     originalPhoto: null, // Foto original para ambiente
     ambienteMode: false, // Indica se está em modo ambiente
     cropData: {
@@ -1312,6 +1313,10 @@ async function uploadImageToServer(imageFile) {
     try {
         console.log('📤 Fazendo upload da imagem para o servidor...');
 
+        // ✨ FIX: Desabilita cards enquanto upload está em andamento
+        state.uploadInProgress = true;
+        disableCountertopCards();
+
         const formData = new FormData();
         formData.append('imagem', imageFile);
 
@@ -1340,6 +1345,10 @@ async function uploadImageToServer(imageFile) {
         console.error('❌ Erro ao fazer upload da imagem:', error);
         // Não bloqueia a UX - o sistema vai usar o fallback (enviar arquivo diretamente)
         state.uploadedImageId = null;
+    } finally {
+        // ✨ FIX: Reabilita cards após upload (sucesso ou erro)
+        state.uploadInProgress = false;
+        enableCountertopCards();
     }
 }
 
@@ -1370,6 +1379,27 @@ async function deleteImageFromServer() {
         // Limpa o imageId independente do resultado
         state.uploadedImageId = null;
     }
+}
+
+// ✨ FIX: Funções para desabilitar/habilitar cards durante upload
+function disableCountertopCards() {
+    const cards = document.querySelectorAll('.countertop-card');
+    cards.forEach(card => {
+        card.classList.add('disabled');
+        card.style.opacity = '0.5';
+        card.style.pointerEvents = 'none';
+    });
+    console.log('🔒 Cards desabilitados durante upload');
+}
+
+function enableCountertopCards() {
+    const cards = document.querySelectorAll('.countertop-card');
+    cards.forEach(card => {
+        card.classList.remove('disabled');
+        card.style.opacity = '1';
+        card.style.pointerEvents = 'auto';
+    });
+    console.log('🔓 Cards habilitados após upload');
 }
 
 // ========== AMBIENTES - CAPTURA DE FOTO ==========
