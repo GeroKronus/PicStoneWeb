@@ -921,17 +921,27 @@ function compressAndPreviewImageIntegracao(file) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            // ✨ OTIMIZAÇÃO: Reduz dimensões em 50% para economizar banda e acelerar processamento
-            const targetWidth = Math.round(img.width * 0.5);
-            const targetHeight = Math.round(img.height * 0.5);
-
-            console.log(`📐 Redimensionando (Integração): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50%)`);
-
+            const ONE_MB = 1024 * 1024;
+            const fileSizeKB = (file.size / 1024).toFixed(0);
             const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+            // ✨ LÓGICA INTELIGENTE: Só compacta se arquivo >= 1MB
+            if (file.size < ONE_MB) {
+                // Arquivo pequeno: mantém tamanho original
+                console.log(`📦 Arquivo pequeno (${fileSizeKB}KB < 1MB): mantendo dimensões originais ${img.width}x${img.height}`);
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0, img.width, img.height);
+            } else {
+                // Arquivo grande: reduz dimensões em 50%
+                const targetWidth = Math.round(img.width * 0.5);
+                const targetHeight = Math.round(img.height * 0.5);
+                console.log(`📐 Arquivo grande (${fileSizeKB}KB >= 1MB): redimensionando ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50%)`);
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+            }
 
             canvas.toBlob(async (blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
