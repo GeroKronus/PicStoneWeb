@@ -221,6 +221,44 @@ using (var scope = app.Services.CreateScope())
         {
             Log.Error("Nao foi possivel conectar ao banco de dados");
         }
+
+        // ✨ LIMPEZA: Remove arquivos temporários com mais de 24 horas
+        try
+        {
+            var tempPath = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+            if (Directory.Exists(tempPath))
+            {
+                var files = Directory.GetFiles(tempPath);
+                var now = DateTime.Now;
+                var deletedCount = 0;
+
+                foreach (var file in files)
+                {
+                    var fileInfo = new FileInfo(file);
+                    var age = now - fileInfo.CreationTime;
+
+                    if (age.TotalHours > 24)
+                    {
+                        File.Delete(file);
+                        deletedCount++;
+                        Log.Information($"Arquivo temp removido (idade: {age.TotalHours:F1}h): {Path.GetFileName(file)}");
+                    }
+                }
+
+                if (deletedCount > 0)
+                {
+                    Log.Information($"Limpeza temp concluída: {deletedCount} arquivo(s) removido(s)");
+                }
+                else
+                {
+                    Log.Information("Limpeza temp: nenhum arquivo antigo para remover");
+                }
+            }
+        }
+        catch (Exception exCleanup)
+        {
+            Log.Warning(exCleanup, "Erro ao limpar arquivos temporários (não crítico)");
+        }
     }
     catch (Exception ex)
     {

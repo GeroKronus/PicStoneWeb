@@ -886,8 +886,9 @@ namespace PicStoneFotoAPI.Controllers
                         return null; // Retorna null para negar acesso silenciosamente
                     }
 
-                    var originalsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "originals");
-                    var caminhoCompleto = Path.Combine(originalsPath, imageId);
+                    // ✨ CACHE: Usa pasta temp (consistente com ImageController)
+                    var tempPath = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+                    var caminhoCompleto = Path.Combine(tempPath, imageId);
 
                     if (!System.IO.File.Exists(caminhoCompleto))
                     {

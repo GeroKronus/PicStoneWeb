@@ -16,8 +16,19 @@ namespace PicStoneFotoAPI.Controllers
         public ImageController(ILogger<ImageController> logger)
         {
             _logger = logger;
-            _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "originals");
-            Directory.CreateDirectory(_uploadsPath);
+            // ✨ CACHE: Pasta temp para armazenar imagens temporárias por usuário
+            _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+
+            try
+            {
+                Directory.CreateDirectory(_uploadsPath);
+                _logger.LogInformation($"✅ Pasta temp criada/verificada: {_uploadsPath}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"❌ ERRO ao criar pasta temp: {_uploadsPath}");
+                throw; // Falha crítica - aplicação não pode funcionar sem cache
+            }
         }
 
         /// <summary>
