@@ -7,6 +7,7 @@ const state = {
     username: localStorage.getItem('username') || null,
     currentPhoto: null,
     currentPhotoFile: null,
+    uploadedImageId: null, // ID da imagem armazenada no servidor
     originalPhoto: null, // Foto original para ambiente
     ambienteMode: false, // Indica se está em modo ambiente
     cropData: {
@@ -923,7 +924,7 @@ function compressAndPreviewImageIntegracao(file) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
 
-            canvas.toBlob((blob) => {
+            canvas.toBlob(async (blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
                     type: 'image/jpeg',
                     lastModified: Date.now()
@@ -937,6 +938,9 @@ function compressAndPreviewImageIntegracao(file) {
                 // Salva imagem no estado compartilhado
                 const originalImageData = state.originalPhoto ? state.originalPhoto.src : currentImageData;
                 saveSharedImage(originalImageData, currentImageData, file.name, state.currentPhotoFile, 'integracao');
+
+                // ✨ NOVO: Faz upload imediato da imagem para o servidor
+                await uploadImageToServer(state.currentPhotoFile);
             }, 'image/jpeg', 0.95);
         };
         img.src = e.target.result;
@@ -945,6 +949,9 @@ function compressAndPreviewImageIntegracao(file) {
 }
 
 function clearPhotoIntegracao() {
+    // ✨ NOVO: Deleta imagem do servidor
+    deleteImageFromServer();
+
     state.currentPhotoFile = null;
     state.originalPhoto = null;
     elements.previewImageIntegracao.src = '';
@@ -1300,6 +1307,71 @@ function resetarParaOriginalIntegracao() {
     state.cropOverlayState.isActive = false;
 }
 
+// ========== UPLOAD DE IMAGEM PARA SERVIDOR ==========
+async function uploadImageToServer(imageFile) {
+    try {
+        console.log('📤 Fazendo upload da imagem para o servidor...');
+
+        const formData = new FormData();
+        formData.append('imagem', imageFile);
+
+        const response = await fetch(`${API_URL}/api/image/upload`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao fazer upload da imagem');
+        }
+
+        const result = await response.json();
+
+        if (result.sucesso && result.imageId) {
+            state.uploadedImageId = result.imageId;
+            console.log(`✅ Imagem enviada para servidor: ${result.imageId}`);
+            console.log(`📐 Dimensões: ${result.largura}x${result.altura}`);
+        } else {
+            console.warn('⚠️ Upload retornou sem imageId');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao fazer upload da imagem:', error);
+        // Não bloqueia a UX - o sistema vai usar o fallback (enviar arquivo diretamente)
+        state.uploadedImageId = null;
+    }
+}
+
+async function deleteImageFromServer() {
+    if (!state.uploadedImageId) {
+        console.log('ℹ️ Nenhuma imagem para deletar no servidor');
+        return;
+    }
+
+    try {
+        console.log(`🗑️ Deletando imagem do servidor: ${state.uploadedImageId}`);
+
+        const response = await fetch(`${API_URL}/api/image/${state.uploadedImageId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            }
+        });
+
+        if (response.ok) {
+            console.log('✅ Imagem deletada do servidor');
+        } else {
+            console.warn('⚠️ Erro ao deletar imagem do servidor');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao deletar imagem do servidor:', error);
+    } finally {
+        // Limpa o imageId independente do resultado
+        state.uploadedImageId = null;
+    }
+}
+
 // ========== AMBIENTES - CAPTURA DE FOTO ==========
 function handleFileSelectAmbientes(e) {
     const file = e.target.files[0];
@@ -1341,7 +1413,7 @@ function compressAndPreviewImageAmbientes(file) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0);
 
-            canvas.toBlob((blob) => {
+            canvas.toBlob(async (blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
                     type: 'image/jpeg',
                     lastModified: Date.now()
@@ -1366,6 +1438,9 @@ function compressAndPreviewImageAmbientes(file) {
                 // Salva imagem no estado compartilhado
                 const originalImageData = state.originalPhoto ? state.originalPhoto.src : imageDataUrl;
                 saveSharedImage(originalImageData, imageDataUrl, file.name, state.currentPhotoFile, 'ambientes');
+
+                // ✨ NOVO: Faz upload imediato da imagem para o servidor
+                await uploadImageToServer(state.currentPhotoFile);
             }, 'image/jpeg', 0.95);
         };
         img.src = e.target.result;
@@ -1374,6 +1449,9 @@ function compressAndPreviewImageAmbientes(file) {
 }
 
 function clearPhotoAmbientes() {
+    // ✨ NOVO: Deleta imagem do servidor
+    deleteImageFromServer();
+
     state.currentPhotoFile = null;
     state.originalPhoto = null;
     elements.previewImageAmbientes.src = '';
@@ -2137,13 +2215,29 @@ async function gerarAmbiente(imagemCropada) {
             const bancadaNum = tipo.replace('bancada', ''); // '1', '2', etc.
             endpoint = `/api/mockup/bancada${bancadaNum}/progressive`;
             formData = new FormData();
-            formData.append('imagem', imagemCropada);
+
+            // ✨ NOVO: Envia imageId se disponível, senão envia arquivo (fallback)
+            if (state.uploadedImageId) {
+                console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
+                formData.append('imageId', state.uploadedImageId);
+            } else {
+                console.log('📤 Reenviando arquivo (fallback - imageId não disponível)');
+                formData.append('imagem', imagemCropada);
+            }
             formData.append('flip', state.ambienteConfig.flip || false);
         } else {
             // Cavalete: /api/mockup/gerar/progressive
             endpoint = '/api/mockup/gerar/progressive';
             formData = new FormData();
-            formData.append('ImagemCropada', imagemCropada);
+
+            // ✨ NOVO: Envia imageId se disponível, senão envia arquivo (fallback)
+            if (state.uploadedImageId) {
+                console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
+                formData.append('imageId', state.uploadedImageId);
+            } else {
+                console.log('📤 Reenviando arquivo (fallback - imageId não disponível)');
+                formData.append('ImagemCropada', imagemCropada);
+            }
             formData.append('TipoCavalete', 'simples');
             formData.append('Fundo', state.ambienteConfig.fundo || 'claro');
         }
