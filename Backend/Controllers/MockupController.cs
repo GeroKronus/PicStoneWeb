@@ -886,14 +886,23 @@ namespace PicStoneFotoAPI.Controllers
                         return null; // Retorna null para negar acesso silenciosamente
                     }
 
-                    // ✨ CACHE: Usa pasta temp (consistente com ImageController)
+                    // ✨ CACHE: Tenta temp primeiro, depois uploads/originals (fallback)
                     var tempPath = Path.Combine(Directory.GetCurrentDirectory(), "temp");
                     var caminhoCompleto = Path.Combine(tempPath, imageId);
 
+                    // Se não encontrar em temp, tenta fallback em uploads/originals
                     if (!System.IO.File.Exists(caminhoCompleto))
                     {
-                        _logger.LogWarning($"Imagem não encontrada no servidor: {imageId}");
-                        return null;
+                        var fallbackPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "originals");
+                        caminhoCompleto = Path.Combine(fallbackPath, imageId);
+
+                        if (!System.IO.File.Exists(caminhoCompleto))
+                        {
+                            _logger.LogWarning($"Imagem não encontrada nem em temp nem em uploads/originals: {imageId}");
+                            return null;
+                        }
+
+                        _logger.LogInformation($"Usando fallback: imagem encontrada em uploads/originals: {imageId}");
                     }
 
                     using var fileStream = System.IO.File.OpenRead(caminhoCompleto);

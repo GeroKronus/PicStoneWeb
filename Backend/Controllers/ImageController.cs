@@ -26,8 +26,19 @@ namespace PicStoneFotoAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"❌ ERRO ao criar pasta temp: {_uploadsPath}");
-                throw; // Falha crítica - aplicação não pode funcionar sem cache
+                // ⚠️ FALLBACK: Se não conseguir criar temp, usa uploads/originals
+                _logger.LogWarning(ex, $"⚠️ Não foi possível criar pasta temp: {_uploadsPath}. Usando fallback.");
+                _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "originals");
+                try
+                {
+                    Directory.CreateDirectory(_uploadsPath);
+                    _logger.LogInformation($"✅ Pasta fallback criada: {_uploadsPath}");
+                }
+                catch (Exception exFallback)
+                {
+                    _logger.LogError(exFallback, $"❌ ERRO CRÍTICO: Não foi possível criar nem temp nem uploads/originals");
+                    // Não faz throw - permite aplicação continuar (uploads falharão mas app não crashará)
+                }
             }
         }
 
