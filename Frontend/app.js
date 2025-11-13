@@ -2809,30 +2809,32 @@ function displayCountertopResults(data) {
         showScreen(elements.countertopSelectionScreen);
     };
 
-    // Configura botão "Modificar Crop" para voltar à tela de crop
-    elements.modifyCropBtn.onclick = () => {
-        // Verifica se há imagem compartilhada
-        if (!state.sharedImageState.originalImage) {
-            console.error('Nenhuma imagem original disponível para modificar crop');
-            return;
-        }
+    // Configura botão "Modificar Crop" para voltar à tela de crop (somente se o botão existir)
+    if (elements.modifyCropBtn) {
+        elements.modifyCropBtn.onclick = () => {
+            // Verifica se há imagem compartilhada
+            if (!state.sharedImageState.originalImage) {
+                console.error('Nenhuma imagem original disponível para modificar crop');
+                return;
+            }
 
-        // ✨ FIX: Preserva contexto de ambiente (cavalete, nicho, etc)
-        // Se ambienteConfig.tipo não for 'simples' ou 'countertop', reativa modo ambiente
-        if (state.ambienteConfig.tipo !== 'simples' && state.ambienteConfig.tipo !== 'countertop') {
-            state.ambienteMode = true;
-            console.log(`[Modificar Crop] Reativando modo ambiente: ${state.ambienteConfig.tipo}`);
-        }
+            // ✨ FIX: Preserva contexto de ambiente (cavalete, nicho, etc)
+            // Se ambienteConfig.tipo não for 'simples' ou 'countertop', reativa modo ambiente
+            if (state.ambienteConfig.tipo !== 'simples' && state.ambienteConfig.tipo !== 'countertop') {
+                state.ambienteMode = true;
+                console.log(`[Modificar Crop] Reativando modo ambiente: ${state.ambienteConfig.tipo}`);
+            }
 
-        // Volta para tela de crop com a imagem original
-        const img = new Image();
-        img.onload = () => {
-            state.cropData.image = img;
-            initializeCropCanvas();
-            showCropScreen();
+            // Volta para tela de crop com a imagem original
+            const img = new Image();
+            img.onload = () => {
+                state.cropData.image = img;
+                initializeCropCanvas();
+                showCropScreen();
+            };
+            img.src = state.sharedImageState.originalImage;
         };
-        img.src = state.sharedImageState.originalImage;
-    };
+    }
 
     // Mostra tela de resultado
     showScreen(elements.ambienteResultScreen);
