@@ -365,7 +365,6 @@ function setupEventListeners() {
     // Integração - Captura de foto
     elements.captureBtnIntegracao.addEventListener('click', () => elements.fileInputIntegracao.click());
     elements.fileInputIntegracao.addEventListener('change', handleFileSelectIntegracao);
-    elements.fileInputIntegracao.addEventListener('input', handleFileSelectIntegracao);
     elements.clearPhotoBtnIntegracao.addEventListener('click', clearPhotoIntegracao);
     elements.adjustImageBtnIntegracao.addEventListener('click', ativarCropOverlayIntegracao);
     elements.resetImageBtnIntegracao.addEventListener('click', resetarParaOriginalIntegracao);
@@ -377,7 +376,6 @@ function setupEventListeners() {
     // Ambientes - Captura de foto
     elements.captureBtnAmbientes.addEventListener('click', () => elements.fileInputAmbientes.click());
     elements.fileInputAmbientes.addEventListener('change', handleFileSelectAmbientes);
-    elements.fileInputAmbientes.addEventListener('input', handleFileSelectAmbientes);
     elements.clearPhotoBtnAmbientes.addEventListener('click', clearPhotoAmbientes);
 
     // Crop de Ambientes
