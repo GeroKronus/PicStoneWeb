@@ -16,30 +16,42 @@ namespace PicStoneFotoAPI.Controllers
         public ImageController(ILogger<ImageController> logger)
         {
             _logger = logger;
+            _logger.LogInformation("🔧 [CONSTRUCTOR] Iniciando ImageController");
+
             // ✨ CACHE: Pasta temp para armazenar imagens temporárias por usuário
-            _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+            var currentDir = Directory.GetCurrentDirectory();
+            _logger.LogInformation($"🔧 [CONSTRUCTOR] Current Directory: {currentDir}");
+
+            _uploadsPath = Path.Combine(currentDir, "temp");
+            _logger.LogInformation($"🔧 [CONSTRUCTOR] Tentando criar pasta temp: {_uploadsPath}");
 
             try
             {
                 Directory.CreateDirectory(_uploadsPath);
-                _logger.LogInformation($"✅ Pasta temp criada/verificada: {_uploadsPath}");
+                var dirExists = Directory.Exists(_uploadsPath);
+                _logger.LogInformation($"✅ [CONSTRUCTOR] Pasta temp criada/verificada. Existe: {dirExists}, Path: {_uploadsPath}");
             }
             catch (Exception ex)
             {
                 // ⚠️ FALLBACK: Se não conseguir criar temp, usa uploads/originals
-                _logger.LogWarning(ex, $"⚠️ Não foi possível criar pasta temp: {_uploadsPath}. Usando fallback.");
-                _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "originals");
+                _logger.LogWarning(ex, $"⚠️ [CONSTRUCTOR] Não foi possível criar pasta temp: {_uploadsPath}. Usando fallback.");
+                _uploadsPath = Path.Combine(currentDir, "uploads", "originals");
+                _logger.LogInformation($"🔧 [CONSTRUCTOR] Tentando criar pasta fallback: {_uploadsPath}");
                 try
                 {
                     Directory.CreateDirectory(_uploadsPath);
-                    _logger.LogInformation($"✅ Pasta fallback criada: {_uploadsPath}");
+                    var dirExists = Directory.Exists(_uploadsPath);
+                    _logger.LogInformation($"✅ [CONSTRUCTOR] Pasta fallback criada. Existe: {dirExists}, Path: {_uploadsPath}");
                 }
                 catch (Exception exFallback)
                 {
-                    _logger.LogError(exFallback, $"❌ ERRO CRÍTICO: Não foi possível criar nem temp nem uploads/originals");
+                    _logger.LogError(exFallback, $"❌ [CONSTRUCTOR] ERRO CRÍTICO: Não foi possível criar nem temp nem uploads/originals");
+                    _logger.LogError($"❌ [CONSTRUCTOR] _uploadsPath final: {_uploadsPath}");
                     // Não faz throw - permite aplicação continuar (uploads falharão mas app não crashará)
                 }
             }
+
+            _logger.LogInformation($"🔧 [CONSTRUCTOR] ImageController inicializado. _uploadsPath = {_uploadsPath}");
         }
 
         /// <summary>
@@ -51,30 +63,42 @@ namespace PicStoneFotoAPI.Controllers
         {
             try
             {
-                _logger.LogInformation("=== IMAGE UPLOAD REQUEST ===");
+                _logger.LogInformation("=== 📤 [UPLOAD] IMAGE UPLOAD REQUEST INICIADA ===");
+                _logger.LogInformation($"📤 [UPLOAD] _uploadsPath configurado: {_uploadsPath}");
+                _logger.LogInformation($"📤 [UPLOAD] _uploadsPath existe? {Directory.Exists(_uploadsPath)}");
 
                 if (imagem == null || imagem.Length == 0)
                 {
-                    _logger.LogWarning("Nenhuma imagem foi enviada");
+                    _logger.LogWarning("📤 [UPLOAD] ❌ Nenhuma imagem foi enviada (null ou length 0)");
                     return BadRequest(new { sucesso = false, mensagem = "Nenhuma imagem foi enviada" });
                 }
 
-                _logger.LogInformation($"Imagem recebida: {imagem.FileName}, Tamanho: {imagem.Length} bytes");
+                _logger.LogInformation($"📤 [UPLOAD] ✅ Imagem recebida: {imagem.FileName}, Tamanho: {imagem.Length} bytes, ContentType: {imagem.ContentType}");
 
                 // Valida se é uma imagem válida
+                _logger.LogInformation("📤 [UPLOAD] Iniciando decodificação da imagem com SkiaSharp...");
                 SKBitmap imagemBitmap;
-                using (var stream = imagem.OpenReadStream())
+                try
                 {
-                    imagemBitmap = SKBitmap.Decode(stream);
+                    using (var stream = imagem.OpenReadStream())
+                    {
+                        _logger.LogInformation($"📤 [UPLOAD] Stream aberto. CanRead: {stream.CanRead}, Length: {stream.Length}");
+                        imagemBitmap = SKBitmap.Decode(stream);
+                    }
+                }
+                catch (Exception exDecode)
+                {
+                    _logger.LogError(exDecode, "📤 [UPLOAD] ❌ ERRO ao decodificar imagem com SkiaSharp");
+                    throw;
                 }
 
                 if (imagemBitmap == null)
                 {
-                    _logger.LogWarning("Não foi possível decodificar a imagem");
+                    _logger.LogWarning("📤 [UPLOAD] ❌ SKBitmap.Decode retornou null - imagem inválida");
                     return BadRequest(new { sucesso = false, mensagem = "Imagem inválida ou corrompida" });
                 }
 
-                _logger.LogInformation($"Imagem decodificada: {imagemBitmap.Width}x{imagemBitmap.Height}");
+                _logger.LogInformation($"📤 [UPLOAD] ✅ Imagem decodificada com sucesso: {imagemBitmap.Width}x{imagemBitmap.Height}");
 
                 // Gera ID único: userId_timestamp_guid
                 var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
@@ -83,19 +107,43 @@ namespace PicStoneFotoAPI.Controllers
                 var imageId = $"{usuarioId}_{timestamp}_{guid}.jpg";
                 var caminhoCompleto = Path.Combine(_uploadsPath, imageId);
 
+                _logger.LogInformation($"📤 [UPLOAD] ImageId gerado: {imageId}");
+                _logger.LogInformation($"📤 [UPLOAD] Caminho completo para salvar: {caminhoCompleto}");
+                _logger.LogInformation($"📤 [UPLOAD] Diretório do caminho existe? {Directory.Exists(Path.GetDirectoryName(caminhoCompleto))}");
+
                 // Salva imagem com qualidade JPEG 95%
-                using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
+                _logger.LogInformation("📤 [UPLOAD] Iniciando salvamento do arquivo...");
+                try
                 {
-                    using (var image = SKImage.FromBitmap(imagemBitmap))
+                    using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
                     {
-                        var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-                        data.SaveTo(fileStream);
+                        _logger.LogInformation($"📤 [UPLOAD] FileStream aberto. CanWrite: {fileStream.CanWrite}");
+                        using (var image = SKImage.FromBitmap(imagemBitmap))
+                        {
+                            _logger.LogInformation("📤 [UPLOAD] SKImage criado a partir do bitmap");
+                            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
+                            _logger.LogInformation($"📤 [UPLOAD] Imagem encodada. Data size: {data.Size} bytes");
+                            data.SaveTo(fileStream);
+                            _logger.LogInformation("📤 [UPLOAD] Dados salvos no FileStream");
+                        }
                     }
+                    _logger.LogInformation("📤 [UPLOAD] FileStream fechado");
+                }
+                catch (Exception exSave)
+                {
+                    _logger.LogError(exSave, $"📤 [UPLOAD] ❌ ERRO ao salvar arquivo em: {caminhoCompleto}");
+                    throw;
                 }
 
-                imagemBitmap.Dispose();
+                // Verifica se arquivo foi salvo
+                var fileExists = System.IO.File.Exists(caminhoCompleto);
+                var fileSize = fileExists ? new FileInfo(caminhoCompleto).Length : 0;
+                _logger.LogInformation($"📤 [UPLOAD] Arquivo existe após salvar? {fileExists}, Tamanho: {fileSize} bytes");
 
-                _logger.LogInformation($"Imagem salva com sucesso: {imageId}");
+                imagemBitmap.Dispose();
+                _logger.LogInformation("📤 [UPLOAD] Bitmap disposed");
+
+                _logger.LogInformation($"📤 [UPLOAD] ✅✅✅ SUCESSO! Imagem salva: {imageId}");
 
                 return Ok(new
                 {
@@ -108,8 +156,15 @@ namespace PicStoneFotoAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao fazer upload da imagem");
-                return StatusCode(500, new { sucesso = false, mensagem = $"Erro interno: {ex.Message}" });
+                _logger.LogError(ex, "📤 [UPLOAD] ❌❌❌ ERRO FATAL ao fazer upload da imagem");
+                _logger.LogError($"📤 [UPLOAD] Tipo da exceção: {ex.GetType().Name}");
+                _logger.LogError($"📤 [UPLOAD] Mensagem: {ex.Message}");
+                _logger.LogError($"📤 [UPLOAD] StackTrace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError($"📤 [UPLOAD] InnerException: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, new { sucesso = false, mensagem = $"Erro interno: {ex.Message}", tipo = ex.GetType().Name });
             }
         }
 
