@@ -421,7 +421,7 @@ function setupEventListeners() {
     elements.ambienteBtn.addEventListener('click', startAmbienteFlow);
     elements.countertopsBtn.addEventListener('click', startCountertopFlow);
     elements.cancelAmbienteBtn.addEventListener('click', () => showMainScreen());
-    elements.cancelCountertopSelectionBtn.addEventListener('click', () => showMainScreen());
+    elements.cancelCountertopSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
     elements.continuarCropAmbienteBtn.addEventListener('click', abrirCropParaAmbiente);
     elements.backToMainBtn.addEventListener('click', handleBackFromResults);
     elements.newAmbienteBtn.addEventListener('click', startAmbienteFlow);
@@ -757,6 +757,26 @@ function showAmbientesScreen() {
             elements.ambienteOptions.classList.remove('hidden');
         }
     } else {
+        clearPhotoAmbientes();
+    }
+}
+
+/**
+ * Volta para a tela de Ambientes mantendo a foto e botões visíveis
+ * Usado ao clicar "Voltar" na tela de seleção de bancadas
+ */
+function backToAmbientesWithPhoto() {
+    showScreen(elements.ambientesScreen);
+
+    // Garante que a foto e os botões permanecem visíveis
+    if (state.currentPhotoFile && elements.previewImageAmbientes.src) {
+        elements.photoPreviewAmbientes.classList.remove('hidden');
+        elements.ambienteOptions.classList.remove('hidden');
+        if (elements.captureSectionAmbientes) {
+            elements.captureSectionAmbientes.classList.add('hidden');
+        }
+    } else {
+        // Fallback: se não há foto, limpa tudo
         clearPhotoAmbientes();
     }
 }
