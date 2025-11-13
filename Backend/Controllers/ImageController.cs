@@ -165,5 +165,67 @@ namespace PicStoneFotoAPI.Controllers
                 return StatusCode(500, new { status = "error", mensagem = ex.Message });
             }
         }
+
+        /// <summary>
+        /// GET /api/image/debug/thumbs
+        /// Verifica disponibilidade dos thumbnails WebP das bancadas
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("debug/thumbs")]
+        public IActionResult DebugThumbs()
+        {
+            try
+            {
+                var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+                var result = new
+                {
+                    timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss UTC"),
+                    wwwrootPath = wwwrootPath,
+                    directoryExists = Directory.Exists(wwwrootPath),
+                    thumbs = new List<object>()
+                };
+
+                if (!Directory.Exists(wwwrootPath))
+                {
+                    return Ok(new
+                    {
+                        result.timestamp,
+                        result.wwwrootPath,
+                        result.directoryExists,
+                        error = "Diretório wwwroot/images não existe!"
+                    });
+                }
+
+                var thumbsList = (List<object>)result.thumbs;
+
+                for (int i = 1; i <= 8; i++)
+                {
+                    var fileName = $"thumb-bancada{i}.webp";
+                    var filePath = Path.Combine(wwwrootPath, fileName);
+                    var fileExists = System.IO.File.Exists(filePath);
+
+                    var thumbInfo = new
+                    {
+                        bancada = i,
+                        fileName = fileName,
+                        exists = fileExists,
+                        size = fileExists ? new FileInfo(filePath).Length : 0,
+                        sizeKB = fileExists ? $"{new FileInfo(filePath).Length / 1024}KB" : "N/A",
+                        fullPath = filePath,
+                        urlPath = $"/images/{fileName}",
+                        readable = fileExists && new FileInfo(filePath).Length > 0
+                    };
+
+                    thumbsList.Add(thumbInfo);
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao verificar thumbnails");
+                return StatusCode(500, new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
     }
 }
