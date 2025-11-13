@@ -833,16 +833,18 @@ function compressAndPreviewImage(file) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            // Usa imagem original sem redimensionamento
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
+            // Redimensiona para 50% (consistente com galeria)
+            const targetWidth = Math.round(img.width * 0.5);
+            const targetHeight = Math.round(img.height * 0.5);
 
-            canvas.width = width;
-            canvas.height = height;
+            console.log(`📐 Redimensionando (Câmera): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50%)`);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
 
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
             canvas.toBlob((blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
