@@ -217,6 +217,41 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// POST /api/image/test-upload
+        /// TESTE: Recebe upload SEM processar a imagem (diagnóstico 502)
+        /// </summary>
+        [HttpPost("test-upload")]
+        public IActionResult TestUpload([FromForm] IFormFile imagem)
+        {
+            try
+            {
+                _logger.LogInformation("🧪 [TEST] Test upload iniciado");
+
+                if (imagem == null || imagem.Length == 0)
+                {
+                    _logger.LogWarning("🧪 [TEST] Imagem null ou vazia");
+                    return BadRequest(new { sucesso = false, mensagem = "Sem imagem" });
+                }
+
+                _logger.LogInformation($"🧪 [TEST] Imagem recebida: {imagem.FileName}, {imagem.Length} bytes");
+
+                return Ok(new
+                {
+                    sucesso = true,
+                    mensagem = "Upload de teste OK - sem processamento",
+                    fileName = imagem.FileName,
+                    size = imagem.Length,
+                    contentType = imagem.ContentType
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "🧪 [TEST] Erro no test-upload");
+                return StatusCode(500, new { sucesso = false, mensagem = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// GET /api/image/health
         /// Verifica status do serviço de imagens
         /// </summary>
