@@ -127,6 +127,7 @@ const elements = {
     flipCountertop: document.getElementById('flipCountertop'),
     backToMainBtn: document.getElementById('backToMainBtn'),
     downloadAllAmbientesBtn: document.getElementById('downloadAllAmbientesBtn'),
+    modifyCropBtn: document.getElementById('modifyCropBtn'),
     newAmbienteBtn: document.getElementById('newAmbienteBtn'),
     ambientesGallery: document.getElementById('ambientesGallery'),
     ambienteMessage: document.getElementById('ambienteMessage'),
@@ -2786,6 +2787,24 @@ function displayCountertopResults(data) {
     elements.newAmbienteBtn.onclick = () => {
         // Retorna para seleção com o mesmo crop
         showScreen(elements.countertopSelectionScreen);
+    };
+
+    // Configura botão "Modificar Crop" para voltar à tela de crop
+    elements.modifyCropBtn.onclick = () => {
+        // Verifica se há imagem compartilhada
+        if (!state.sharedImageState.originalImage) {
+            console.error('Nenhuma imagem original disponível para modificar crop');
+            return;
+        }
+
+        // Volta para tela de crop com a imagem original
+        const img = new Image();
+        img.onload = () => {
+            state.cropData.image = img;
+            initializeCropCanvas();
+            showCropScreen();
+        };
+        img.src = state.sharedImageState.originalImage;
     };
 
     // Mostra tela de resultado
