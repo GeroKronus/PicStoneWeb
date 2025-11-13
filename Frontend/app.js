@@ -1322,6 +1322,7 @@ async function uploadImageToServer(imageFile) {
         // ✨ FIX: Desabilita cards enquanto upload está em andamento
         state.uploadInProgress = true;
         disableCountertopCards();
+        showUploadToast(); // ✨ NOVO: Exibe mensagem de upload em andamento
 
         const formData = new FormData();
         formData.append('imagem', imageFile);
@@ -1355,6 +1356,7 @@ async function uploadImageToServer(imageFile) {
         // ✨ FIX: Reabilita cards após upload (sucesso ou erro)
         state.uploadInProgress = false;
         enableCountertopCards();
+        hideUploadToast(); // ✨ NOVO: Esconde mensagem de upload
     }
 }
 
@@ -1406,6 +1408,100 @@ function enableCountertopCards() {
         card.style.pointerEvents = 'auto';
     });
     console.log('🔓 Cards habilitados após upload');
+}
+
+// ✨ NOVO: Funções para exibir/esconder toast de upload
+function showUploadToast() {
+    // Cria elemento toast se não existir
+    let toast = document.getElementById('upload-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'upload-toast';
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2196F3;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            font-size: 16px;
+            font-weight: 500;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideDown 0.3s ease-out;
+        `;
+
+        // Adiciona ícone de loading
+        const spinner = document.createElement('div');
+        spinner.style.cssText = `
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        `;
+
+        const text = document.createElement('span');
+        text.textContent = '📤 Enviando foto... Aguarde antes de selecionar a bancada';
+
+        toast.appendChild(spinner);
+        toast.appendChild(text);
+        document.body.appendChild(toast);
+
+        // Adiciona CSS de animações se não existir
+        if (!document.getElementById('toast-animations')) {
+            const style = document.createElement('style');
+            style.id = 'toast-animations';
+            style.textContent = `
+                @keyframes slideDown {
+                    from {
+                        transform: translate(-50%, -100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translate(-50%, 0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes slideUp {
+                    from {
+                        transform: translate(-50%, 0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translate(-50%, -100%);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    } else {
+        toast.style.display = 'flex';
+    }
+
+    console.log('🔔 Toast de upload exibido');
+}
+
+function hideUploadToast() {
+    const toast = document.getElementById('upload-toast');
+    if (toast) {
+        toast.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => {
+            toast.style.display = 'none';
+            toast.style.animation = 'slideDown 0.3s ease-out';
+        }, 300);
+    }
+    console.log('🔕 Toast de upload escondido');
 }
 
 // ========== AMBIENTES - CAPTURA DE FOTO ==========
