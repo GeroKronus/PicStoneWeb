@@ -109,6 +109,14 @@ namespace PicStoneFotoAPI.Controllers
                     return BadRequest(new { sucesso = false, mensagem = "ID de imagem inválido" });
                 }
 
+                // ✨ SEGURANÇA: Valida ownership - imageId deve começar com userId do usuário logado
+                var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+                if (!imageId.StartsWith($"{usuarioId}_"))
+                {
+                    _logger.LogWarning($"Tentativa de deletar imagem de outro usuário! UserId: {usuarioId}, ImageId: {imageId}");
+                    return Forbid(); // 403 Forbidden
+                }
+
                 var caminhoCompleto = Path.Combine(_uploadsPath, imageId);
 
                 if (!System.IO.File.Exists(caminhoCompleto))

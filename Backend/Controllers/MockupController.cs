@@ -878,6 +878,14 @@ namespace PicStoneFotoAPI.Controllers
                         return null;
                     }
 
+                    // ✨ SEGURANÇA: Valida ownership - imageId deve começar com userId do usuário logado
+                    var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+                    if (!imageId.StartsWith($"{usuarioId}_"))
+                    {
+                        _logger.LogWarning($"Tentativa de acessar imagem de outro usuário! UserId: {usuarioId}, ImageId: {imageId}");
+                        return null; // Retorna null para negar acesso silenciosamente
+                    }
+
                     var originalsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "originals");
                     var caminhoCompleto = Path.Combine(originalsPath, imageId);
 
