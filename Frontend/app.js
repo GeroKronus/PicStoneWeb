@@ -2797,6 +2797,13 @@ function displayCountertopResults(data) {
             return;
         }
 
+        // ✨ FIX: Preserva contexto de ambiente (cavalete, nicho, etc)
+        // Se ambienteConfig.tipo não for 'simples' ou 'countertop', reativa modo ambiente
+        if (state.ambienteConfig.tipo !== 'simples' && state.ambienteConfig.tipo !== 'countertop') {
+            state.ambienteMode = true;
+            console.log(`[Modificar Crop] Reativando modo ambiente: ${state.ambienteConfig.tipo}`);
+        }
+
         // Volta para tela de crop com a imagem original
         const img = new Image();
         img.onload = () => {
