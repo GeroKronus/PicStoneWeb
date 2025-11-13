@@ -242,8 +242,14 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-// Serve arquivos estáticos do frontend
-app.UseStaticFiles();
+// Serve arquivos estáticos do frontend com MIME types configurados
+var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+provider.Mappings[".webp"] = "image/webp"; // ✨ CRITICAL: Adiciona suporte WebP
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider
+});
 app.UseDefaultFiles();
 
 // Serve arquivos da pasta uploads (mockups e fotos)
