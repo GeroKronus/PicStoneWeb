@@ -919,11 +919,17 @@ function compressAndPreviewImageIntegracao(file) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
+            // ✨ OTIMIZAÇÃO: Reduz dimensões em 50% para economizar banda e acelerar processamento
+            const targetWidth = Math.round(img.width * 0.5);
+            const targetHeight = Math.round(img.height * 0.5);
+
+            console.log(`📐 Redimensionando (Integração): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50%)`);
+
             const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
             canvas.toBlob(async (blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
@@ -1437,11 +1443,17 @@ function compressAndPreviewImageAmbientes(file) {
             // Salva imagem original para uso nos ambientes
             state.originalPhoto = img;
 
+            // ✨ OTIMIZAÇÃO: Reduz dimensões em 50% para economizar banda e acelerar processamento
+            const targetWidth = Math.round(img.width * 0.5);
+            const targetHeight = Math.round(img.height * 0.5);
+
+            console.log(`📐 Redimensionando: ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50%)`);
+
             const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
             canvas.toBlob(async (blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
