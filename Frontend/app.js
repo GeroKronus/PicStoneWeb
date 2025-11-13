@@ -2399,12 +2399,11 @@ async function gerarAmbiente(imagemCropada) {
         state.ambienteUrls = [];
 
         // Labels para cada tipo
-        const getLabels = (tipoAmbiente) => {
-            if (tipoAmbiente === 'bancada1') {
-                return ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'];
-            } else if (tipoAmbiente.startsWith('bancada')) {
+        const getLabels = (tipoAmbiente, count) => {
+            if (tipoAmbiente.startsWith('bancada')) {
                 const num = tipoAmbiente.replace('bancada', '');
-                return [`Bancada #${num} - Variação 1`, `Bancada #${num} - Variação 2`, `Bancada #${num} - Variação 3`, `Bancada #${num} - Variação 4`];
+                // Gera labels dinamicamente: "Bancada #X - View 1", "View 2", etc.
+                return Array.from({ length: count }, (_, i) => `Bancada #${num} - View ${i + 1}`);
             } else {
                 return [
                     'Cavalete Duplo - Original/Espelho',
@@ -2414,7 +2413,8 @@ async function gerarAmbiente(imagemCropada) {
             }
         };
 
-        const labels = getLabels(tipo);
+        // Gera labels suficientes (máximo 10 views) - serão ajustados conforme mockups chegam
+        const labels = getLabels(tipo, 10);
 
         // Lê stream SSE usando ReadableStream
         const reader = response.body.getReader();
@@ -2734,18 +2734,18 @@ function displayCountertopResults(data) {
 
     // Mapeia o tipo de bancada para o número correto
     const bancadaLabels = {
-        'bancada1': ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'],
-        'bancada2': ['Bancada #2 - Normal', 'Bancada #2 - Rotacionado 180°'],
-        'bancada3': ['Bancada #3 - Normal', 'Bancada #3 - Rotacionado 180°'],
-        'bancada4': ['Bancada #4 - Normal', 'Bancada #4 - Rotacionado 180°'],
-        'bancada5': ['Bancada #5 - Normal', 'Bancada #5 - Rotacionado 180°'],
-        'bancada6': ['Bancada #6 - Normal', 'Bancada #6 - Rotacionado 180°'],
-        'bancada7': ['Bancada #7 - Normal', 'Bancada #7 - Rotacionado 180°'],
-        'bancada8': ['Bancada #8 - Normal', 'Bancada #8 - Rotacionado 180°']
+        'bancada1': ['Bancada #1 - View 1', 'Bancada #1 - View 2'],
+        'bancada2': ['Bancada #2 - View 1', 'Bancada #2 - View 2'],
+        'bancada3': ['Bancada #3 - View 1', 'Bancada #3 - View 2'],
+        'bancada4': ['Bancada #4 - View 1', 'Bancada #4 - View 2'],
+        'bancada5': ['Bancada #5 - View 1', 'Bancada #5 - View 2'],
+        'bancada6': ['Bancada #6 - View 1', 'Bancada #6 - View 2'],
+        'bancada7': ['Bancada #7 - View 1', 'Bancada #7 - View 2'],
+        'bancada8': ['Bancada #8 - View 1', 'Bancada #8 - View 2']
     };
 
     const labels = bancadaLabels[state.countertopState.selectedType] ||
-                   ['Bancada - Normal', 'Bancada - Rotacionado 180°'];
+                   ['Bancada - View 1', 'Bancada - View 2'];
 
     caminhos.forEach((caminho, index) => {
         const ambienteUrl = `${API_URL}${caminho}`;

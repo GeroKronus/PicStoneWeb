@@ -7,6 +7,8 @@ const state = {
     username: localStorage.getItem('username') || null,
     currentPhoto: null,
     currentPhotoFile: null,
+    uploadedImageId: null, // ID da imagem armazenada no servidor
+    uploadInProgress: false, // ✨ FIX: Flag para indicar upload em andamento
     originalPhoto: null, // Foto original para ambiente
     ambienteMode: false, // Indica se está em modo ambiente
     cropData: {
@@ -147,6 +149,11 @@ const elements = {
     addUserMessage: document.getElementById('addUserMessage'),
     backFromAddUserBtn: document.getElementById('backFromAddUserBtn'),
     loadingOverlay: document.getElementById('loadingOverlay'),
+    loadingMessage: document.getElementById('loadingMessage'),
+    loadingSubmessage: document.getElementById('loadingSubmessage'),
+    progressContainer: document.getElementById('progressContainer'),
+    progressBar: document.getElementById('progressBar'),
+    progressText: document.getElementById('progressText'),
     // Visualização Cards/Tabela em Gerenciar Usuários
     usersCardViewBtn: document.getElementById('usersCardViewBtn'),
     usersTableViewBtn: document.getElementById('usersTableViewBtn'),
@@ -912,13 +919,19 @@ function compressAndPreviewImageIntegracao(file) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
+            // ✨ OTIMIZAÇÃO: Reduz dimensões em 50% para economizar banda e acelerar processamento
+            const targetWidth = Math.round(img.width * 0.5);
+            const targetHeight = Math.round(img.height * 0.5);
 
-            canvas.toBlob((blob) => {
+            console.log(`📐 Redimensionando (Integração): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50%)`);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+            canvas.toBlob(async (blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
                     type: 'image/jpeg',
                     lastModified: Date.now()
@@ -932,6 +945,9 @@ function compressAndPreviewImageIntegracao(file) {
                 // Salva imagem no estado compartilhado
                 const originalImageData = state.originalPhoto ? state.originalPhoto.src : currentImageData;
                 saveSharedImage(originalImageData, currentImageData, file.name, state.currentPhotoFile, 'integracao');
+
+                // ✨ NOVO: Faz upload imediato da imagem para o servidor
+                await uploadImageToServer(state.currentPhotoFile);
             }, 'image/jpeg', 0.95);
         };
         img.src = e.target.result;
@@ -940,6 +956,9 @@ function compressAndPreviewImageIntegracao(file) {
 }
 
 function clearPhotoIntegracao() {
+    // ✨ NOVO: Deleta imagem do servidor
+    deleteImageFromServer();
+
     state.currentPhotoFile = null;
     state.originalPhoto = null;
     elements.previewImageIntegracao.src = '';
@@ -1295,6 +1314,196 @@ function resetarParaOriginalIntegracao() {
     state.cropOverlayState.isActive = false;
 }
 
+// ========== UPLOAD DE IMAGEM PARA SERVIDOR ==========
+async function uploadImageToServer(imageFile) {
+    try {
+        console.log('📤 Fazendo upload da imagem para o servidor...');
+
+        // ✨ FIX: Desabilita cards enquanto upload está em andamento
+        state.uploadInProgress = true;
+        disableCountertopCards();
+        showUploadToast(); // ✨ NOVO: Exibe mensagem de upload em andamento
+
+        const formData = new FormData();
+        formData.append('imagem', imageFile);
+
+        const response = await fetch(`${API_URL}/api/image/upload`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao fazer upload da imagem');
+        }
+
+        const result = await response.json();
+
+        if (result.sucesso && result.imageId) {
+            state.uploadedImageId = result.imageId;
+            console.log(`✅ Imagem enviada para servidor: ${result.imageId}`);
+            console.log(`📐 Dimensões: ${result.largura}x${result.altura}`);
+        } else {
+            console.warn('⚠️ Upload retornou sem imageId');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao fazer upload da imagem:', error);
+        // Não bloqueia a UX - o sistema vai usar o fallback (enviar arquivo diretamente)
+        state.uploadedImageId = null;
+    } finally {
+        // ✨ FIX: Reabilita cards após upload (sucesso ou erro)
+        state.uploadInProgress = false;
+        enableCountertopCards();
+        hideUploadToast(); // ✨ NOVO: Esconde mensagem de upload
+    }
+}
+
+async function deleteImageFromServer() {
+    if (!state.uploadedImageId) {
+        console.log('ℹ️ Nenhuma imagem para deletar no servidor');
+        return;
+    }
+
+    try {
+        console.log(`🗑️ Deletando imagem do servidor: ${state.uploadedImageId}`);
+
+        const response = await fetch(`${API_URL}/api/image/${state.uploadedImageId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${state.token}`
+            }
+        });
+
+        if (response.ok) {
+            console.log('✅ Imagem deletada do servidor');
+        } else {
+            console.warn('⚠️ Erro ao deletar imagem do servidor');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao deletar imagem do servidor:', error);
+    } finally {
+        // Limpa o imageId independente do resultado
+        state.uploadedImageId = null;
+    }
+}
+
+// ✨ FIX: Funções para desabilitar/habilitar cards durante upload
+function disableCountertopCards() {
+    const cards = document.querySelectorAll('.countertop-card');
+    cards.forEach(card => {
+        card.classList.add('disabled');
+        card.style.opacity = '0.5';
+        card.style.pointerEvents = 'none';
+    });
+    console.log('🔒 Cards desabilitados durante upload');
+}
+
+function enableCountertopCards() {
+    const cards = document.querySelectorAll('.countertop-card');
+    cards.forEach(card => {
+        card.classList.remove('disabled');
+        card.style.opacity = '1';
+        card.style.pointerEvents = 'auto';
+    });
+    console.log('🔓 Cards habilitados após upload');
+}
+
+// ✨ NOVO: Funções para exibir/esconder toast de upload
+function showUploadToast() {
+    // Cria elemento toast se não existir
+    let toast = document.getElementById('upload-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'upload-toast';
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2196F3;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            font-size: 16px;
+            font-weight: 500;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideDown 0.3s ease-out;
+        `;
+
+        // Adiciona ícone de loading
+        const spinner = document.createElement('div');
+        spinner.style.cssText = `
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        `;
+
+        const text = document.createElement('span');
+        text.textContent = 'Enviando imagem. Aguarde';
+
+        toast.appendChild(spinner);
+        toast.appendChild(text);
+        document.body.appendChild(toast);
+
+        // Adiciona CSS de animações se não existir
+        if (!document.getElementById('toast-animations')) {
+            const style = document.createElement('style');
+            style.id = 'toast-animations';
+            style.textContent = `
+                @keyframes slideDown {
+                    from {
+                        transform: translate(-50%, -100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translate(-50%, 0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes slideUp {
+                    from {
+                        transform: translate(-50%, 0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translate(-50%, -100%);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    } else {
+        toast.style.display = 'flex';
+    }
+
+    console.log('🔔 Toast de upload exibido');
+}
+
+function hideUploadToast() {
+    const toast = document.getElementById('upload-toast');
+    if (toast) {
+        toast.style.animation = 'slideUp 0.3s ease-out';
+        setTimeout(() => {
+            toast.style.display = 'none';
+            toast.style.animation = 'slideDown 0.3s ease-out';
+        }, 300);
+    }
+    console.log('🔕 Toast de upload escondido');
+}
+
 // ========== AMBIENTES - CAPTURA DE FOTO ==========
 function handleFileSelectAmbientes(e) {
     const file = e.target.files[0];
@@ -1330,13 +1539,19 @@ function compressAndPreviewImageAmbientes(file) {
             // Salva imagem original para uso nos ambientes
             state.originalPhoto = img;
 
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
+            // ✨ OTIMIZAÇÃO: Reduz dimensões em 50% para economizar banda e acelerar processamento
+            const targetWidth = Math.round(img.width * 0.5);
+            const targetHeight = Math.round(img.height * 0.5);
 
-            canvas.toBlob((blob) => {
+            console.log(`📐 Redimensionando: ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50%)`);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+            canvas.toBlob(async (blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
                     type: 'image/jpeg',
                     lastModified: Date.now()
@@ -1361,6 +1576,9 @@ function compressAndPreviewImageAmbientes(file) {
                 // Salva imagem no estado compartilhado
                 const originalImageData = state.originalPhoto ? state.originalPhoto.src : imageDataUrl;
                 saveSharedImage(originalImageData, imageDataUrl, file.name, state.currentPhotoFile, 'ambientes');
+
+                // ✨ NOVO: Faz upload imediato da imagem para o servidor
+                await uploadImageToServer(state.currentPhotoFile);
             }, 'image/jpeg', 0.95);
         };
         img.src = e.target.result;
@@ -1369,6 +1587,9 @@ function compressAndPreviewImageAmbientes(file) {
 }
 
 function clearPhotoAmbientes() {
+    // ✨ NOVO: Deleta imagem do servidor
+    deleteImageFromServer();
+
     state.currentPhotoFile = null;
     state.originalPhoto = null;
     elements.previewImageAmbientes.src = '';
@@ -2115,26 +2336,51 @@ function abrirCropParaAmbiente() {
 
 async function gerarAmbiente(imagemCropada) {
     try {
-        // Mostra loading overlay global (spinner)
+        // Mostra loading overlay e prepara elementos de progresso
         elements.loadingOverlay.classList.remove('hidden');
+        elements.loadingMessage.textContent = 'Gerando mockups...';
+        elements.loadingSubmessage.textContent = 'Você verá cada imagem assim que ficar pronta';
+        elements.progressContainer.classList.remove('hidden');
+        elements.progressBar.style.width = '0%';
+        elements.progressText.textContent = '0 de 0 mockups prontos';
 
-        // Verifica o tipo de ambiente
-        const isBancada1 = state.ambienteConfig.tipo === 'bancada1';
+        // Detecta tipo de ambiente e monta endpoint
+        const tipo = state.ambienteConfig.tipo; // 'simples', 'bancada1', 'bancada2', etc.
+        let endpoint, formData;
 
-        const formData = new FormData();
-        formData.append(isBancada1 ? 'imagem' : 'ImagemCropada', imagemCropada);
+        if (tipo.startsWith('bancada')) {
+            // Bancadas 1-8: /api/mockup/bancada1/progressive ... /api/mockup/bancada8/progressive
+            const bancadaNum = tipo.replace('bancada', ''); // '1', '2', etc.
+            endpoint = `/api/mockup/bancada${bancadaNum}/progressive`;
+            formData = new FormData();
 
-        if (isBancada1) {
-            // Parâmetros específicos da bancada1
+            // ✨ NOVO: Envia imageId se disponível, senão envia arquivo (fallback)
+            if (state.uploadedImageId) {
+                console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
+                formData.append('imageId', state.uploadedImageId);
+            } else {
+                console.log('📤 Reenviando arquivo (fallback - imageId não disponível)');
+                formData.append('imagem', imagemCropada);
+            }
             formData.append('flip', state.ambienteConfig.flip || false);
         } else {
-            // Parâmetros do cavalete (simples)
-            formData.append('TipoCavalete', 'simples'); // Sempre simples por enquanto
-            formData.append('Fundo', state.ambienteConfig.fundo);
+            // Cavalete: /api/mockup/gerar/progressive
+            endpoint = '/api/mockup/gerar/progressive';
+            formData = new FormData();
+
+            // ✨ NOVO: Envia imageId se disponível, senão envia arquivo (fallback)
+            if (state.uploadedImageId) {
+                console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
+                formData.append('imageId', state.uploadedImageId);
+            } else {
+                console.log('📤 Reenviando arquivo (fallback - imageId não disponível)');
+                formData.append('ImagemCropada', imagemCropada);
+            }
+            formData.append('TipoCavalete', 'simples');
+            formData.append('Fundo', state.ambienteConfig.fundo || 'claro');
         }
 
-        const endpoint = isBancada1 ? '/api/mockup/bancada1' : '/api/mockup/gerar';
-
+        // Inicia requisição SSE com fetch()
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             headers: {
@@ -2143,73 +2389,134 @@ async function gerarAmbiente(imagemCropada) {
             body: formData
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-            throw new Error(data.mensagem || 'Erro ao gerar ambiente');
+            throw new Error('Erro ao iniciar geração de mockups');
         }
 
-        // Exibe resultado (backend retorna diferente para bancada1 e cavalete)
-        const caminhos = data.caminhosGerados || data.ambientes;
+        // Prepara galeria
+        const gallery = document.getElementById('ambientesGallery');
+        gallery.innerHTML = '';
+        state.ambienteUrls = [];
 
-        if (caminhos && caminhos.length > 0) {
-            const gallery = document.getElementById('ambientesGallery');
-            gallery.innerHTML = ''; // Limpa galeria
-
-            // Labels diferentes para cada tipo
-            let labels;
-            if (isBancada1) {
-                labels = ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'];
+        // Labels para cada tipo
+        const getLabels = (tipoAmbiente, count) => {
+            if (tipoAmbiente.startsWith('bancada')) {
+                const num = tipoAmbiente.replace('bancada', '');
+                // Gera labels dinamicamente: "Bancada #X - View 1", "View 2", etc.
+                return Array.from({ length: count }, (_, i) => `Bancada #${num} - View ${i + 1}`);
             } else {
-                labels = [
+                return [
                     'Cavalete Duplo - Original/Espelho',
                     'Cavalete Duplo - Espelho/Original',
                     'Cavalete Simples'
                 ];
             }
+        };
 
-            caminhos.forEach((caminho, index) => {
-                // Para bancada1, caminho já vem completo; para cavalete, precisa montar
-                const ambienteUrl = isBancada1 ? `${API_URL}${caminho}` : `${API_URL}/uploads/${caminho}`;
+        // Gera labels suficientes (máximo 10 views) - serão ajustados conforme mockups chegam
+        const labels = getLabels(tipo, 10);
 
-                const ambienteItem = document.createElement('div');
-                ambienteItem.className = 'ambiente-item';
-                ambienteItem.innerHTML = `
-                    <h3>${labels[index] || `Ambiente ${index + 1}`}</h3>
-                    <img src="${ambienteUrl}" alt="${labels[index]}">
-                    <div class="ambiente-actions">
-                        <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${labels[index] || `Ambiente ${index + 1}`}">
-                            ⬇️ Baixar
-                        </button>
-                        <button class="btn btn-primary btn-share-single" data-url="${ambienteUrl}" data-nome="${labels[index] || `Ambiente ${index + 1}`}">
-                            📤 Compartilhar
-                        </button>
-                    </div>
-                `;
-                gallery.appendChild(ambienteItem);
-            });
+        // Lê stream SSE usando ReadableStream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let mockupCount = 0;
+        let totalMockups = 0;
 
-            // Salva URLs para download em massa
-            state.ambienteUrls = isBancada1
-                ? caminhos.map(c => `${API_URL}${c}`)
-                : caminhos.map(c => `${API_URL}/uploads/${c}`);
+        while (true) {
+            const { done, value } = await reader.read();
 
-            showScreen(elements.ambienteResultScreen);
-            showAmbienteMessage(data.mensagem, 'success');
-        } else {
-            throw new Error('Nenhum ambiente foi gerado');
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // Processa linhas completas (eventos SSE)
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Última linha pode estar incompleta
+
+            for (const line of lines) {
+                if (!line.startsWith('data: ')) continue;
+
+                const jsonStr = line.substring(6); // Remove "data: "
+                if (!jsonStr.trim()) continue;
+
+                try {
+                    const event = JSON.parse(jsonStr);
+
+                    if (event.type === 'start') {
+                        console.log('📌 SSE: Iniciando geração...', event.data);
+                        elements.loadingMessage.textContent = event.data.mensagem || 'Gerando mockups...';
+                    }
+                    else if (event.type === 'progress') {
+                        totalMockups = event.data.total;
+                        const currentIndex = event.data.index;
+                        console.log(`🔄 SSE: Progresso ${currentIndex + 1}/${totalMockups}`);
+                        elements.loadingMessage.textContent = event.data.mensagem || `Gerando mockup ${currentIndex + 1}/${totalMockups}...`;
+                    }
+                    else if (event.type === 'mockup') {
+                        mockupCount++;
+                        totalMockups = event.data.total;
+                        const percentage = Math.round((mockupCount / totalMockups) * 100);
+                        elements.progressBar.style.width = `${percentage}%`;
+                        elements.progressText.textContent = `${mockupCount} de ${totalMockups} mockups prontos`;
+
+                        console.log(`✅ SSE: Mockup ${mockupCount}/${totalMockups} pronto!`, event.data.url);
+
+                        // Adiciona mockup na galeria IMEDIATAMENTE
+                        const ambienteUrl = `${API_URL}${event.data.url}`;
+                        state.ambienteUrls.push(ambienteUrl);
+
+                        const ambienteItem = document.createElement('div');
+                        ambienteItem.className = 'ambiente-item';
+                        ambienteItem.innerHTML = `
+                            <h3>${labels[event.data.index] || `Mockup ${event.data.index + 1}`}</h3>
+                            <img src="${ambienteUrl}" alt="${labels[event.data.index]}">
+                            <div class="ambiente-actions">
+                                <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${labels[event.data.index] || `Mockup ${event.data.index + 1}`}">
+                                    ⬇️ Baixar
+                                </button>
+                                <button class="btn btn-primary btn-share-single" data-url="${ambienteUrl}" data-nome="${labels[event.data.index] || `Mockup ${event.data.index + 1}`}">
+                                    📤 Compartilhar
+                                </button>
+                            </div>
+                        `;
+                        gallery.appendChild(ambienteItem);
+
+                        // Mostra tela de resultado após primeiro mockup
+                        if (mockupCount === 1) {
+                            showScreen(elements.ambienteResultScreen);
+                        }
+                    }
+                    else if (event.type === 'done') {
+                        console.log('🎉 SSE: Todos os mockups foram gerados!', event.data);
+                        elements.loadingMessage.textContent = event.data.mensagem || 'Mockups gerados com sucesso!';
+                        elements.progressBar.style.width = '100%';
+                        elements.progressText.textContent = `${totalMockups} de ${totalMockups} mockups prontos`;
+                        showAmbienteMessage(event.data.mensagem || 'Mockups gerados!', 'success');
+                    }
+                    else if (event.type === 'error') {
+                        console.error('❌ SSE: Erro!', event.data);
+                        throw new Error(event.data.mensagem || 'Erro ao gerar mockup');
+                    }
+                } catch (parseError) {
+                    console.warn('⚠️ Erro ao parsear evento SSE:', jsonStr, parseError);
+                }
+            }
         }
 
         // Reseta modo ambiente
         state.ambienteMode = false;
 
     } catch (error) {
-        showAmbienteMessage(error.message, 'error');
+        console.error('❌ Erro ao gerar ambiente:', error);
+        showAmbienteMessage(error.message || 'Erro ao gerar mockups', 'error');
         state.ambienteMode = false;
         showMainScreen();
     } finally {
-        // Esconde loading overlay
+        // Esconde loading overlay e reseta progresso
         elements.loadingOverlay.classList.add('hidden');
+        elements.progressContainer.classList.add('hidden');
+        elements.progressBar.style.width = '0%';
     }
 }
 
@@ -2427,18 +2734,18 @@ function displayCountertopResults(data) {
 
     // Mapeia o tipo de bancada para o número correto
     const bancadaLabels = {
-        'bancada1': ['Bancada #1 - Normal', 'Bancada #1 - Rotacionado 180°'],
-        'bancada2': ['Bancada #2 - Normal', 'Bancada #2 - Rotacionado 180°'],
-        'bancada3': ['Bancada #3 - Normal', 'Bancada #3 - Rotacionado 180°'],
-        'bancada4': ['Bancada #4 - Normal', 'Bancada #4 - Rotacionado 180°'],
-        'bancada5': ['Bancada #5 - Normal', 'Bancada #5 - Rotacionado 180°'],
-        'bancada6': ['Bancada #6 - Normal', 'Bancada #6 - Rotacionado 180°'],
-        'bancada7': ['Bancada #7 - Normal', 'Bancada #7 - Rotacionado 180°'],
-        'bancada8': ['Bancada #8 - Normal', 'Bancada #8 - Rotacionado 180°']
+        'bancada1': ['Bancada #1 - View 1', 'Bancada #1 - View 2'],
+        'bancada2': ['Bancada #2 - View 1', 'Bancada #2 - View 2'],
+        'bancada3': ['Bancada #3 - View 1', 'Bancada #3 - View 2'],
+        'bancada4': ['Bancada #4 - View 1', 'Bancada #4 - View 2'],
+        'bancada5': ['Bancada #5 - View 1', 'Bancada #5 - View 2'],
+        'bancada6': ['Bancada #6 - View 1', 'Bancada #6 - View 2'],
+        'bancada7': ['Bancada #7 - View 1', 'Bancada #7 - View 2'],
+        'bancada8': ['Bancada #8 - View 1', 'Bancada #8 - View 2']
     };
 
     const labels = bancadaLabels[state.countertopState.selectedType] ||
-                   ['Bancada - Normal', 'Bancada - Rotacionado 180°'];
+                   ['Bancada - View 1', 'Bancada - View 2'];
 
     caminhos.forEach((caminho, index) => {
         const ambienteUrl = `${API_URL}${caminho}`;
