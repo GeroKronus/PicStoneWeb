@@ -2738,7 +2738,7 @@ function displayCountertopResults(data) {
         'bancada2': ['Bancada #2 - View 1', 'Bancada #2 - View 2'],
         'bancada3': ['Bancada #3 - View 1', 'Bancada #3 - View 2'],
         'bancada4': ['Bancada #4 - View 1', 'Bancada #4 - View 2'],
-        'bancada5': ['Bancada #5 - View 1', 'Bancada #5 - View 2'],
+        'bancada5': ['Bancada #5 - View 1', 'Bancada #5 - View 2', 'Bancada #5 - View 3', 'Bancada #5 - View 4'],
         'bancada6': ['Bancada #6 - View 1', 'Bancada #6 - View 2'],
         'bancada7': ['Bancada #7 - View 1', 'Bancada #7 - View 2'],
         'bancada8': ['Bancada #8 - View 1', 'Bancada #8 - View 2']
