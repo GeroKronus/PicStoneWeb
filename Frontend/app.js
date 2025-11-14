@@ -1391,6 +1391,35 @@ async function resetarParaOriginalIntegracao() {
 }
 
 // ========== UPLOAD DE IMAGEM PARA SERVIDOR ==========
+
+/**
+ * Faz upload condicional da imagem cropada antes de gerar mockup
+ * Retorna true se fez upload, false se pulou
+ */
+async function uploadCroppedIfNeeded(croppedFile) {
+    console.log('🔍 Verificando necessidade de upload...');
+    console.log('🐛 state.imagemFoiCropada:', state.imagemFoiCropada);
+    console.log('🐛 state.croppedImageSentToServer:', state.croppedImageSentToServer);
+
+    if (state.imagemFoiCropada && !state.croppedImageSentToServer) {
+        console.log('📤 Upload da imagem cropada ao servidor antes de gerar mockup...');
+        try {
+            await uploadImageToServer(croppedFile);
+            state.croppedImageSentToServer = true;
+            state.imagemFoiCropada = false; // Reset - agora imageId aponta para cropada
+            console.log('✅ Imagem cropada enviada ao servidor. ImageId atualizado.');
+            return true;
+        } catch (error) {
+            console.error('Erro ao fazer upload da imagem cropada:', error);
+            // Se falhar, continua enviando arquivo diretamente no mockup
+            return false;
+        }
+    } else {
+        console.log('⏭️ Pulando upload (cropada:', state.imagemFoiCropada, ', já enviada:', state.croppedImageSentToServer, ')');
+        return false;
+    }
+}
+
 async function uploadImageToServer(imageFile) {
     try {
         console.log('📤 Fazendo upload da imagem para o servidor...');
@@ -2423,28 +2452,10 @@ function abrirCropParaAmbiente() {
 
 async function gerarAmbiente(imagemCropada) {
     try {
-        // 🐛 DEBUG
         console.log('🎬 gerarAmbiente() chamado');
-        console.log('🐛 state.imagemFoiCropada:', state.imagemFoiCropada);
-        console.log('🐛 state.croppedImageSentToServer:', state.croppedImageSentToServer);
-        console.log('🐛 imagemCropada:', imagemCropada);
 
-        // ✨ OTIMIZAÇÃO: Se imagem foi cropada mas ainda não foi enviada ao servidor,
-        // faz upload AGORA antes de gerar o mockup
-        if (state.imagemFoiCropada && !state.croppedImageSentToServer) {
-            console.log('📤 Upload da imagem cropada ao servidor antes de gerar mockup...');
-            try {
-                await uploadImageToServer(imagemCropada);
-                state.croppedImageSentToServer = true;
-                state.imagemFoiCropada = false; // Reset - agora imageId aponta para cropada
-                console.log('✅ Imagem cropada enviada ao servidor. ImageId atualizado.');
-            } catch (error) {
-                console.error('Erro ao fazer upload da imagem cropada:', error);
-                // Se falhar, continua enviando arquivo diretamente no mockup
-            }
-        } else {
-            console.log('⏭️ Pulando upload (cropada:', state.imagemFoiCropada, ', já enviada:', state.croppedImageSentToServer, ')');
-        }
+        // ✨ OTIMIZAÇÃO: Faz upload da cropada se necessário (DRY)
+        await uploadCroppedIfNeeded(imagemCropada);
 
         // Mostra loading overlay e prepara elementos de progresso
         elements.loadingOverlay.classList.remove('hidden');
@@ -2778,27 +2789,10 @@ async function selectCountertopAndGenerate(type) {
  */
 async function generateCountertopAmbiente() {
     try {
-        // 🐛 DEBUG
         console.log('🎬 generateCountertopAmbiente() chamado');
-        console.log('🐛 state.imagemFoiCropada:', state.imagemFoiCropada);
-        console.log('🐛 state.croppedImageSentToServer:', state.croppedImageSentToServer);
 
-        // ✨ OTIMIZAÇÃO: Se imagem foi cropada mas ainda não foi enviada ao servidor,
-        // faz upload AGORA antes de gerar o mockup
-        if (state.imagemFoiCropada && !state.croppedImageSentToServer) {
-            console.log('📤 Upload da imagem cropada ao servidor antes de gerar mockup...');
-            try {
-                await uploadImageToServer(state.countertopState.croppedImage);
-                state.croppedImageSentToServer = true;
-                state.imagemFoiCropada = false; // Reset - agora imageId aponta para cropada
-                console.log('✅ Imagem cropada enviada ao servidor. ImageId atualizado.');
-            } catch (error) {
-                console.error('Erro ao fazer upload da imagem cropada:', error);
-                // Se falhar, continua enviando arquivo diretamente no mockup
-            }
-        } else {
-            console.log('⏭️ Pulando upload (cropada:', state.imagemFoiCropada, ', já enviada:', state.croppedImageSentToServer, ')');
-        }
+        // ✨ OTIMIZAÇÃO: Faz upload da cropada se necessário (DRY)
+        await uploadCroppedIfNeeded(state.countertopState.croppedImage);
 
         // Mostra loading overlay global
         elements.loadingOverlay.classList.remove('hidden');
