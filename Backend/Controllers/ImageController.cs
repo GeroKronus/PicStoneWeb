@@ -140,6 +140,10 @@ namespace PicStoneFotoAPI.Controllers
                 var fileSize = fileExists ? new FileInfo(caminhoCompleto).Length : 0;
                 _logger.LogInformation($"📤 [UPLOAD] Arquivo existe após salvar? {fileExists}, Tamanho: {fileSize} bytes");
 
+                // Captura dimensões ANTES do dispose
+                var largura = imagemBitmap.Width;
+                var altura = imagemBitmap.Height;
+
                 imagemBitmap.Dispose();
                 _logger.LogInformation("📤 [UPLOAD] Bitmap disposed");
 
@@ -150,8 +154,8 @@ namespace PicStoneFotoAPI.Controllers
                     sucesso = true,
                     mensagem = "Imagem enviada com sucesso",
                     imageId = imageId,
-                    largura = imagemBitmap.Width,
-                    altura = imagemBitmap.Height
+                    largura = largura,
+                    altura = altura
                 });
             }
             catch (Exception ex)
