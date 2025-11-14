@@ -850,51 +850,54 @@ function handleFileSelect(e) {
     reader.readAsDataURL(file);
 }
 
+// ========== FUNÇÃO ÚNICA DE REDIMENSIONAMENTO (DRY) ==========
+function redimensionarImagem(img, fileName) {
+    return new Promise((resolve) => {
+        const maxWidth = 2000;
+        let targetWidth, targetHeight;
+
+        if (img.width > maxWidth) {
+            const scale = maxWidth / img.width;
+            targetWidth = maxWidth;
+            targetHeight = Math.round(img.height * scale);
+            console.log(`📐 Redimensionando ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (max ${maxWidth}px)`);
+        } else {
+            targetWidth = img.width;
+            targetHeight = img.height;
+            console.log(`📦 Mantendo original: ${img.width}x${img.height} (< ${maxWidth}px)`);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        const qualidadeJPEG = 0.75;
+        canvas.toBlob((blob) => {
+            const file = new File([blob], fileName, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+            });
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            resolve({ file, dataUrl, canvas });
+        }, 'image/jpeg', qualidadeJPEG);
+    });
+}
+
 function compressAndPreviewImage(file) {
     const reader = new FileReader();
-
     reader.onload = (e) => {
         const img = new Image();
-        img.onload = () => {
-            // Redimensiona apenas se largura > 1500px, mantendo proporção
-            let targetWidth, targetHeight;
-            const maxWidth = 1500;
-
-            if (img.width > maxWidth) {
-                const scale = maxWidth / img.width;
-                targetWidth = maxWidth;
-                targetHeight = Math.round(img.height * scale);
-                console.log(`📐 Redimensionando (Câmera): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (largura limitada a ${maxWidth}px)`);
-            } else {
-                targetWidth = img.width;
-                targetHeight = img.height;
-                console.log(`📦 Mantendo original (Câmera): ${img.width}x${img.height}`);
-            }
-
-            const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-
-            const qualidadeJPEG = 0.75;
-            canvas.toBlob((blob) => {
-                state.currentPhotoFile = new File([blob], file.name, {
-                    type: 'image/jpeg',
-                    lastModified: Date.now()
-                });
-
-                // Exibe preview (qualidade reduzida apenas para preview)
-                elements.previewImage.src = canvas.toDataURL('image/jpeg', 0.85);
-                elements.photoPreview.classList.remove('hidden');
-                elements.submitBtn.disabled = false;
-
-            }, 'image/jpeg', qualidadeJPEG);
+        img.onload = async () => {
+            const { file: processedFile, dataUrl } = await redimensionarImagem(img, file.name);
+            state.currentPhotoFile = processedFile;
+            elements.previewImage.src = dataUrl;
+            elements.photoPreview.classList.remove('hidden');
+            elements.submitBtn.disabled = false;
         };
         img.src = e.target.result;
     };
-
     reader.readAsDataURL(file);
 }
 
@@ -950,56 +953,26 @@ function handleFileSelectIntegracao(e) {
 }
 
 function compressAndPreviewImageIntegracao(file) {
+    const fileSizeKB = (file.size / 1024).toFixed(0);
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
-        img.onload = () => {
-            const ONE_MB = 1024 * 1024;
-            const fileSizeKB = (file.size / 1024).toFixed(0);
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+        img.onload = async () => {
+            const { file: processedFile, dataUrl } = await redimensionarImagem(img, file.name);
+            state.currentPhotoFile = processedFile;
 
-            // Redimensiona apenas se largura > 2000px, mantendo proporção
-            let targetWidth, targetHeight;
-            const maxWidth = 2000;
+            console.log(`📦 Arquivo processado: ${(processedFile.size / 1024).toFixed(0)}KB (original: ${fileSizeKB}KB)`);
 
-            if (img.width > maxWidth) {
-                const scale = maxWidth / img.width;
-                targetWidth = maxWidth;
-                targetHeight = Math.round(img.height * scale);
-                console.log(`📐 Redimensionando ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (largura limitada a ${maxWidth}px)`);
-            } else {
-                targetWidth = img.width;
-                targetHeight = img.height;
-                console.log(`📦 Mantendo original: ${img.width}x${img.height} (largura <= ${maxWidth}px)`);
-            }
+            elements.previewImageIntegracao.src = dataUrl;
+            elements.photoPreviewIntegracao.classList.remove('hidden');
+            elements.submitBtn.disabled = false;
 
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+            // Salva imagem no estado compartilhado
+            const originalImageData = state.originalPhoto ? state.originalPhoto.src : dataUrl;
+            saveSharedImage(originalImageData, dataUrl, file.name, processedFile, 'integracao');
 
-            // ✅ Qualidade JPEG ajustada para 75% = redução proporcional em bytes
-            const qualidadeJPEG = 0.75; // Equivalente a 75% quality do VB.NET EncoderParameters
-            canvas.toBlob(async (blob) => {
-                state.currentPhotoFile = new File([blob], file.name, {
-                    type: 'image/jpeg',
-                    lastModified: Date.now()
-                });
-
-                console.log(`📦 Arquivo processado: ${(blob.size / 1024).toFixed(0)}KB (original: ${fileSizeKB}KB)`);
-
-                const currentImageData = canvas.toDataURL('image/jpeg', 0.85);
-                elements.previewImageIntegracao.src = currentImageData;
-                elements.photoPreviewIntegracao.classList.remove('hidden');
-                elements.submitBtn.disabled = false;
-
-                // Salva imagem no estado compartilhado
-                const originalImageData = state.originalPhoto ? state.originalPhoto.src : currentImageData;
-                saveSharedImage(originalImageData, currentImageData, file.name, state.currentPhotoFile, 'integracao');
-
-                // ✨ NOVO: Faz upload imediato da imagem para o servidor
-                await uploadImageToServer(state.currentPhotoFile);
-            }, 'image/jpeg', qualidadeJPEG);
+            // ✨ NOVO: Faz upload imediato da imagem para o servidor
+            await uploadImageToServer(processedFile);
         };
         img.src = e.target.result;
     };
@@ -1596,61 +1569,34 @@ function compressAndPreviewImageAmbientes(file) {
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
-        img.onload = () => {
+        img.onload = async () => {
             // Salva imagem original para uso nos ambientes
             state.originalPhoto = img;
 
-            // Redimensiona apenas se largura > 1500px, mantendo proporção
-            let targetWidth, targetHeight;
-            const maxWidth = 1500;
+            const { file: processedFile, dataUrl } = await redimensionarImagem(img, file.name);
+            state.currentPhotoFile = processedFile;
 
-            if (img.width > maxWidth) {
-                const scale = maxWidth / img.width;
-                targetWidth = maxWidth;
-                targetHeight = Math.round(img.height * scale);
-                console.log(`📐 Redimensionando (Ambientes): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (largura limitada a ${maxWidth}px)`);
-            } else {
-                targetWidth = img.width;
-                targetHeight = img.height;
-                console.log(`📦 Mantendo original (Ambientes): ${img.width}x${img.height}`);
+            elements.previewImageAmbientes.src = dataUrl;
+
+            // Salva imagem original para crop
+            state.cropOverlayState.originalImageSrc = dataUrl;
+
+            elements.photoPreviewAmbientes.classList.remove('hidden');
+
+            // Esconde botão "Escolher/Tirar Foto"
+            if (elements.captureSectionAmbientes) {
+                elements.captureSectionAmbientes.classList.add('hidden');
             }
 
-            const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+            // Mostra opções de ambiente
+            elements.ambienteOptions.classList.remove('hidden');
 
-            const qualidadeJPEG = 0.75;
-            canvas.toBlob(async (blob) => {
-                state.currentPhotoFile = new File([blob], file.name, {
-                    type: 'image/jpeg',
-                    lastModified: Date.now()
-                });
+            // Salva imagem no estado compartilhado
+            const originalImageData = state.originalPhoto ? state.originalPhoto.src : dataUrl;
+            saveSharedImage(originalImageData, dataUrl, file.name, processedFile, 'ambientes');
 
-                const imageDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                elements.previewImageAmbientes.src = imageDataUrl;
-
-                // Salva imagem original para crop
-                state.cropOverlayState.originalImageSrc = imageDataUrl;
-
-                elements.photoPreviewAmbientes.classList.remove('hidden');
-
-                // Esconde botão "Escolher/Tirar Foto"
-                if (elements.captureSectionAmbientes) {
-                    elements.captureSectionAmbientes.classList.add('hidden');
-                }
-
-                // Mostra opções de ambiente
-                elements.ambienteOptions.classList.remove('hidden');
-
-                // Salva imagem no estado compartilhado
-                const originalImageData = state.originalPhoto ? state.originalPhoto.src : imageDataUrl;
-                saveSharedImage(originalImageData, imageDataUrl, file.name, state.currentPhotoFile, 'ambientes');
-
-                // ✨ NOVO: Faz upload imediato da imagem para o servidor
-                await uploadImageToServer(state.currentPhotoFile);
-            }, 'image/jpeg', 0.95);
+            // ✨ NOVO: Faz upload imediato da imagem para o servidor
+            await uploadImageToServer(processedFile);
         };
         img.src = e.target.result;
     };
