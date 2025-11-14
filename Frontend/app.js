@@ -949,17 +949,23 @@ function compressAndPreviewImageIntegracao(file) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
-            // ✅ CORRIGIDO: Mantém dimensões originais (resolução máxima para mockups)
-            console.log(`📦 Mantendo dimensões originais: ${img.width}x${img.height} (${fileSizeKB}KB)`);
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0, img.width, img.height);
+            // Reduz dimensões em 50% (resulta em 25% dos pixels)
+            const targetWidth = Math.round(img.width * 0.5);
+            const targetHeight = Math.round(img.height * 0.5);
+            console.log(`📐 Redimensionando ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50% dimensões = 25% pixels)`);
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
+            // ✅ Qualidade JPEG ajustada para 75% = redução proporcional em bytes
+            const qualidadeJPEG = 0.75; // Equivalente a 75% quality do VB.NET EncoderParameters
             canvas.toBlob(async (blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
                     type: 'image/jpeg',
                     lastModified: Date.now()
                 });
+
+                console.log(`📦 Arquivo processado: ${(blob.size / 1024).toFixed(0)}KB (original: ${fileSizeKB}KB)`);
 
                 const currentImageData = canvas.toDataURL('image/jpeg', 0.85);
                 elements.previewImageIntegracao.src = currentImageData;
@@ -972,7 +978,7 @@ function compressAndPreviewImageIntegracao(file) {
 
                 // ✨ NOVO: Faz upload imediato da imagem para o servidor
                 await uploadImageToServer(state.currentPhotoFile);
-            }, 'image/jpeg', 0.95);
+            }, 'image/jpeg', qualidadeJPEG);
         };
         img.src = e.target.result;
     };
