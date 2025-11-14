@@ -862,10 +862,52 @@ namespace PicStoneFotoAPI.Controllers
         /// <summary>
         /// Helper: Carrega imagem do servidor (imageId) ou do upload (arquivo)
         /// </summary>
-        private async Task<SKBitmap?> CarregarImagemAsync(string? imageId, IFormFile? imagem)
+        /// <summary>
+        /// Aplica crop em uma imagem se coordenadas foram fornecidas
+        /// </summary>
+        private SKBitmap? AplicarCrop(SKBitmap original, int? cropX, int? cropY, int? cropWidth, int? cropHeight)
+        {
+            // Se qualquer parâmetro de crop está faltando, retorna original
+            if (!cropX.HasValue || !cropY.HasValue || !cropWidth.HasValue || !cropHeight.HasValue)
+            {
+                _logger.LogInformation("Nenhum crop especificado, usando imagem original completa");
+                return original;
+            }
+
+            _logger.LogInformation($"Aplicando crop: x={cropX}, y={cropY}, width={cropWidth}, height={cropHeight}");
+
+            // Valida coordenadas
+            if (cropX.Value < 0 || cropY.Value < 0 || cropWidth.Value <= 0 || cropHeight.Value <= 0)
+            {
+                _logger.LogWarning("Coordenadas de crop inválidas, usando imagem original");
+                return original;
+            }
+
+            if (cropX.Value + cropWidth.Value > original.Width || cropY.Value + cropHeight.Value > original.Height)
+            {
+                _logger.LogWarning("Crop excede dimensões da imagem original, usando imagem original");
+                return original;
+            }
+
+            // Cria bitmap cropado
+            var cropped = new SKBitmap(cropWidth.Value, cropHeight.Value);
+            using (var canvas = new SKCanvas(cropped))
+            {
+                var srcRect = new SKRectI(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                var destRect = new SKRectI(0, 0, cropWidth.Value, cropHeight.Value);
+                canvas.DrawBitmap(original, srcRect, destRect);
+            }
+
+            _logger.LogInformation($"Crop aplicado com sucesso: {cropped.Width}x{cropped.Height}");
+            return cropped;
+        }
+
+        private async Task<SKBitmap?> CarregarImagemAsync(string? imageId, IFormFile? imagem, int? cropX = null, int? cropY = null, int? cropWidth = null, int? cropHeight = null)
         {
             try
             {
+                SKBitmap? bitmapOriginal = null;
+
                 // Prioridade 1: Se imageId fornecido, carrega do servidor
                 if (!string.IsNullOrWhiteSpace(imageId))
                 {
@@ -898,23 +940,27 @@ namespace PicStoneFotoAPI.Controllers
                     }
 
                     using var fileStream = System.IO.File.OpenRead(caminhoCompleto);
-                    var bitmap = SKBitmap.Decode(fileStream);
-                    _logger.LogInformation($"Imagem carregada do servidor: {bitmap?.Width}x{bitmap?.Height}");
-                    return bitmap;
+                    bitmapOriginal = SKBitmap.Decode(fileStream);
+                    _logger.LogInformation($"Imagem carregada do servidor: {bitmapOriginal?.Width}x{bitmapOriginal?.Height}");
                 }
 
                 // Prioridade 2: Se arquivo fornecido, carrega do upload
-                if (imagem != null && imagem.Length > 0)
+                else if (imagem != null && imagem.Length > 0)
                 {
                     _logger.LogInformation($"Carregando imagem do upload: {imagem.FileName}, {imagem.Length} bytes");
                     using var stream = imagem.OpenReadStream();
-                    var bitmap = SKBitmap.Decode(stream);
-                    _logger.LogInformation($"Imagem carregada do upload: {bitmap?.Width}x{bitmap?.Height}");
-                    return bitmap;
+                    bitmapOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation($"Imagem carregada do upload: {bitmapOriginal?.Width}x{bitmapOriginal?.Height}");
                 }
 
-                _logger.LogWarning("Nenhuma imagem fornecida (nem imageId nem arquivo)");
-                return null;
+                if (bitmapOriginal == null)
+                {
+                    _logger.LogWarning("Nenhuma imagem fornecida (nem imageId nem arquivo)");
+                    return null;
+                }
+
+                // ✨ OTIMIZAÇÃO: Aplica crop se coordenadas foram fornecidas
+                return AplicarCrop(bitmapOriginal, cropX, cropY, cropWidth, cropHeight);
             }
             catch (Exception ex)
             {
@@ -928,12 +974,19 @@ namespace PicStoneFotoAPI.Controllers
         /// Gera mockup tipo Bancada1 com download progressivo via SSE
         /// </summary>
         [HttpPost("bancada1/progressive")]
-        public async Task GerarBancada1Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada1Progressive(
+            [FromForm] string? imageId,
+            [FromForm] IFormFile? imagem,
+            [FromForm] bool flip = false,
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
         {
             try
             {
                 _logger.LogInformation("=== BANCADA1 PROGRESSIVE SSE REQUEST RECEBIDO ===");
-                _logger.LogInformation($"ImageId: {imageId}, Flip: {flip}");
+                _logger.LogInformation($"ImageId: {imageId}, Flip: {flip}, Crop: x={cropX}, y={cropY}, w={cropWidth}, h={cropHeight}");
 
                 // Configura response como SSE
                 Response.ContentType = "text/event-stream";
@@ -943,8 +996,8 @@ namespace PicStoneFotoAPI.Controllers
                 // Envia evento de início
                 await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de mockups..." });
 
-                // Carrega imagem (do servidor ou do upload)
-                var imagemOriginal = await CarregarImagemAsync(imageId, imagem);
+                // Carrega imagem (do servidor ou do upload) e aplica crop se fornecido
+                var imagemOriginal = await CarregarImagemAsync(imageId, imagem, cropX, cropY, cropWidth, cropHeight);
 
                 if (imagemOriginal == null)
                 {
@@ -1045,12 +1098,21 @@ namespace PicStoneFotoAPI.Controllers
         /// Gera mockup de cavalete com SSE progressivo (3 mockups sempre)
         /// </summary>
         [HttpPost("gerar/progressive")]
-        public async Task GerarCavaleteProgressive([FromForm] string? imageId, [FromForm] IFormFile? ImagemCropada, [FromForm] string? TipoCavalete, [FromForm] string? Fundo)
+        public async Task GerarCavaleteProgressive(
+            [FromForm] string? imageId,
+            [FromForm] IFormFile? ImagemCropada,
+            [FromForm] string? TipoCavalete,
+            [FromForm] string? Fundo,
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
         {
             try
             {
                 _logger.LogInformation("=== CAVALETE PROGRESSIVE SSE REQUEST RECEBIDO ===");
-                _logger.LogInformation("ImageId: {ImageId}, TipoCavalete: {Tipo}, Fundo: {Fundo}", imageId, TipoCavalete, Fundo);
+                _logger.LogInformation("ImageId: {ImageId}, TipoCavalete: {Tipo}, Fundo: {Fundo}, Crop: x={CropX}, y={CropY}, w={CropWidth}, h={CropHeight}",
+                    imageId, TipoCavalete, Fundo, cropX, cropY, cropWidth, cropHeight);
 
                 // Configura response como SSE
                 Response.ContentType = "text/event-stream";
@@ -1060,8 +1122,8 @@ namespace PicStoneFotoAPI.Controllers
                 // Envia evento de início
                 await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de cavaletes..." });
 
-                // Carrega a imagem (do servidor ou do upload)
-                var bitmapCropado = await CarregarImagemAsync(imageId, ImagemCropada);
+                // Carrega a imagem (do servidor ou do upload) e aplica crop se fornecido
+                var bitmapCropado = await CarregarImagemAsync(imageId, ImagemCropada, cropX, cropY, cropWidth, cropHeight);
                 if (bitmapCropado == null)
                 {
                     await EnviarEventoSSE("error", new { mensagem = "Não foi possível carregar a imagem" });
@@ -1244,74 +1306,74 @@ namespace PicStoneFotoAPI.Controllers
         /// POST /api/mockup/bancada2/progressive
         /// </summary>
         [HttpPost("bancada2/progressive")]
-        public async Task GerarBancada2Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada2Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false, [FromForm] int? cropX = null, [FromForm] int? cropY = null, [FromForm] int? cropWidth = null, [FromForm] int? cropHeight = null)
         {
-            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 2, _bancadaService.GerarBancada2);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 2, _bancadaService.GerarBancada2, cropX, cropY, cropWidth, cropHeight);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada3/progressive
         /// </summary>
         [HttpPost("bancada3/progressive")]
-        public async Task GerarBancada3Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada3Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false, [FromForm] int? cropX = null, [FromForm] int? cropY = null, [FromForm] int? cropWidth = null, [FromForm] int? cropHeight = null)
         {
-            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 3, _bancadaService.GerarBancada3);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 3, _bancadaService.GerarBancada3, cropX, cropY, cropWidth, cropHeight);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada4/progressive
         /// </summary>
         [HttpPost("bancada4/progressive")]
-        public async Task GerarBancada4Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada4Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false, [FromForm] int? cropX = null, [FromForm] int? cropY = null, [FromForm] int? cropWidth = null, [FromForm] int? cropHeight = null)
         {
-            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 4, _bancadaService.GerarBancada4);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 4, _bancadaService.GerarBancada4, cropX, cropY, cropWidth, cropHeight);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada5/progressive
         /// </summary>
         [HttpPost("bancada5/progressive")]
-        public async Task GerarBancada5Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada5Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false, [FromForm] int? cropX = null, [FromForm] int? cropY = null, [FromForm] int? cropWidth = null, [FromForm] int? cropHeight = null)
         {
-            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 5, _bancadaService.GerarBancada5);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 5, _bancadaService.GerarBancada5, cropX, cropY, cropWidth, cropHeight);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada6/progressive
         /// </summary>
         [HttpPost("bancada6/progressive")]
-        public async Task GerarBancada6Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada6Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false, [FromForm] int? cropX = null, [FromForm] int? cropY = null, [FromForm] int? cropWidth = null, [FromForm] int? cropHeight = null)
         {
-            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 6, _bancadaService.GerarBancada6);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 6, _bancadaService.GerarBancada6, cropX, cropY, cropWidth, cropHeight);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada7/progressive
         /// </summary>
         [HttpPost("bancada7/progressive")]
-        public async Task GerarBancada7Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada7Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false, [FromForm] int? cropX = null, [FromForm] int? cropY = null, [FromForm] int? cropWidth = null, [FromForm] int? cropHeight = null)
         {
-            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 7, _bancadaService.GerarBancada7);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 7, _bancadaService.GerarBancada7, cropX, cropY, cropWidth, cropHeight);
         }
 
         /// <summary>
         /// POST /api/mockup/bancada8/progressive
         /// </summary>
         [HttpPost("bancada8/progressive")]
-        public async Task GerarBancada8Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false)
+        public async Task GerarBancada8Progressive([FromForm] string? imageId, [FromForm] IFormFile? imagem, [FromForm] bool flip = false, [FromForm] int? cropX = null, [FromForm] int? cropY = null, [FromForm] int? cropWidth = null, [FromForm] int? cropHeight = null)
         {
-            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 8, _bancadaService.GerarBancada8);
+            await GerarBancadaProgressiveGenerico(imageId, imagem, flip, 8, _bancadaService.GerarBancada8, cropX, cropY, cropWidth, cropHeight);
         }
 
         /// <summary>
         /// Método genérico para gerar bancadas com SSE progressivo
         /// </summary>
-        private async Task GerarBancadaProgressiveGenerico(string? imageId, IFormFile? imagem, bool flip, int numeroBancada, Func<SKBitmap, bool, List<SKBitmap>> gerador)
+        private async Task GerarBancadaProgressiveGenerico(string? imageId, IFormFile? imagem, bool flip, int numeroBancada, Func<SKBitmap, bool, List<SKBitmap>> gerador, int? cropX = null, int? cropY = null, int? cropWidth = null, int? cropHeight = null)
         {
             try
             {
                 _logger.LogInformation($"=== BANCADA{numeroBancada} PROGRESSIVE SSE REQUEST RECEBIDO ===");
-                _logger.LogInformation($"ImageId: {imageId}, Flip: {flip}");
+                _logger.LogInformation($"ImageId: {imageId}, Flip: {flip}, Crop: x={cropX}, y={cropY}, w={cropWidth}, h={cropHeight}");
 
                 // Configura response como SSE
                 Response.ContentType = "text/event-stream";
@@ -1321,8 +1383,8 @@ namespace PicStoneFotoAPI.Controllers
                 // Envia evento de início
                 await EnviarEventoSSE("start", new { mensagem = "Iniciando geração de mockups..." });
 
-                // Carrega imagem (do servidor ou do upload)
-                var imagemOriginal = await CarregarImagemAsync(imageId, imagem);
+                // Carrega imagem (do servidor ou do upload) e aplica crop se fornecido
+                var imagemOriginal = await CarregarImagemAsync(imageId, imagem, cropX, cropY, cropWidth, cropHeight);
 
                 if (imagemOriginal == null)
                 {

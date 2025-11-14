@@ -9,8 +9,8 @@ const state = {
     currentPhotoFile: null,
     uploadedImageId: null, // ID da imagem armazenada no servidor
     uploadInProgress: false, // ✨ FIX: Flag para indicar upload em andamento
-    imagemFoiCropada: false, // Flag indicando se a imagem atual foi cropada (apenas local)
-    croppedImageSentToServer: false, // Flag indicando se a versão cropada já foi enviada ao servidor
+    // ✨ NOVA ARQUITETURA: Coordenadas de crop (enviadas ao servidor ao invés de arquivo)
+    cropCoordinates: null, // { x, y, width, height } ou null se não tem crop
     originalPhoto: null, // Foto original para ambiente
     ambienteMode: false, // Indica se está em modo ambiente
     cropData: {
@@ -1085,28 +1085,9 @@ function ativarCropOverlayAmbientes() {
 
 async function resetarParaOriginalAmbientes() {
     if (state.cropOverlayState.originalImageSrc) {
-        // ✨ OTIMIZAÇÃO: Só reenvia original ao servidor se a cropada já foi usada
-        if (state.croppedImageSentToServer) {
-            console.log('📤 Reenviando imagem original ao servidor (cropada foi usada)...');
-
-            // Recria arquivo da imagem original
-            const blob = await fetch(state.cropOverlayState.originalImageSrc).then(r => r.blob());
-            const originalFile = new File([blob], 'original.jpg', {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-            });
-
-            try {
-                await uploadImageToServer(originalFile);
-                state.croppedImageSentToServer = false; // Reset - servidor tem original novamente
-                console.log('✅ Imagem original reenviada ao servidor.');
-            } catch (error) {
-                console.error('Erro ao reenviar imagem original:', error);
-            }
-        }
-
-        // ✅ Reset: Desmarca flag de crop - volta para original
-        state.imagemFoiCropada = false;
+        // ✨ NOVA ARQUITETURA: Apenas limpa coordenadas (original sempre preservada no servidor)
+        console.log('🔄 Resetando para imagem original (limpando coordenadas de crop)');
+        state.cropCoordinates = null;
 
         elements.previewImageAmbientes.src = state.cropOverlayState.originalImageSrc;
         state.currentPhotoFile = null; // Reset to original file
@@ -1222,34 +1203,32 @@ async function aplicarCropGenerico(x, y, width, height) {
     img.onload = () => {
         ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
 
-        tempCanvas.toBlob(async (blob) => {
-            const croppedFile = new File([blob], 'cropped.jpg', {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-            });
-            const croppedBase64 = tempCanvas.toDataURL('image/jpeg', 0.95);
+        const croppedBase64 = tempCanvas.toDataURL('image/jpeg', 0.95);
 
-            // ✅ Marca que imagem foi cropada (local apenas - sem upload ainda)
-            // Upload acontecerá apenas ao clicar em "Gerar Ambiente"
-            state.imagemFoiCropada = true;
-            console.log('✂️ Crop aplicado! state.imagemFoiCropada = true');
+        // ✨ NOVA ARQUITETURA: Armazena COORDENADAS ao invés de arquivo
+        // Servidor fará o crop sob demanda usando a imagem original
+        state.cropCoordinates = {
+            x: Math.round(x),
+            y: Math.round(y),
+            width: Math.round(width),
+            height: Math.round(height)
+        };
+        console.log('✂️ Crop aplicado! Coordenadas armazenadas:', state.cropCoordinates);
 
-            // Hide overlay
-            const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
-            canvas.classList.add('hidden');
-            state.cropOverlayState.isActive = false;
+        // Hide overlay
+        const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
+        canvas.classList.add('hidden');
+        state.cropOverlayState.isActive = false;
 
-            // Show reset button (se fornecido)
-            if (state.cropOverlayState.currentResetBtn) {
-                state.cropOverlayState.currentResetBtn.classList.remove('hidden');
-            }
+        // Show reset button (se fornecido)
+        if (state.cropOverlayState.currentResetBtn) {
+            state.cropOverlayState.currentResetBtn.classList.remove('hidden');
+        }
 
-            // Call callback (se fornecido)
-            if (state.cropOverlayState.onCropComplete) {
-                state.cropOverlayState.onCropComplete(croppedBase64, croppedFile);
-            }
-
-        }, 'image/jpeg', 0.95);
+        // Call callback com preview visual (base64) - SEM arquivo
+        if (state.cropOverlayState.onCropComplete) {
+            state.cropOverlayState.onCropComplete(croppedBase64, null);
+        }
     };
     const imgSrc = state.cropOverlayState.currentImage ? state.cropOverlayState.currentImage.src : elements.previewImageIntegracao.src;
     img.src = imgSrc;
@@ -1345,28 +1324,9 @@ function finalizarEAplicarCropTouch(e) {
 async function resetarParaOriginalIntegracao() {
     if (!state.cropOverlayState.originalImageSrc) return;
 
-    // ✨ OTIMIZAÇÃO: Só reenvia original ao servidor se a cropada já foi usada
-    if (state.croppedImageSentToServer) {
-        console.log('📤 Reenviando imagem original ao servidor (cropada foi usada)...');
-
-        // Recria arquivo da imagem original
-        const blob = await fetch(state.cropOverlayState.originalImageSrc).then(r => r.blob());
-        const originalFile = new File([blob], 'original.jpg', {
-            type: 'image/jpeg',
-            lastModified: Date.now()
-        });
-
-        try {
-            await uploadImageToServer(originalFile);
-            state.croppedImageSentToServer = false; // Reset - servidor tem original novamente
-            console.log('✅ Imagem original reenviada ao servidor.');
-        } catch (error) {
-            console.error('Erro ao reenviar imagem original:', error);
-        }
-    }
-
-    // ✅ Reset: Desmarca flag de crop - volta para original
-    state.imagemFoiCropada = false;
+    // ✨ NOVA ARQUITETURA: Apenas limpa coordenadas (original sempre preservada no servidor)
+    console.log('🔄 Resetando para imagem original (limpando coordenadas de crop)');
+    state.cropCoordinates = null;
 
     // Restore original image
     elements.previewImageIntegracao.src = state.cropOverlayState.originalImageSrc;
@@ -1392,33 +1352,7 @@ async function resetarParaOriginalIntegracao() {
 
 // ========== UPLOAD DE IMAGEM PARA SERVIDOR ==========
 
-/**
- * Faz upload condicional da imagem cropada antes de gerar mockup
- * Retorna true se fez upload, false se pulou
- */
-async function uploadCroppedIfNeeded(croppedFile) {
-    console.log('🔍 Verificando necessidade de upload...');
-    console.log('🐛 state.imagemFoiCropada:', state.imagemFoiCropada);
-    console.log('🐛 state.croppedImageSentToServer:', state.croppedImageSentToServer);
-
-    if (state.imagemFoiCropada && !state.croppedImageSentToServer) {
-        console.log('📤 Upload da imagem cropada ao servidor antes de gerar mockup...');
-        try {
-            await uploadImageToServer(croppedFile);
-            state.croppedImageSentToServer = true;
-            state.imagemFoiCropada = false; // Reset - agora imageId aponta para cropada
-            console.log('✅ Imagem cropada enviada ao servidor. ImageId atualizado.');
-            return true;
-        } catch (error) {
-            console.error('Erro ao fazer upload da imagem cropada:', error);
-            // Se falhar, continua enviando arquivo diretamente no mockup
-            return false;
-        }
-    } else {
-        console.log('⏭️ Pulando upload (cropada:', state.imagemFoiCropada, ', já enviada:', state.croppedImageSentToServer, ')');
-        return false;
-    }
-}
+// ✨ REMOVIDO: uploadCroppedIfNeeded() - Nova arquitetura envia coordenadas ao invés de arquivo
 
 async function uploadImageToServer(imageFile) {
     try {
@@ -1448,7 +1382,6 @@ async function uploadImageToServer(imageFile) {
 
         if (result.sucesso && result.imageId) {
             state.uploadedImageId = result.imageId;
-            state.imagemFoiCropada = false; // ✅ Reset: nova imagem original
             console.log(`✅ Imagem enviada para servidor: ${result.imageId}`);
             console.log(`📐 Dimensões: ${result.largura}x${result.altura}`);
         } else {
@@ -2357,9 +2290,7 @@ function confirmarCropIntegracao() {
                 const originalImageData = state.originalPhoto ? state.originalPhoto.src : dataUrl;
                 saveSharedImage(originalImageData, dataUrl, file.name, processedFile, 'integracao');
 
-                // ✅ Marca que imagem foi cropada (local apenas - sem upload ainda)
-                // Upload acontecerá apenas ao clicar em "Gerar Ambiente"
-                state.imagemFoiCropada = true;
+                // ✨ NOVA ARQUITETURA: Coordenadas já armazenadas em aplicarCropGenerico()
 
                 // Esconde crop, mostra preview
                 elements.cropSectionIntegracao.classList.add('hidden');
@@ -2422,10 +2353,7 @@ async function startAmbienteFlow() {
         return;
     }
 
-    // ✨ OTIMIZAÇÃO: Faz upload da cropada AGORA (dá tempo durante navegação)
-    // Isso acontece ao clicar em "Simular Cavaletes", antes de escolher fundo/gerar
-    await uploadCroppedIfNeeded(state.currentPhotoFile);
-
+    // ✨ NOVA ARQUITETURA: Upload já foi feito, coordenadas armazenadas localmente
     // Mostra tela de configuração
     showScreen(elements.ambienteConfigScreen);
 }
@@ -2477,28 +2405,38 @@ async function gerarAmbiente(imagemCropada) {
             endpoint = `/api/mockup/bancada${bancadaNum}/progressive`;
             formData = new FormData();
 
-            // ✅ FIX: Se imagem foi cropada, sempre usa arquivo (imageId aponta para original)
-            if (state.uploadedImageId && !state.imagemFoiCropada) {
-                console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
-                formData.append('imageId', state.uploadedImageId);
-            } else {
-                console.log('📤 Enviando arquivo cropado');
-                formData.append('imagem', imagemCropada);
+            // ✨ NOVA ARQUITETURA: Sempre usa imageId + coordenadas de crop opcionais
+            console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
+            formData.append('imageId', state.uploadedImageId);
+
+            // Adiciona coordenadas de crop se existirem
+            if (state.cropCoordinates) {
+                console.log('✂️ Enviando coordenadas de crop:', state.cropCoordinates);
+                formData.append('cropX', state.cropCoordinates.x);
+                formData.append('cropY', state.cropCoordinates.y);
+                formData.append('cropWidth', state.cropCoordinates.width);
+                formData.append('cropHeight', state.cropCoordinates.height);
             }
+
             formData.append('flip', state.ambienteConfig.flip || false);
         } else {
             // Cavalete: /api/mockup/gerar/progressive
             endpoint = '/api/mockup/gerar/progressive';
             formData = new FormData();
 
-            // ✅ FIX: Se imagem foi cropada, sempre usa arquivo (imageId aponta para original)
-            if (state.uploadedImageId && !state.imagemFoiCropada) {
-                console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
-                formData.append('imageId', state.uploadedImageId);
-            } else {
-                console.log('📤 Enviando arquivo cropado');
-                formData.append('ImagemCropada', imagemCropada);
+            // ✨ NOVA ARQUITETURA: Sempre usa imageId + coordenadas de crop opcionais
+            console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
+            formData.append('imageId', state.uploadedImageId);
+
+            // Adiciona coordenadas de crop se existirem
+            if (state.cropCoordinates) {
+                console.log('✂️ Enviando coordenadas de crop:', state.cropCoordinates);
+                formData.append('cropX', state.cropCoordinates.x);
+                formData.append('cropY', state.cropCoordinates.y);
+                formData.append('cropWidth', state.cropCoordinates.width);
+                formData.append('cropHeight', state.cropCoordinates.height);
             }
+
             formData.append('TipoCavalete', 'simples');
             formData.append('Fundo', state.ambienteConfig.fundo || 'claro');
         }
@@ -2732,9 +2670,7 @@ async function startCountertopFlow() {
         return;
     }
 
-    // ✨ OTIMIZAÇÃO: Faz upload da cropada AGORA (dá tempo durante navegação)
-    // Isso acontece ao clicar em "Simular Bancadas", antes de escolher qual
-    await uploadCroppedIfNeeded(state.currentPhotoFile);
+    // ✨ NOVA ARQUITETURA: Upload já foi feito, coordenadas armazenadas localmente
 
     // Limpa estado anterior de countertop
     state.countertopState.croppedImage = null;
@@ -2796,21 +2732,28 @@ async function selectCountertopAndGenerate(type) {
 async function generateCountertopAmbiente() {
     try {
         console.log('🎬 generateCountertopAmbiente() chamado');
-        // ✅ Upload já foi feito em startCountertopFlow()
 
         // Mostra loading overlay global
         elements.loadingOverlay.classList.remove('hidden');
 
         const formData = new FormData();
 
-        // ⚠️ Este endpoint não suporta imageId, sempre envia arquivo
-        // A otimização de upload serve para PRÓXIMAS gerações reutilizarem
-        console.log('📤 Enviando arquivo para gerar mockup');
-        formData.append('imagem', state.countertopState.croppedImage, 'cropped.jpg');
+        // ✨ NOVA ARQUITETURA: Usa endpoint progressive com imageId + coordenadas
+        console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
+        formData.append('imageId', state.uploadedImageId);
         formData.append('flip', state.countertopState.flip);
 
-        // Suporta bancada1 até bancada8
-        const endpoint = `/api/mockup/${state.countertopState.selectedType}`;
+        // Adiciona coordenadas de crop se existirem
+        if (state.cropCoordinates) {
+            console.log('✂️ Enviando coordenadas de crop:', state.cropCoordinates);
+            formData.append('cropX', state.cropCoordinates.x);
+            formData.append('cropY', state.cropCoordinates.y);
+            formData.append('cropWidth', state.cropCoordinates.width);
+            formData.append('cropHeight', state.cropCoordinates.height);
+        }
+
+        // Usa endpoint progressive que suporta imageId e crop
+        const endpoint = `/api/mockup/${state.countertopState.selectedType}/progressive`;
 
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
@@ -2820,25 +2763,43 @@ async function generateCountertopAmbiente() {
             body: formData
         });
 
-        // Verifica se há conteúdo antes de parsear JSON
-        const contentType = response.headers.get('content-type');
-        let data = null;
+        // ✨ Endpoint progressive retorna SSE (Server-Sent Events)
+        // Mas vamos processar como progressive para coletar todas as imagens
+        if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${response.statusText || 'Falha ao gerar ambiente'}`);
+        }
 
-        if (contentType && contentType.includes('application/json')) {
-            const text = await response.text();
-            if (text) {
-                data = JSON.parse(text);
+        // Processa SSE progressive
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        const ambientes = [];
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.substring(6);
+                    if (dataStr === '[DONE]') continue;
+
+                    try {
+                        const data = JSON.parse(dataStr);
+                        if (data.imagem) {
+                            ambientes.push(data.imagem);
+                        }
+                    } catch (e) {
+                        console.warn('Erro ao parsear SSE:', e);
+                    }
+                }
             }
         }
 
-        if (!response.ok) {
-            const errorMsg = data?.mensagem ||
-                           `Erro ${response.status}: ${response.statusText || 'Falha ao gerar ambiente'}`;
-            throw new Error(errorMsg);
-        }
-
         // Exibe resultado
-        displayCountertopResults(data);
+        displayCountertopResults({ ambientes });
 
     } catch (error) {
         console.error('Erro ao gerar bancada:', error);
