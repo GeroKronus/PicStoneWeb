@@ -2416,11 +2416,15 @@ function resetToOriginalImage() {
 }
 
 // ========== MOCKUP DE CAVALETES ==========
-function startAmbienteFlow() {
+async function startAmbienteFlow() {
     if (!state.originalPhoto) {
         showMessage('Nenhuma foto disponível para ambiente', 'error');
         return;
     }
+
+    // ✨ OTIMIZAÇÃO: Faz upload da cropada AGORA (dá tempo durante navegação)
+    // Isso acontece ao clicar em "Simular Cavaletes", antes de escolher fundo/gerar
+    await uploadCroppedIfNeeded(state.currentPhotoFile);
 
     // Mostra tela de configuração
     showScreen(elements.ambienteConfigScreen);
@@ -2453,9 +2457,7 @@ function abrirCropParaAmbiente() {
 async function gerarAmbiente(imagemCropada) {
     try {
         console.log('🎬 gerarAmbiente() chamado');
-
-        // ✨ OTIMIZAÇÃO: Faz upload da cropada se necessário (DRY)
-        await uploadCroppedIfNeeded(imagemCropada);
+        // ✅ Upload já foi feito em startAmbienteFlow()
 
         // Mostra loading overlay e prepara elementos de progresso
         elements.loadingOverlay.classList.remove('hidden');
