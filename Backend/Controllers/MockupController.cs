@@ -878,31 +878,23 @@ namespace PicStoneFotoAPI.Controllers
                         return null;
                     }
 
-                    // ✨ SEGURANÇA: Valida ownership - imageId deve começar com userId do usuário logado
+                    // ✅ SEGURANÇA: Valida ownership - imageId deve ser ImgUser{userId}.jpg do próprio usuário
                     var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
-                    if (!imageId.StartsWith($"{usuarioId}_"))
+                    var expectedImageId = $"ImgUser{usuarioId}.jpg";
+                    if (imageId != expectedImageId)
                     {
-                        _logger.LogWarning($"Tentativa de acessar imagem de outro usuário! UserId: {usuarioId}, ImageId: {imageId}");
+                        _logger.LogWarning($"Tentativa de acessar imagem de outro usuário! UserId: {usuarioId}, ImageId: {imageId}, Expected: {expectedImageId}");
                         return null; // Retorna null para negar acesso silenciosamente
                     }
 
-                    // ✨ CACHE: Tenta temp primeiro, depois uploads/originals (fallback)
-                    var tempPath = Path.Combine(Directory.GetCurrentDirectory(), "temp");
-                    var caminhoCompleto = Path.Combine(tempPath, imageId);
+                    // ✅ CORRIGIDO: Carrega de wwwroot/images (onde ImageController salva)
+                    var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+                    var caminhoCompleto = Path.Combine(imagePath, imageId);
 
-                    // Se não encontrar em temp, tenta fallback em uploads/originals
                     if (!System.IO.File.Exists(caminhoCompleto))
                     {
-                        var fallbackPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "originals");
-                        caminhoCompleto = Path.Combine(fallbackPath, imageId);
-
-                        if (!System.IO.File.Exists(caminhoCompleto))
-                        {
-                            _logger.LogWarning($"Imagem não encontrada nem em temp nem em uploads/originals: {imageId}");
-                            return null;
-                        }
-
-                        _logger.LogInformation($"Usando fallback: imagem encontrada em uploads/originals: {imageId}");
+                        _logger.LogWarning($"Imagem não encontrada em wwwroot/images: {imageId}");
+                        return null;
                     }
 
                     using var fileStream = System.IO.File.OpenRead(caminhoCompleto);
