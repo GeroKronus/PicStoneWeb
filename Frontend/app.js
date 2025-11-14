@@ -856,11 +856,20 @@ function compressAndPreviewImage(file) {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            // Redimensiona para 50% (consistente com galeria)
-            const targetWidth = Math.round(img.width * 0.5);
-            const targetHeight = Math.round(img.height * 0.5);
+            // Redimensiona apenas se largura > 1500px, mantendo proporção
+            let targetWidth, targetHeight;
+            const maxWidth = 1500;
 
-            console.log(`📐 Redimensionando (Câmera): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50%)`);
+            if (img.width > maxWidth) {
+                const scale = maxWidth / img.width;
+                targetWidth = maxWidth;
+                targetHeight = Math.round(img.height * scale);
+                console.log(`📐 Redimensionando (Câmera): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (max ${maxWidth}px)`);
+            } else {
+                targetWidth = img.width;
+                targetHeight = img.height;
+                console.log(`📦 Mantendo original (Câmera): ${img.width}x${img.height}`);
+            }
 
             const canvas = document.createElement('canvas');
             canvas.width = targetWidth;
@@ -869,6 +878,7 @@ function compressAndPreviewImage(file) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
+            const qualidadeJPEG = 0.75;
             canvas.toBlob((blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
                     type: 'image/jpeg',
@@ -880,7 +890,7 @@ function compressAndPreviewImage(file) {
                 elements.photoPreview.classList.remove('hidden');
                 elements.submitBtn.disabled = false;
 
-            }, 'image/jpeg', 0.95);
+            }, 'image/jpeg', qualidadeJPEG);
         };
         img.src = e.target.result;
     };
@@ -1590,11 +1600,20 @@ function compressAndPreviewImageAmbientes(file) {
             // Salva imagem original para uso nos ambientes
             state.originalPhoto = img;
 
-            // ✨ OTIMIZAÇÃO: Reduz dimensões em 50% para economizar banda e acelerar processamento
-            const targetWidth = Math.round(img.width * 0.5);
-            const targetHeight = Math.round(img.height * 0.5);
+            // Redimensiona apenas se largura > 1500px, mantendo proporção
+            let targetWidth, targetHeight;
+            const maxWidth = 1500;
 
-            console.log(`📐 Redimensionando: ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50%)`);
+            if (img.width > maxWidth) {
+                const scale = maxWidth / img.width;
+                targetWidth = maxWidth;
+                targetHeight = Math.round(img.height * scale);
+                console.log(`📐 Redimensionando (Ambientes): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (max ${maxWidth}px)`);
+            } else {
+                targetWidth = img.width;
+                targetHeight = img.height;
+                console.log(`📦 Mantendo original (Ambientes): ${img.width}x${img.height}`);
+            }
 
             const canvas = document.createElement('canvas');
             canvas.width = targetWidth;
@@ -1602,6 +1621,7 @@ function compressAndPreviewImageAmbientes(file) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
+            const qualidadeJPEG = 0.75;
             canvas.toBlob(async (blob) => {
                 state.currentPhotoFile = new File([blob], file.name, {
                     type: 'image/jpeg',
