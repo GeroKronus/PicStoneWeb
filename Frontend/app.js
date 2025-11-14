@@ -2766,39 +2766,47 @@ async function generateCountertopAmbiente() {
         });
 
         // ✨ Endpoint progressive retorna SSE (Server-Sent Events)
-        // Mas vamos processar como progressive para coletar todas as imagens
         if (!response.ok) {
             throw new Error(`Erro ${response.status}: ${response.statusText || 'Falha ao gerar ambiente'}`);
         }
 
-        // Processa SSE progressive
+        // Processa SSE progressive com buffer (técnica robusta)
         const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
         const ambientes = [];
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
+            buffer += decoder.decode(value, { stream: true });
+
+            // Processa linhas completas (eventos SSE)
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Última linha pode estar incompleta
 
             for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const dataStr = line.substring(6);
-                    if (dataStr === '[DONE]') continue;
+                if (!line.startsWith('data: ')) continue;
 
-                    try {
-                        const data = JSON.parse(dataStr);
-                        if (data.imagem) {
-                            ambientes.push(data.imagem);
-                        }
-                    } catch (e) {
-                        console.warn('Erro ao parsear SSE:', e);
+                const jsonStr = line.substring(6); // Remove "data: "
+                if (!jsonStr.trim()) continue;
+
+                try {
+                    const event = JSON.parse(jsonStr);
+                    console.log('📦 SSE event recebido:', event);
+
+                    if (event.type === 'mockup' && event.data?.url) {
+                        ambientes.push(event.data.url);
+                        console.log(`✅ Mockup ${ambientes.length} recebido:`, event.data.url);
                     }
+                } catch (e) {
+                    console.warn('⚠️ Erro ao parsear SSE:', e, 'Line:', jsonStr);
                 }
             }
         }
+
+        console.log('🎉 Todos os mockups recebidos:', ambientes);
 
         // Exibe resultado
         displayCountertopResults({ ambientes });
