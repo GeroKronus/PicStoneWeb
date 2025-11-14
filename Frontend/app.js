@@ -864,7 +864,7 @@ function compressAndPreviewImage(file) {
                 const scale = maxWidth / img.width;
                 targetWidth = maxWidth;
                 targetHeight = Math.round(img.height * scale);
-                console.log(`📐 Redimensionando (Câmera): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (max ${maxWidth}px)`);
+                console.log(`📐 Redimensionando (Câmera): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (largura limitada a ${maxWidth}px)`);
             } else {
                 targetWidth = img.width;
                 targetHeight = img.height;
@@ -959,9 +959,9 @@ function compressAndPreviewImageIntegracao(file) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
-            // Redimensiona apenas se largura > 1500px, mantendo proporção
+            // Redimensiona apenas se largura > 2000px, mantendo proporção
             let targetWidth, targetHeight;
-            const maxWidth = 1500;
+            const maxWidth = 2000;
 
             if (img.width > maxWidth) {
                 const scale = maxWidth / img.width;
@@ -1608,7 +1608,7 @@ function compressAndPreviewImageAmbientes(file) {
                 const scale = maxWidth / img.width;
                 targetWidth = maxWidth;
                 targetHeight = Math.round(img.height * scale);
-                console.log(`📐 Redimensionando (Ambientes): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (max ${maxWidth}px)`);
+                console.log(`📐 Redimensionando (Ambientes): ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (largura limitada a ${maxWidth}px)`);
             } else {
                 targetWidth = img.width;
                 targetHeight = img.height;
