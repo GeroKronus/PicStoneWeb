@@ -2724,11 +2724,15 @@ function showAmbienteMessage(message, type) {
 /**
  * Passo 1: Inicia o flow de countertop - mostra tela de seleção de tipo
  */
-function startCountertopFlow() {
+async function startCountertopFlow() {
     if (!state.currentPhotoFile) {
         showMessage('Por favor, selecione uma foto primeiro', 'error');
         return;
     }
+
+    // ✨ OTIMIZAÇÃO: Faz upload da cropada AGORA (dá tempo durante navegação)
+    // Isso acontece ao clicar em "Simular Bancadas", antes de escolher qual
+    await uploadCroppedIfNeeded(state.currentPhotoFile);
 
     // Limpa estado anterior de countertop
     state.countertopState.croppedImage = null;
@@ -2790,9 +2794,7 @@ async function selectCountertopAndGenerate(type) {
 async function generateCountertopAmbiente() {
     try {
         console.log('🎬 generateCountertopAmbiente() chamado');
-
-        // ✨ OTIMIZAÇÃO: Faz upload da cropada se necessário (DRY)
-        await uploadCroppedIfNeeded(state.countertopState.croppedImage);
+        // ✅ Upload já foi feito em startCountertopFlow()
 
         // Mostra loading overlay global
         elements.loadingOverlay.classList.remove('hidden');
