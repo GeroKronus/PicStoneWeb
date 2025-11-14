@@ -18,37 +18,23 @@ namespace PicStoneFotoAPI.Controllers
             _logger = logger;
             _logger.LogInformation("🔧 [CONSTRUCTOR] Iniciando ImageController");
 
-            // ✨ CACHE: Pasta temp para armazenar imagens temporárias por usuário
+            // ✅ CORRIGIDO: Salva em wwwroot/images para ser acessível via URL estática
             var currentDir = Directory.GetCurrentDirectory();
             _logger.LogInformation($"🔧 [CONSTRUCTOR] Current Directory: {currentDir}");
 
-            _uploadsPath = Path.Combine(currentDir, "temp");
-            _logger.LogInformation($"🔧 [CONSTRUCTOR] Tentando criar pasta temp: {_uploadsPath}");
+            _uploadsPath = Path.Combine(currentDir, "wwwroot", "images");
+            _logger.LogInformation($"🔧 [CONSTRUCTOR] Configurando pasta de uploads: {_uploadsPath}");
 
             try
             {
                 Directory.CreateDirectory(_uploadsPath);
                 var dirExists = Directory.Exists(_uploadsPath);
-                _logger.LogInformation($"✅ [CONSTRUCTOR] Pasta temp criada/verificada. Existe: {dirExists}, Path: {_uploadsPath}");
+                _logger.LogInformation($"✅ [CONSTRUCTOR] Pasta wwwroot/images criada/verificada. Existe: {dirExists}, Path: {_uploadsPath}");
             }
             catch (Exception ex)
             {
-                // ⚠️ FALLBACK: Se não conseguir criar temp, usa uploads/originals
-                _logger.LogWarning(ex, $"⚠️ [CONSTRUCTOR] Não foi possível criar pasta temp: {_uploadsPath}. Usando fallback.");
-                _uploadsPath = Path.Combine(currentDir, "uploads", "originals");
-                _logger.LogInformation($"🔧 [CONSTRUCTOR] Tentando criar pasta fallback: {_uploadsPath}");
-                try
-                {
-                    Directory.CreateDirectory(_uploadsPath);
-                    var dirExists = Directory.Exists(_uploadsPath);
-                    _logger.LogInformation($"✅ [CONSTRUCTOR] Pasta fallback criada. Existe: {dirExists}, Path: {_uploadsPath}");
-                }
-                catch (Exception exFallback)
-                {
-                    _logger.LogError(exFallback, $"❌ [CONSTRUCTOR] ERRO CRÍTICO: Não foi possível criar nem temp nem uploads/originals");
-                    _logger.LogError($"❌ [CONSTRUCTOR] _uploadsPath final: {_uploadsPath}");
-                    // Não faz throw - permite aplicação continuar (uploads falharão mas app não crashará)
-                }
+                _logger.LogError(ex, $"❌ [CONSTRUCTOR] ERRO ao criar pasta wwwroot/images: {_uploadsPath}");
+                // Não faz throw - permite aplicação continuar
             }
 
             _logger.LogInformation($"🔧 [CONSTRUCTOR] ImageController inicializado. _uploadsPath = {_uploadsPath}");
