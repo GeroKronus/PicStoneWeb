@@ -949,10 +949,21 @@ function compressAndPreviewImageIntegracao(file) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
-            // Reduz dimensões em 50% (resulta em 25% dos pixels)
-            const targetWidth = Math.round(img.width * 0.5);
-            const targetHeight = Math.round(img.height * 0.5);
-            console.log(`📐 Redimensionando ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (50% dimensões = 25% pixels)`);
+            // Redimensiona apenas se largura > 1500px, mantendo proporção
+            let targetWidth, targetHeight;
+            const maxWidth = 1500;
+
+            if (img.width > maxWidth) {
+                const scale = maxWidth / img.width;
+                targetWidth = maxWidth;
+                targetHeight = Math.round(img.height * scale);
+                console.log(`📐 Redimensionando ${img.width}x${img.height} → ${targetWidth}x${targetHeight} (largura limitada a ${maxWidth}px)`);
+            } else {
+                targetWidth = img.width;
+                targetHeight = img.height;
+                console.log(`📦 Mantendo original: ${img.width}x${img.height} (largura <= ${maxWidth}px)`);
+            }
+
             canvas.width = targetWidth;
             canvas.height = targetHeight;
             ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
