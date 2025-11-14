@@ -100,24 +100,29 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation($"📤 [UPLOAD] ✅ Imagem decodificada com sucesso: {imagemBitmap.Width}x{imagemBitmap.Height}");
 
-                // Gera ID único: userId_timestamp_guid
+                // Gera nome fixo por usuário: ImgUser{userId}.jpg (sobrescreve anterior)
                 var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                var guid = Guid.NewGuid().ToString("N").Substring(0, 8);
-                var imageId = $"{usuarioId}_{timestamp}_{guid}.jpg";
+                var imageId = $"ImgUser{usuarioId}.jpg";
                 var caminhoCompleto = Path.Combine(_uploadsPath, imageId);
 
                 _logger.LogInformation($"📤 [UPLOAD] ImageId gerado: {imageId}");
                 _logger.LogInformation($"📤 [UPLOAD] Caminho completo para salvar: {caminhoCompleto}");
                 _logger.LogInformation($"📤 [UPLOAD] Diretório do caminho existe? {Directory.Exists(Path.GetDirectoryName(caminhoCompleto))}");
 
+                // Deleta arquivo anterior se existir
+                if (System.IO.File.Exists(caminhoCompleto))
+                {
+                    _logger.LogInformation($"📤 [UPLOAD] Arquivo anterior encontrado, será sobrescrito: {imageId}");
+                    System.IO.File.Delete(caminhoCompleto);
+                }
+
                 // Salva imagem com qualidade JPEG 95%
                 _logger.LogInformation("📤 [UPLOAD] Iniciando salvamento do arquivo...");
                 try
                 {
-                    using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
+                    using (var fileStream = System.IO.File.Create(caminhoCompleto))
                     {
-                        _logger.LogInformation($"📤 [UPLOAD] FileStream aberto. CanWrite: {fileStream.CanWrite}");
+                        _logger.LogInformation($"📤 [UPLOAD] FileStream criado. CanWrite: {fileStream.CanWrite}");
                         using (var image = SKImage.FromBitmap(imagemBitmap))
                         {
                             _logger.LogInformation("📤 [UPLOAD] SKImage criado a partir do bitmap");
@@ -190,11 +195,12 @@ namespace PicStoneFotoAPI.Controllers
                     return BadRequest(new { sucesso = false, mensagem = "ID de imagem inválido" });
                 }
 
-                // ✨ SEGURANÇA: Valida ownership - imageId deve começar com userId do usuário logado
+                // ✨ SEGURANÇA: Valida ownership - imageId deve ser ImgUser{userId}.jpg do próprio usuário
                 var usuarioId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
-                if (!imageId.StartsWith($"{usuarioId}_"))
+                var expectedImageId = $"ImgUser{usuarioId}.jpg";
+                if (imageId != expectedImageId)
                 {
-                    _logger.LogWarning($"Tentativa de deletar imagem de outro usuário! UserId: {usuarioId}, ImageId: {imageId}");
+                    _logger.LogWarning($"Tentativa de deletar imagem de outro usuário! UserId: {usuarioId}, ImageId: {imageId}, Expected: {expectedImageId}");
                     return Forbid(); // 403 Forbidden
                 }
 
