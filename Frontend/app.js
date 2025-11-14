@@ -1232,6 +1232,7 @@ async function aplicarCropGenerico(x, y, width, height) {
             // ✅ Marca que imagem foi cropada (local apenas - sem upload ainda)
             // Upload acontecerá apenas ao clicar em "Gerar Ambiente"
             state.imagemFoiCropada = true;
+            console.log('✂️ Crop aplicado! state.imagemFoiCropada = true');
 
             // Hide overlay
             const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
@@ -2422,6 +2423,12 @@ function abrirCropParaAmbiente() {
 
 async function gerarAmbiente(imagemCropada) {
     try {
+        // 🐛 DEBUG
+        console.log('🎬 gerarAmbiente() chamado');
+        console.log('🐛 state.imagemFoiCropada:', state.imagemFoiCropada);
+        console.log('🐛 state.croppedImageSentToServer:', state.croppedImageSentToServer);
+        console.log('🐛 imagemCropada:', imagemCropada);
+
         // ✨ OTIMIZAÇÃO: Se imagem foi cropada mas ainda não foi enviada ao servidor,
         // faz upload AGORA antes de gerar o mockup
         if (state.imagemFoiCropada && !state.croppedImageSentToServer) {
@@ -2435,6 +2442,8 @@ async function gerarAmbiente(imagemCropada) {
                 console.error('Erro ao fazer upload da imagem cropada:', error);
                 // Se falhar, continua enviando arquivo diretamente no mockup
             }
+        } else {
+            console.log('⏭️ Pulando upload (cropada:', state.imagemFoiCropada, ', já enviada:', state.croppedImageSentToServer, ')');
         }
 
         // Mostra loading overlay e prepara elementos de progresso
