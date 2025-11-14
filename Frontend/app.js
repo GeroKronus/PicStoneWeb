@@ -2778,11 +2778,41 @@ async function selectCountertopAndGenerate(type) {
  */
 async function generateCountertopAmbiente() {
     try {
+        // 🐛 DEBUG
+        console.log('🎬 generateCountertopAmbiente() chamado');
+        console.log('🐛 state.imagemFoiCropada:', state.imagemFoiCropada);
+        console.log('🐛 state.croppedImageSentToServer:', state.croppedImageSentToServer);
+
+        // ✨ OTIMIZAÇÃO: Se imagem foi cropada mas ainda não foi enviada ao servidor,
+        // faz upload AGORA antes de gerar o mockup
+        if (state.imagemFoiCropada && !state.croppedImageSentToServer) {
+            console.log('📤 Upload da imagem cropada ao servidor antes de gerar mockup...');
+            try {
+                await uploadImageToServer(state.countertopState.croppedImage);
+                state.croppedImageSentToServer = true;
+                state.imagemFoiCropada = false; // Reset - agora imageId aponta para cropada
+                console.log('✅ Imagem cropada enviada ao servidor. ImageId atualizado.');
+            } catch (error) {
+                console.error('Erro ao fazer upload da imagem cropada:', error);
+                // Se falhar, continua enviando arquivo diretamente no mockup
+            }
+        } else {
+            console.log('⏭️ Pulando upload (cropada:', state.imagemFoiCropada, ', já enviada:', state.croppedImageSentToServer, ')');
+        }
+
         // Mostra loading overlay global
         elements.loadingOverlay.classList.remove('hidden');
 
         const formData = new FormData();
-        formData.append('imagem', state.countertopState.croppedImage, 'cropped.jpg');
+
+        // ✅ Usa imageId se disponível, senão envia arquivo
+        if (state.uploadedImageId && !state.imagemFoiCropada) {
+            console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
+            formData.append('imageId', state.uploadedImageId);
+        } else {
+            console.log('📤 Enviando arquivo cropado no mockup');
+            formData.append('imagem', state.countertopState.croppedImage, 'cropped.jpg');
+        }
         formData.append('flip', state.countertopState.flip);
 
         // Suporta bancada1 até bancada8
