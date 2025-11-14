@@ -9,6 +9,7 @@ const state = {
     currentPhotoFile: null,
     uploadedImageId: null, // ID da imagem armazenada no servidor
     uploadInProgress: false, // ✨ FIX: Flag para indicar upload em andamento
+    imagemFoiCropada: false, // Flag indicando se a imagem atual foi cropada
     originalPhoto: null, // Foto original para ambiente
     ambienteMode: false, // Indica se está em modo ambiente
     cropData: {
@@ -1094,6 +1095,9 @@ function ativarCropOverlayAmbientes() {
 
 function resetarParaOriginalAmbientes() {
     if (state.cropOverlayState.originalImageSrc) {
+        // ✅ FIX: Desmarca flag de crop - uploadedImageId volta a ser válido
+        state.imagemFoiCropada = false;
+
         elements.previewImageAmbientes.src = state.cropOverlayState.originalImageSrc;
         state.currentPhotoFile = null; // Reset to original file
         elements.resetImageBtnAmbientes.classList.add('hidden');
@@ -1215,6 +1219,9 @@ function aplicarCropGenerico(x, y, width, height) {
             });
             const croppedBase64 = tempCanvas.toDataURL('image/jpeg', 0.95);
 
+            // ✅ FIX: Marca que a imagem foi cropada - invalida uploadedImageId
+            state.imagemFoiCropada = true;
+
             // Hide overlay
             const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
             canvas.classList.add('hidden');
@@ -1326,6 +1333,9 @@ function finalizarEAplicarCropTouch(e) {
 function resetarParaOriginalIntegracao() {
     if (!state.cropOverlayState.originalImageSrc) return;
 
+    // ✅ FIX: Desmarca flag de crop - uploadedImageId volta a ser válido
+    state.imagemFoiCropada = false;
+
     // Restore original image
     elements.previewImageIntegracao.src = state.cropOverlayState.originalImageSrc;
 
@@ -1377,6 +1387,7 @@ async function uploadImageToServer(imageFile) {
 
         if (result.sucesso && result.imageId) {
             state.uploadedImageId = result.imageId;
+            state.imagemFoiCropada = false; // ✅ Reset: nova imagem original
             console.log(`✅ Imagem enviada para servidor: ${result.imageId}`);
             console.log(`📐 Dimensões: ${result.largura}x${result.altura}`);
         } else {
@@ -2283,6 +2294,9 @@ function confirmarCropIntegracao() {
         const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
         compressAndPreviewImageIntegracao(file);
 
+        // ✅ FIX: Marca que a imagem foi cropada - invalida uploadedImageId
+        state.imagemFoiCropada = true;
+
         // Esconde crop, mostra preview
         elements.cropSectionIntegracao.classList.add('hidden');
         elements.photoPreviewIntegracao.classList.remove('hidden');
@@ -2388,12 +2402,12 @@ async function gerarAmbiente(imagemCropada) {
             endpoint = `/api/mockup/bancada${bancadaNum}/progressive`;
             formData = new FormData();
 
-            // ✨ NOVO: Envia imageId se disponível, senão envia arquivo (fallback)
-            if (state.uploadedImageId) {
+            // ✅ FIX: Se imagem foi cropada, sempre usa arquivo (imageId aponta para original)
+            if (state.uploadedImageId && !state.imagemFoiCropada) {
                 console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
                 formData.append('imageId', state.uploadedImageId);
             } else {
-                console.log('📤 Reenviando arquivo (fallback - imageId não disponível)');
+                console.log('📤 Enviando arquivo cropado');
                 formData.append('imagem', imagemCropada);
             }
             formData.append('flip', state.ambienteConfig.flip || false);
@@ -2402,12 +2416,12 @@ async function gerarAmbiente(imagemCropada) {
             endpoint = '/api/mockup/gerar/progressive';
             formData = new FormData();
 
-            // ✨ NOVO: Envia imageId se disponível, senão envia arquivo (fallback)
-            if (state.uploadedImageId) {
+            // ✅ FIX: Se imagem foi cropada, sempre usa arquivo (imageId aponta para original)
+            if (state.uploadedImageId && !state.imagemFoiCropada) {
                 console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
                 formData.append('imageId', state.uploadedImageId);
             } else {
-                console.log('📤 Reenviando arquivo (fallback - imageId não disponível)');
+                console.log('📤 Enviando arquivo cropado');
                 formData.append('ImagemCropada', imagemCropada);
             }
             formData.append('TipoCavalete', 'simples');
