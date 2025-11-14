@@ -1062,7 +1062,8 @@ function ativarCropOverlayIntegracao() {
         elements.cropOverlayIntegracao,
         elements.resetImageBtnIntegracao,
         (croppedBase64, croppedFile) => {
-            state.currentPhotoFile = croppedFile;
+            // ✨ NOVA ARQUITETURA: Apenas atualiza preview, mantém arquivo original
+            // Coordenadas já foram armazenadas em state.cropCoordinates
             elements.previewImageIntegracao.src = croppedBase64;
         },
         elements.cropIndicatorIntegracao
@@ -1076,7 +1077,8 @@ function ativarCropOverlayAmbientes() {
         elements.cropOverlayAmbientes,
         elements.resetImageBtnAmbientes,
         (croppedBase64, croppedFile) => {
-            state.currentPhotoFile = croppedFile;
+            // ✨ NOVA ARQUITETURA: Apenas atualiza preview, mantém arquivo original
+            // Coordenadas já foram armazenadas em state.cropCoordinates
             elements.previewImageAmbientes.src = croppedBase64;
         },
         elements.cropIndicatorAmbientes
