@@ -1191,7 +1191,7 @@ function finalizarEAplicarCrop(e) {
 }
 
 // Função genérica para aplicar crop (usada por todas as features)
-function aplicarCropGenerico(x, y, width, height) {
+async function aplicarCropGenerico(x, y, width, height) {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
     tempCanvas.height = height;
@@ -1201,15 +1201,40 @@ function aplicarCropGenerico(x, y, width, height) {
     img.onload = () => {
         ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
 
-        tempCanvas.toBlob((blob) => {
+        tempCanvas.toBlob(async (blob) => {
             const croppedFile = new File([blob], 'cropped.jpg', {
                 type: 'image/jpeg',
                 lastModified: Date.now()
             });
             const croppedBase64 = tempCanvas.toDataURL('image/jpeg', 0.95);
 
-            // ✅ FIX: Marca que a imagem foi cropada - invalida uploadedImageId
-            state.imagemFoiCropada = true;
+            // ✨ OTIMIZAÇÃO: Faz upload da imagem cropada para substituir a original no servidor
+            // Isso permite reutilizar imageId nos próximos ambientes sem reenvios
+            try {
+                // Redimensiona se necessário (aplica mesma lógica de redimensionarImagem)
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const imgToResize = new Image();
+                    imgToResize.onload = async () => {
+                        const { file: processedFile } = await redimensionarImagem(imgToResize, croppedFile.name);
+
+                        // Upload para servidor - substitui a imagem original
+                        await uploadImageToServer(processedFile);
+
+                        // ✅ RESET: Agora uploadedImageId aponta para a versão cropada
+                        // Próximos ambientes usarão imageId sem reenvios
+                        state.imagemFoiCropada = false;
+
+                        console.log('✅ Imagem cropada enviada ao servidor. ImageId atualizado.');
+                    };
+                    imgToResize.src = e.target.result;
+                };
+                reader.readAsDataURL(croppedFile);
+            } catch (error) {
+                console.error('Erro ao fazer upload da imagem cropada:', error);
+                // Em caso de erro, mantém comportamento anterior (reenvia em cada ambiente)
+                state.imagemFoiCropada = true;
+            }
 
             // Hide overlay
             const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
@@ -2262,19 +2287,46 @@ function confirmarCropIntegracao() {
     cropCtx.drawImage(img, x, y, width, height, 0, 0, width, height);
 
     // Converte para File e atualiza preview
-    cropCanvas.toBlob((blob) => {
+    cropCanvas.toBlob(async (blob) => {
         const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
-        compressAndPreviewImageIntegracao(file);
 
-        // ✅ FIX: Marca que a imagem foi cropada - invalida uploadedImageId
-        state.imagemFoiCropada = true;
+        // ✅ OTIMIZAÇÃO: Faz upload da imagem cropada para substituir a original no servidor
+        // Isso permite reutilizar imageId sem reenvios múltiplos
+        const fileSizeKB = (file.size / 1024).toFixed(0);
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const img = new Image();
+            img.onload = async () => {
+                const { file: processedFile, dataUrl } = await redimensionarImagem(img, file.name);
+                state.currentPhotoFile = processedFile;
 
-        // Esconde crop, mostra preview
-        elements.cropSectionIntegracao.classList.add('hidden');
-        elements.photoPreviewIntegracao.classList.remove('hidden');
-        elements.cropInfoIntegracao.classList.add('hidden');
+                console.log(`📦 Imagem cropada processada: ${(processedFile.size / 1024).toFixed(0)}KB (original: ${fileSizeKB}KB)`);
 
-        showMessage('Imagem cortada com sucesso!', 'success');
+                elements.previewImageIntegracao.src = dataUrl;
+                elements.photoPreviewIntegracao.classList.remove('hidden');
+                elements.submitBtn.disabled = false;
+
+                // Salva imagem no estado compartilhado
+                const originalImageData = state.originalPhoto ? state.originalPhoto.src : dataUrl;
+                saveSharedImage(originalImageData, dataUrl, file.name, processedFile, 'integracao');
+
+                // ✨ UPLOAD: Substitui imagem no servidor pela versão cropada
+                await uploadImageToServer(processedFile);
+
+                // ✅ RESET: Agora uploadedImageId aponta para a versão cropada
+                // Próximos ambientes usarão imageId sem reenvios
+                state.imagemFoiCropada = false;
+
+                // Esconde crop, mostra preview
+                elements.cropSectionIntegracao.classList.add('hidden');
+                elements.photoPreviewIntegracao.classList.remove('hidden');
+                elements.cropInfoIntegracao.classList.add('hidden');
+
+                showMessage('Imagem cortada e salva no servidor!', 'success');
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
     }, 'image/jpeg', 0.95);
 }
 
