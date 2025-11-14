@@ -89,7 +89,7 @@ namespace PicStoneFotoAPI.Services
             }
         }
 
-        public async Task<string> GerarCavaleteSimples(SKBitmap chapaCropada, string fundo)
+        public async Task<string> GerarCavaleteSimples(SKBitmap chapaCropada, string fundo, int? usuarioId = null)
         {
             // Nome do arquivo de moldura
             var nomeMoldura = fundo.ToLower() == "claro"
@@ -156,8 +156,10 @@ namespace PicStoneFotoAPI.Services
             // Adiciona marca d'água
             _watermark.AddWatermark(canvas, larguraCanvas, alturaCanvas);
 
-            // Salva resultado
-            var nomeArquivo = $"mockup_simples_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
+            // Salva resultado - usa usuarioId se fornecido, senão usa timestamp
+            var nomeArquivo = usuarioId.HasValue
+                ? $"cavalete_simples_{fundo}_User{usuarioId.Value}.jpg"
+                : $"mockup_simples_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
             var caminhoFinal = Path.Combine(_uploadPath, nomeArquivo);
 
             using var image = surface.Snapshot();
@@ -169,7 +171,7 @@ namespace PicStoneFotoAPI.Services
             return nomeArquivo;
         }
 
-        public async Task<string> GerarCavaleteDuplo(SKBitmap chapaCropada, string fundo, bool inverterLados)
+        public async Task<string> GerarCavaleteDuplo(SKBitmap chapaCropada, string fundo, bool inverterLados, int? usuarioId = null)
         {
             // Nome do arquivo de moldura
             var nomeMoldura = fundo.ToLower() == "claro"
@@ -245,9 +247,11 @@ namespace PicStoneFotoAPI.Services
             // Adiciona marca d'água
             _watermark.AddWatermark(canvas, larguraCanvas, alturaCanvas);
 
-            // Salva resultado
+            // Salva resultado - usa usuarioId se fornecido, senão usa timestamp
             var sufixo = inverterLados ? "invertido" : "normal";
-            var nomeArquivo = $"mockup_duplo_{sufixo}_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
+            var nomeArquivo = usuarioId.HasValue
+                ? $"cavalete_duplo_{sufixo}_{fundo}_User{usuarioId.Value}.jpg"
+                : $"mockup_duplo_{sufixo}_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
             var caminhoFinal = Path.Combine(_uploadPath, nomeArquivo);
 
             using var image = surface.Snapshot();

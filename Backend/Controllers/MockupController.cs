@@ -135,14 +135,14 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation("Mockups gerados: {Count} imagens", mockups.Count);
 
-                // Salva as imagens geradas
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                // Salva as imagens geradas - obtém usuarioId para nomeação consistente
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var caminhos = new List<string>();
 
                 for (int i = 0; i < mockups.Count; i++)
                 {
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"nicho1_{timestamp}_{sufixo}.jpg";
+                    var nomeArquivo = $"nicho1_{sufixo}_User{usuarioId}.jpg";
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -167,7 +167,6 @@ namespace PicStoneFotoAPI.Controllers
                 }
 
                 // Registra geração no histórico
-                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 await _historyService.RegistrarAmbienteAsync(
                     usuarioId: usuarioId,
                     tipoAmbiente: "Nicho",
@@ -232,14 +231,14 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation($"Mockups gerados: {mockups.Count} imagens");
 
-                // Salva as imagens geradas
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                // Salva as imagens geradas - obtém usuarioId para nomeação consistente
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var caminhos = new List<string>();
 
                 for (int i = 0; i < mockups.Count; i++)
                 {
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"bancada1_{timestamp}_{sufixo}.jpg";
+                    var nomeArquivo = $"bancada1_{sufixo}_User{usuarioId}.jpg";
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -264,7 +263,6 @@ namespace PicStoneFotoAPI.Controllers
                 }
 
                 // Registra geração no histórico
-                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 await _historyService.RegistrarAmbienteAsync(
                     usuarioId: usuarioId,
                     tipoAmbiente: "Bancada1",
@@ -329,14 +327,14 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation($"Mockups gerados: {mockups.Count} imagens");
 
-                // Salva as imagens geradas
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                // Salva as imagens geradas - obtém usuarioId para nomeação consistente
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var caminhos = new List<string>();
 
                 for (int i = 0; i < mockups.Count; i++)
                 {
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"bancada2_{timestamp}_{sufixo}.jpg";
+                    var nomeArquivo = $"bancada2_{sufixo}_User{usuarioId}.jpg";
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -361,7 +359,6 @@ namespace PicStoneFotoAPI.Controllers
                 }
 
                 // Registra geração no histórico
-                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 await _historyService.RegistrarAmbienteAsync(
                     usuarioId: usuarioId,
                     tipoAmbiente: "Bancada2",
@@ -677,14 +674,14 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation($"Mockups gerados: {mockups.Count} imagens");
 
-                // Salva as imagens geradas
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                // Salva as imagens geradas - obtém usuarioId para nomeação consistente
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var caminhos = new List<string>();
 
                 for (int i = 0; i < mockups.Count; i++)
                 {
                     var sufixo = i == 0 ? "normal" : $"variacao{i}";
-                    var nomeArquivo = $"bancada{numeroBancada}_{timestamp}_{sufixo}.jpg";
+                    var nomeArquivo = $"bancada{numeroBancada}_{sufixo}_User{usuarioId}.jpg";
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -709,7 +706,6 @@ namespace PicStoneFotoAPI.Controllers
                 }
 
                 // Registra geração no histórico
-                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 await _historyService.RegistrarAmbienteAsync(
                     usuarioId: usuarioId,
                     tipoAmbiente: $"Bancada{numeroBancada}",
@@ -1019,7 +1015,8 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation($"Mockups gerados: {mockups.Count} imagens");
 
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                // Obtém usuarioId para nomeação consistente dos arquivos
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var caminhos = new List<string>();
 
                 // Salva e envia cada mockup progressivamente
@@ -1034,7 +1031,7 @@ namespace PicStoneFotoAPI.Controllers
                     });
 
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"bancada1_{timestamp}_{sufixo}.jpg";
+                    var nomeArquivo = $"bancada1_{sufixo}_User{usuarioId}.jpg";
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -1070,7 +1067,6 @@ namespace PicStoneFotoAPI.Controllers
                 }
 
                 // Registra geração no histórico
-                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 await _historyService.RegistrarAmbienteAsync(
                     usuarioId: usuarioId,
                     tipoAmbiente: "Bancada1",
@@ -1138,26 +1134,28 @@ namespace PicStoneFotoAPI.Controllers
                 var fundo = Fundo ?? "claro";
                 var tipoCavalete = TipoCavalete ?? "simples";
 
+                // Obtém usuarioId para nomeação consistente dos arquivos
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
                 // 1. CavaletePronto - Duplo: original à esquerda, espelho à direita
                 await EnviarEventoSSE("progress", new { index = 0, total = 3, mensagem = "Gerando cavalete duplo (normal)..." });
-                var caminhoDuplo1 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, fundo, inverterLados: false);
+                var caminhoDuplo1 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, fundo, inverterLados: false, usuarioId: usuarioId);
                 caminhos.Add($"/uploads/{caminhoDuplo1}");
                 await EnviarEventoSSE("mockup", new { index = 0, total = 3, url = $"/uploads/{caminhoDuplo1}", mensagem = "Cavalete duplo 1/3 pronto!" });
 
                 // 2. CavaletePronto2 - Duplo invertido: espelho à esquerda, original à direita
                 await EnviarEventoSSE("progress", new { index = 1, total = 3, mensagem = "Gerando cavalete duplo (invertido)..." });
-                var caminhoDuplo2 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, fundo, inverterLados: true);
+                var caminhoDuplo2 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, fundo, inverterLados: true, usuarioId: usuarioId);
                 caminhos.Add($"/uploads/{caminhoDuplo2}");
                 await EnviarEventoSSE("mockup", new { index = 1, total = 3, url = $"/uploads/{caminhoDuplo2}", mensagem = "Cavalete duplo 2/3 pronto!" });
 
                 // 3. CavaletePronto3 - Simples
                 await EnviarEventoSSE("progress", new { index = 2, total = 3, mensagem = "Gerando cavalete simples..." });
-                var caminhoSimples = await _mockupService.GerarCavaleteSimples(bitmapCropado, fundo);
+                var caminhoSimples = await _mockupService.GerarCavaleteSimples(bitmapCropado, fundo, usuarioId: usuarioId);
                 caminhos.Add($"/uploads/{caminhoSimples}");
                 await EnviarEventoSSE("mockup", new { index = 2, total = 3, url = $"/uploads/{caminhoSimples}", mensagem = "Cavalete simples 3/3 pronto!" });
 
                 // Registra geração no histórico
-                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 await _historyService.RegistrarAmbienteAsync(
                     usuarioId: usuarioId,
                     tipoAmbiente: "Cavalete",
@@ -1228,7 +1226,8 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation("Mockups gerados: {Count} imagens", mockups.Count);
 
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                // Obtém usuarioId para nomeação consistente dos arquivos
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var caminhos = new List<string>();
 
                 // Salva e envia cada mockup progressivamente
@@ -1243,7 +1242,7 @@ namespace PicStoneFotoAPI.Controllers
                     });
 
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"nicho1_{timestamp}_{sufixo}.jpg";
+                    var nomeArquivo = $"nicho1_{sufixo}_User{usuarioId}.jpg";
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -1279,7 +1278,6 @@ namespace PicStoneFotoAPI.Controllers
                 }
 
                 // Registra geração no histórico
-                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 await _historyService.RegistrarAmbienteAsync(
                     usuarioId: usuarioId,
                     tipoAmbiente: "Nicho",
@@ -1406,7 +1404,8 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation($"Mockups gerados: {mockups.Count} imagens");
 
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                // Obtém usuarioId para nomeação consistente dos arquivos
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var caminhos = new List<string>();
 
                 // Salva e envia cada mockup progressivamente
@@ -1421,7 +1420,7 @@ namespace PicStoneFotoAPI.Controllers
                     });
 
                     var sufixo = i == 0 ? "normal" : $"variacao{i}";
-                    var nomeArquivo = $"bancada{numeroBancada}_{timestamp}_{sufixo}.jpg";
+                    var nomeArquivo = $"bancada{numeroBancada}_{sufixo}_User{usuarioId}.jpg";
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -1457,7 +1456,6 @@ namespace PicStoneFotoAPI.Controllers
                 }
 
                 // Registra geração no histórico
-                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 await _historyService.RegistrarAmbienteAsync(
                     usuarioId: usuarioId,
                     tipoAmbiente: $"Bancada{numeroBancada}",
