@@ -2799,14 +2799,10 @@ async function generateCountertopAmbiente() {
 
         const formData = new FormData();
 
-        // ✅ Usa imageId se disponível, senão envia arquivo
-        if (state.uploadedImageId && !state.imagemFoiCropada) {
-            console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
-            formData.append('imageId', state.uploadedImageId);
-        } else {
-            console.log('📤 Enviando arquivo cropado no mockup');
-            formData.append('imagem', state.countertopState.croppedImage, 'cropped.jpg');
-        }
+        // ⚠️ Este endpoint não suporta imageId, sempre envia arquivo
+        // A otimização de upload serve para PRÓXIMAS gerações reutilizarem
+        console.log('📤 Enviando arquivo para gerar mockup');
+        formData.append('imagem', state.countertopState.croppedImage, 'cropped.jpg');
         formData.append('flip', state.countertopState.flip);
 
         // Suporta bancada1 até bancada8
