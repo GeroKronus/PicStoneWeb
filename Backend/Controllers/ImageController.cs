@@ -275,6 +275,53 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// GET /api/image/debug/mockups
+        /// Lista mockups gerados em uploads/mockups
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("debug/mockups")]
+        public IActionResult DebugMockups()
+        {
+            try
+            {
+                var mockupsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
+                var exists = Directory.Exists(mockupsPath);
+
+                var mockups = new List<object>();
+                if (exists)
+                {
+                    var files = Directory.GetFiles(mockupsPath, "*.jpg");
+                    foreach (var file in files.OrderByDescending(f => new FileInfo(f).LastWriteTime))
+                    {
+                        var info = new FileInfo(file);
+                        mockups.Add(new
+                        {
+                            fileName = Path.GetFileName(file),
+                            size = info.Length,
+                            sizeKB = $"{info.Length / 1024}KB",
+                            created = info.CreationTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                            modified = info.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+                        });
+                    }
+                }
+
+                return Ok(new
+                {
+                    timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") + " UTC",
+                    mockupsPath,
+                    directoryExists = exists,
+                    totalFiles = mockups.Count,
+                    mockups
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao listar mockups");
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// GET /api/image/debug/thumbs
         /// Verifica disponibilidade dos thumbnails WebP das bancadas
         /// </summary>
