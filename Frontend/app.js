@@ -3787,6 +3787,7 @@ async function startBathroomsFlow() {
 
     // 🔧 FIX: Limpa estado de countertop para evitar interferência entre flows
     state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null; // ← FIX: Limpa croppedImage para evitar bug de navegação
 
     if (!state.currentPhotoFile) {
         showMessage('Por favor, selecione uma foto primeiro', 'error');
