@@ -2710,6 +2710,11 @@ async function startAmbienteFlow() {
     // 🔧 EMERGENCY FIX: Reseta flag travada se usuário voltar ao menu principal
     state.isGeneratingMockup = false;
 
+    // 🔧 FIX: Limpa estado de countertop e bathroom para evitar interferência entre flows
+    state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null;
+    state.bathroomState.selectedType = null;
+
     if (!state.originalPhoto) {
         showMessage('Nenhuma foto disponível para ambiente', 'error');
         return;
