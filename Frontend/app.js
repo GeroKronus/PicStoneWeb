@@ -3055,6 +3055,9 @@ async function startCountertopFlow() {
     state.countertopState.selectedType = null;
     state.countertopState.flip = false;
 
+    // 🔧 FIX: Limpa estado de bathroom para evitar interferência entre flows
+    state.bathroomState.selectedType = null;
+
     // Marca que estamos no flow de countertop
     state.ambienteConfig.tipo = 'countertop';
     state.ambienteMode = false;
@@ -3777,6 +3780,9 @@ window.addEventListener('DOMContentLoaded', () => {
 async function startBathroomsFlow() {
     // 🔧 EMERGENCY FIX: Reseta flag travada se usuário voltar ao menu principal
     state.isGeneratingMockup = false;
+
+    // 🔧 FIX: Limpa estado de countertop para evitar interferência entre flows
+    state.countertopState.selectedType = null;
 
     if (!state.currentPhotoFile) {
         showMessage('Por favor, selecione uma foto primeiro', 'error');
