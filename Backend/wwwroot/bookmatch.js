@@ -43,8 +43,6 @@ const bookmatchElements = {
 
 // Inicializar BookMatch
 function initBookMatch() {
-    console.log('Inicializando BookMatch...');
-
     // Navegação
     if (bookmatchElements.bookmatchCard) {
         bookmatchElements.bookmatchCard.addEventListener('click', showBookmatchScreen);
@@ -89,22 +87,15 @@ function initBookMatch() {
         bookmatchElements.cropOverlayBookmatch.addEventListener('touchstart', iniciarSelecaoCropTouch, { passive: false });
         bookmatchElements.cropOverlayBookmatch.setAttribute('data-listeners-added', 'true');
     }
-
-    console.log('BookMatch inicializado!');
 }
 
 // Mostrar tela do BookMatch
 function showBookmatchScreen() {
-    console.log('🔄 SHOW: Abrindo tela Bookmatch', {
-        hasFunction: typeof hasSharedImage === 'function',
-        hasImage: typeof hasSharedImage === 'function' && hasSharedImage()
-    });
     document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
     bookmatchElements.bookmatchScreen.classList.add('active');
 
     // Carrega automaticamente imagem compartilhada se existir (função definida em app.js)
     if (typeof hasSharedImage === 'function' && typeof loadSharedImage === 'function' && hasSharedImage()) {
-        console.log('✅ SHOW: Tem imagem compartilhada em Bookmatch, vou carregar...');
         const sharedImage = loadSharedImage('bookmatch');
         if (sharedImage) {
             bookmatchState.originalImage = sharedImage.originalImage;
@@ -113,10 +104,8 @@ function showBookmatchScreen() {
             bookmatchElements.photoPreviewBookmatch.classList.remove('hidden');
             bookmatchElements.bookmatchOptions.classList.remove('hidden');
             bookmatchElements.captureSectionBookmatch.classList.add('hidden');
-            console.log('✅ SHOW: Imagem compartilhada carregada em Bookmatch');
         }
     } else {
-        console.log('❌ SHOW: Não tem imagem compartilhada em Bookmatch, vou limpar...');
         resetBookmatch();
     }
 }
@@ -186,6 +175,11 @@ function resetToOriginalBookmatch() {
         bookmatchElements.resetImageBtnBookmatch.classList.add('hidden');
         bookmatchElements.cropOverlayBookmatch.classList.add('hidden');
         bookmatchElements.cropIndicatorBookmatch.classList.add('hidden');
+
+        // ✨ FIX: Mostrar botão de crop novamente ao resetar
+        if (bookmatchElements.adjustImageBtnBookmatch) {
+            bookmatchElements.adjustImageBtnBookmatch.classList.remove('hidden');
+        }
     }
 }
 
@@ -203,7 +197,8 @@ function startBookmatchCropMode() {
             bookmatchState.currentImage = croppedBase64;
             bookmatchElements.previewImageBookmatch.src = croppedBase64;
         },
-        bookmatchElements.cropIndicatorBookmatch  // Passa o indicador visual
+        bookmatchElements.cropIndicatorBookmatch,  // Passa o indicador visual
+        bookmatchElements.adjustImageBtnBookmatch  // ✨ FIX: Passar botão para ocultar
     );
 }
 
@@ -216,7 +211,7 @@ async function generateBookmatch() {
     }
 
     const loadingOverlay = document.getElementById('loadingOverlay');
-    if (loadingOverlay) loadingOverlay.classList.add('active');
+    if (loadingOverlay) loadingOverlay.classList.remove('hidden');
 
     try {
         // Obter dimensões da imagem atual
@@ -265,7 +260,7 @@ async function generateBookmatch() {
         console.error('Erro ao gerar BookMatch:', error);
         alert('Erro ao gerar BookMatch: ' + error.message);
     } finally {
-        if (loadingOverlay) loadingOverlay.classList.remove('active');
+        if (loadingOverlay) loadingOverlay.classList.add('hidden');
     }
 }
 

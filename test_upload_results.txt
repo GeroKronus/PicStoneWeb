@@ -1,0 +1,61 @@
+================================================================================
+TESTE DE UPLOAD DIRETO VIA HTTP
+================================================================================
+
+Data/Hora: 2025-11-13 19:07:19
+API URL: https://mobile.picstone.com.br/api/image/upload
+Arquivo: D:\Apresentação\8723 0.jpg
+Total de Tentativas: 3
+
+================================================================================
+RESUMO
+================================================================================
+Sucessos: 0/3
+Erros 502: 0/3
+Outros Erros: 3/3
+
+================================================================================
+TENTATIVA 1
+================================================================================
+Timestamp: 2025-11-13 19:07:06.365
+Status Code: None
+Tempo de Resposta: 0ms
+Sucesso: NÃO
+Erro: ('Connection aborted.', ConnectionResetError(10054, 'Foi forçado o cancelamento de uma conexão existente pelo host remoto', None, 10054, None))
+
+Headers de Resposta:
+
+Corpo da Resposta:
+
+
+================================================================================
+TENTATIVA 2
+================================================================================
+Timestamp: 2025-11-13 19:07:12.459
+Status Code: None
+Tempo de Resposta: 0ms
+Sucesso: NÃO
+Erro: ('Connection aborted.', ConnectionAbortedError(10053, 'Uma conexão estabelecida foi anulada pelo software no computador host', None, 10053, None))
+
+Headers de Resposta:
+
+Corpo da Resposta:
+
+
+================================================================================
+TENTATIVA 3
+================================================================================
+Timestamp: 2025-11-13 19:07:18.333
+Status Code: None
+Tempo de Resposta: 0ms
+Sucesso: NÃO
+Erro: ('Connection aborted.', ConnectionAbortedError(10053, 'Uma conexão estabelecida foi anulada pelo software no computador host', None, 10053, None))
+
+Headers de Resposta:
+
+Corpo da Resposta:
+
+
+================================================================================
+FIM DO RELATÓRIO
+================================================================================

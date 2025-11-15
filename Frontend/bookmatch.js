@@ -175,6 +175,11 @@ function resetToOriginalBookmatch() {
         bookmatchElements.resetImageBtnBookmatch.classList.add('hidden');
         bookmatchElements.cropOverlayBookmatch.classList.add('hidden');
         bookmatchElements.cropIndicatorBookmatch.classList.add('hidden');
+
+        // ✨ FIX: Mostrar botão de crop novamente ao resetar
+        if (bookmatchElements.adjustImageBtnBookmatch) {
+            bookmatchElements.adjustImageBtnBookmatch.classList.remove('hidden');
+        }
     }
 }
 
@@ -192,7 +197,8 @@ function startBookmatchCropMode() {
             bookmatchState.currentImage = croppedBase64;
             bookmatchElements.previewImageBookmatch.src = croppedBase64;
         },
-        bookmatchElements.cropIndicatorBookmatch  // Passa o indicador visual
+        bookmatchElements.cropIndicatorBookmatch,  // Passa o indicador visual
+        bookmatchElements.adjustImageBtnBookmatch  // ✨ FIX: Passar botão para ocultar
     );
 }
 

@@ -17,15 +17,17 @@ namespace PicStoneFotoAPI.Controllers
         private readonly NichoService _nichoService;
         private readonly BancadaService _bancadaService;
         private readonly HistoryService _historyService;
+        private readonly GraphicsTransformService _graphicsTransformService;
         private readonly ILogger<MockupController> _logger;
         private readonly string _uploadsPath;
 
-        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, HistoryService historyService, ILogger<MockupController> logger)
+        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, HistoryService historyService, GraphicsTransformService graphicsTransformService, ILogger<MockupController> logger)
         {
             _mockupService = mockupService;
             _nichoService = nichoService;
             _bancadaService = bancadaService;
             _historyService = historyService;
+            _graphicsTransformService = graphicsTransformService;
             _logger = logger;
             _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
             Directory.CreateDirectory(_uploadsPath);
@@ -1477,6 +1479,232 @@ namespace PicStoneFotoAPI.Controllers
                 await EnviarEventoSSE("error", new { mensagem = "Erro ao gerar mockup: " + ex.Message });
             }
         }
+
+        // ==================== BATHROOM PROGRESSIVE ====================
+
+        [HttpPost("bathroom1/progressive")]
+        public async Task GerarBathroom1Progressive(IFormFile imagemCropada, string fundo = "claro")
+        {
+            await GerarBathroomProgressiveGenerico(1, imagemCropada, fundo);
+        }
+
+        [HttpPost("bathroom2/progressive")]
+        public async Task GerarBathroom2Progressive(IFormFile imagemCropada, string fundo = "claro")
+        {
+            await GerarBathroomProgressiveGenerico(2, imagemCropada, fundo);
+        }
+
+        private async Task GerarBathroomProgressiveGenerico(int numeroBathroom, IFormFile imagemCropada, string fundo)
+        {
+            Response.ContentType = "text/event-stream";
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Bathroom{Numero} Progressive ===", numeroBathroom);
+
+                // Obtém usuarioId para nomeação consistente dos arquivos
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                await EnviarEventoSSE("inicio", new { mensagem = $"Gerando Bathroom #{numeroBathroom}..." });
+
+                // Carrega imagem cropada
+                using var streamCrop = new MemoryStream();
+                await imagemCropada.CopyToAsync(streamCrop);
+                streamCrop.Position = 0;
+
+                using var bitmapCropado = SKBitmap.Decode(streamCrop);
+                if (bitmapCropado == null)
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Erro ao decodificar imagem cropada" });
+                    return;
+                }
+
+                // Parâmetros específicos de cada Bathroom (como no VB.NET original)
+                int larguraMoldura, alturaMoldura, alturaQuadroSemSkew, larguraQuadroSemSkew;
+                int ladoMaior, ladoMenor, primeiroPixelYNoQuadroSkew, coordPlotSkewX, coordPlotSkewY, fatorInclinacao;
+
+                if (numeroBathroom == 1)
+                {
+                    // Bathroom 1 - Canvas 1440x1080 (do VB.NET Sub Banho1)
+                    larguraMoldura = 1440;
+                    alturaMoldura = 1080;
+                    larguraQuadroSemSkew = 608;
+                    alturaQuadroSemSkew = 686;
+                    ladoMaior = 686;
+                    ladoMenor = 554;
+                    primeiroPixelYNoQuadroSkew = 199;
+                    coordPlotSkewX = 800;
+                    coordPlotSkewY = 131;
+                    fatorInclinacao = 73;
+                }
+                else // Bathroom 2
+                {
+                    // Bathroom 2 - Canvas 1000x667 (horizontal)
+                    larguraMoldura = 1000;
+                    alturaMoldura = 667;
+                    larguraQuadroSemSkew = 265;
+                    alturaQuadroSemSkew = 575;
+                    ladoMaior = 550;
+                    ladoMenor = 340;
+                    primeiroPixelYNoQuadroSkew = 155;
+                    coordPlotSkewX = 535;
+                    coordPlotSkewY = 0;
+                    fatorInclinacao = 135;
+                }
+
+                // Redimensiona para largura fixa de 1500px
+                const int tamanhoDoQuadro = 1500;
+                float fatorDeAjuste = (float)bitmapCropado.Width / tamanhoDoQuadro;
+                int novaAltura = (int)(bitmapCropado.Height / fatorDeAjuste);
+
+                using var imagemRedimensionada = bitmapCropado.Resize(
+                    new SKImageInfo(tamanhoDoQuadro, novaAltura),
+                    SKFilterQuality.High);
+
+                _logger.LogInformation("Imagem redimensionada: {W}x{H}", tamanhoDoQuadro, novaAltura);
+
+                // Cria as 4 versões rotacionadas (como no VB.NET)
+                using var bitmap90E = CriarBitmapRotacionado(imagemRedimensionada, SKEncodedOrigin.LeftBottom); // 90° sem flip
+                using var bitmap90D = FlipHorizontal(bitmap90E); // 90° com flip
+                using var bitmap270E = CriarBitmapRotacionado(imagemRedimensionada, SKEncodedOrigin.RightTop); // 270° sem flip
+                using var bitmap270D = FlipHorizontal(bitmap270E); // 270° com flip
+
+                // Cria os 4 mosaicos (quadrantes) como no VB.NET
+                var larguraMosaico = (novaAltura * 2) + 1; // +1 para linha divisória opcional
+                var alturaMosaico = tamanhoDoQuadro;
+
+                var caminhos = new List<string>();
+
+                // Gera os 4 quadrantes
+                for (int quadrante = 1; quadrante <= 4; quadrante++)
+                {
+                    await EnviarEventoSSE("progresso", new {
+                        etapa = $"Gerando quadrante {quadrante}/4",
+                        porcentagem = (quadrante - 1) * 25
+                    });
+
+                    using var mosaico = new SKBitmap(larguraMosaico, alturaMosaico);
+                    using var canvas = new SKCanvas(mosaico);
+                    canvas.Clear(SKColors.White);
+
+                    // Desenha as 2 chapas lado a lado conforme o quadrante
+                    switch (quadrante)
+                    {
+                        case 1: // 90E + 90D
+                            canvas.DrawBitmap(bitmap90E, 0, 0);
+                            canvas.DrawBitmap(bitmap90D, novaAltura + 1, 0);
+                            break;
+                        case 2: // 90D + 90E (invertido)
+                            canvas.DrawBitmap(bitmap90D, 0, 0);
+                            canvas.DrawBitmap(bitmap90E, novaAltura + 1, 0);
+                            break;
+                        case 3: // 270E + 270D
+                            canvas.DrawBitmap(bitmap270E, 0, 0);
+                            canvas.DrawBitmap(bitmap270D, novaAltura + 1, 0);
+                            break;
+                        case 4: // 270D + 270E (invertido)
+                            canvas.DrawBitmap(bitmap270D, 0, 0);
+                            canvas.DrawBitmap(bitmap270E, novaAltura + 1, 0);
+                            break;
+                    }
+
+                    // PASSO 1: Aplica DistortionInclina (redimensiona + skew)
+                    _logger.LogInformation("Aplicando DistortionInclina ao quadrante {Q}...", quadrante);
+                    using var quadranteDistorcido = _graphicsTransformService.DistortionInclina(
+                        imagem: mosaico,
+                        ladoMaior: ladoMaior,
+                        ladoMenor: ladoMenor,
+                        novaLargura: larguraQuadroSemSkew,
+                        novaAltura: alturaQuadroSemSkew,
+                        inclinacao: fatorInclinacao
+                    );
+
+                    _logger.LogInformation("Quadrante distorcido: {W}x{H}", quadranteDistorcido.Width, quadranteDistorcido.Height);
+
+                    // PASSO 2: Cria canvas VAZIO (1440x1080px)
+                    using var canvasBase = new SKBitmap(larguraMoldura, alturaMoldura);
+                    using var canvasFinal = new SKCanvas(canvasBase);
+                    canvasFinal.Clear(SKColors.Transparent); // Canvas transparente
+                    _logger.LogInformation("Canvas vazio criado: {W}x{H}", larguraMoldura, alturaMoldura);
+
+                    // PASSO 3: Plota transformações no canvas vazio
+                    canvasFinal.DrawBitmap(quadranteDistorcido, 302, 187);
+                    _logger.LogInformation("Primeira transformação plotada em (302, 187)");
+
+                    canvasFinal.DrawBitmap(quadranteDistorcido, coordPlotSkewX, coordPlotSkewY);
+                    _logger.LogInformation("Segunda transformação plotada em ({X}, {Y})", coordPlotSkewX, coordPlotSkewY);
+
+                    // PASSO 4: Carrega moldura do banheiro como OVERLAY FINAL (camada por cima)
+                    var caminhoBanho = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Banheiros", $"Banho{numeroBathroom}.webp");
+
+                    if (System.IO.File.Exists(caminhoBanho))
+                    {
+                        using var banho = SKBitmap.Decode(caminhoBanho);
+                        _logger.LogInformation("Banho{Num}.webp carregado: {W}x{H}", numeroBathroom, banho.Width, banho.Height);
+
+                        // Desenha moldura POR CIMA em (0, 0)
+                        canvasFinal.DrawBitmap(banho, 0, 0);
+                        _logger.LogInformation("Banho{Num}.webp desenhado como overlay final em (0, 0)", numeroBathroom);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Banho{Num}.webp não encontrado: {Path}. Canvas sem moldura.", numeroBathroom, caminhoBanho);
+                    }
+
+                    // PASSO 5: Salva o quadrante final
+                    var nomeArquivo = $"bathroom{numeroBathroom}_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
+                    var caminhoFinal = Path.Combine(_uploadsPath, nomeArquivo);
+
+                    using var image = SKImage.FromBitmap(canvasBase);
+                    using var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
+                    using var outputStream = System.IO.File.OpenWrite(caminhoFinal);
+                    data.SaveTo(outputStream);
+
+                    caminhos.Add(nomeArquivo);
+                    _logger.LogInformation("Quadrante {Q} salvo: {Path}", quadrante, nomeArquivo);
+                }
+
+                await EnviarEventoSSE("sucesso", new {
+                    mensagem = $"Bathroom #{numeroBathroom} gerado com sucesso!",
+                    caminhos = caminhos
+                });
+
+                _logger.LogInformation("=== FIM Bathroom{Numero} Progressive ===", numeroBathroom);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Bathroom{Numero}", numeroBathroom);
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Cria bitmap rotacionado conforme orientação EXIF
+        /// </summary>
+        private SKBitmap CriarBitmapRotacionado(SKBitmap source, SKEncodedOrigin orientation)
+        {
+            var rotated = new SKBitmap(source.Height, source.Width); // Inverte dimensões para rotação 90/270
+            using var canvas = new SKCanvas(rotated);
+
+            switch (orientation)
+            {
+                case SKEncodedOrigin.LeftBottom: // 90° anti-horário
+                    canvas.Translate(0, source.Width);
+                    canvas.RotateDegrees(-90);
+                    break;
+                case SKEncodedOrigin.RightTop: // 90° horário (270° anti-horário)
+                    canvas.Translate(source.Height, 0);
+                    canvas.RotateDegrees(90);
+                    break;
+            }
+
+            canvas.DrawBitmap(source, 0, 0);
+            return rotated;
+        }
+
+        // ==================== FIM BATHROOM ====================
 
         /// <summary>
         /// Método auxiliar para enviar eventos SSE

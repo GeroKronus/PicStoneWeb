@@ -915,9 +915,10 @@ body {
         font-size: 15px;
     }
 
-    /* Garantir que botões Cavalete e Bancadas tenham tamanho idêntico no mobile/tablet */
+    /* Garantir que botões Cavalete, Bancadas e Bathrooms tenham tamanho idêntico no mobile/tablet */
     .btn-ambiente,
-    .btn-countertops {
+    .btn-countertops,
+    .btn-bathrooms {
         font-size: 16px !important;
         padding: 14px !important;
         width: 100% !important;
@@ -1074,6 +1075,22 @@ body {
     background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%);
     transform: translateY(-2px);
     box-shadow: 0 8px 15px -3px rgba(160, 82, 45, 0.4);
+}
+
+.btn-bathrooms {
+    background: linear-gradient(135deg, #1E90FF 0%, #00BFFF 100%);
+    color: white;
+    font-size: 18px;
+    padding: 14px;
+    margin-top: 10px;
+    width: 100% !important;
+    display: block;
+}
+
+.btn-bathrooms:hover {
+    background: linear-gradient(135deg, #00BFFF 0%, #1E90FF 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(30, 144, 255, 0.4);
 }
 
 .ambiente-config-card {
@@ -1516,6 +1533,11 @@ body {
     max-width: 1200px;
 }
 
+/* Aumenta largura do container da tela de banheiros para cards quadrados (DRY com bancadas) */
+#bathroomSelectionScreen .container {
+    max-width: 1200px;
+}
+
 /* Garante scroll suave em mobile */
 @media (max-width: 599px) {
     #countertopSelectionScreen .container {
@@ -1574,6 +1596,41 @@ body {
     font-size: 14px;
     margin: 0;
     color: rgba(255, 255, 255, 0.8);
+}
+
+/* Barra de Progresso */
+.progress-container {
+    margin-top: 24px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.progress-container.hidden {
+    display: none;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+.progress-text {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    font-weight: 500;
 }
 
 /* ========== TELA DE VERIFICAÇÃO DE EMAIL ========== */

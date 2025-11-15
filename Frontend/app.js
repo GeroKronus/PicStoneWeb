@@ -1,6 +1,115 @@
 // Configuração da API
 const API_URL = window.location.origin;
 
+// 🔍 DEBUG SYSTEM - Sistema de debug visual e detalhado
+const DEBUG_MODE = false;  // ✅ DESATIVADO - Bug resolvido!
+let globalClickLock = false;  // 🔒 Lock para prevenir cliques múltiplos
+const debugState = {
+    clickCount: 0,
+    activationCount: 0,
+    dragStartCount: 0,
+    dragEndCount: 0,
+    lockCount: 0
+};
+
+function debugLog(label, data = {}) {
+    if (!DEBUG_MODE) return;
+    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    console.log(`🔍 [${timestamp}] ${label}`, data);
+    updateDebugDisplay();
+}
+
+function updateDebugDisplay() {
+    if (!DEBUG_MODE) return;
+    let debugDiv = document.getElementById('debugDisplay');
+    if (!debugDiv) {
+        debugDiv = document.createElement('div');
+        debugDiv.id = 'debugDisplay';
+        debugDiv.style.cssText = 'position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.9);color:#0f0;padding:10px;font-family:monospace;font-size:11px;z-index:99999;border:2px solid #0f0;border-radius:5px;max-width:300px;pointer-events:auto !important;';
+        document.body.appendChild(debugDiv);
+    }
+    debugDiv.innerHTML = `
+        <div style="color:#ff0;font-weight:bold;margin-bottom:5px;">🔍 CROP DEBUG MONITOR</div>
+        <div>Cliques: ${debugState.clickCount}</div>
+        <div>Ativações: ${debugState.activationCount}</div>
+        <div>Drag Start: ${debugState.dragStartCount}</div>
+        <div>Drag End: ${debugState.dragEndCount}</div>
+        <div>Locks: ${debugState.lockCount}</div>
+        <div style="color:${globalClickLock ? '#f00' : '#0f0'};font-weight:bold;margin-top:5px;">
+            Status: ${globalClickLock ? '🔒 LOCKED' : '✅ UNLOCKED'}
+        </div>
+        <button id="emergencyUnlockBtn" style="width:100%;margin-top:10px;padding:8px;background:#f00;color:#fff;border:none;border-radius:5px;font-weight:bold;cursor:pointer;pointer-events:auto !important;font-size:12px;">
+            🚨 DESTRAVAR TUDO
+        </button>
+    `;
+
+    // Adicionar event listener ao botão de emergência
+    const emergencyBtn = document.getElementById('emergencyUnlockBtn');
+    if (emergencyBtn && !emergencyBtn.hasAttribute('data-listener-added')) {
+        emergencyBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            console.error('🚨 BOTÃO DE EMERGÊNCIA ACIONADO! Destravando tudo...');
+
+            // Reseta estado de crop
+            state.cropOverlayState.isActive = false;
+            state.cropOverlayState.isActivating = false;
+            state.cropOverlayState.isDragging = false;
+
+            // Oculta todos os canvas de crop
+            document.querySelectorAll('canvas[id*="cropOverlay"]').forEach(canvas => {
+                canvas.classList.add('hidden');
+            });
+
+            // Mostra todos os botões de crop
+            document.querySelectorAll('button[id*="adjustImageBtn"]').forEach(btn => {
+                btn.classList.remove('hidden');
+            });
+
+            // ✨ RESET COMPLETO: Volta para a tela principal
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const mainScreen = document.getElementById('mainScreen');
+            if (mainScreen) {
+                mainScreen.classList.add('active');
+            }
+
+            console.log('✅ Sistema resetado - voltou para tela principal');
+            alert('✅ Sistema destravado! Voltando para tela principal...');
+        });
+        emergencyBtn.setAttribute('data-listener-added', 'true');
+    }
+}
+
+// ✨ REMOVIDO COMPLETAMENTE: Sistema de lockClicks causava mais problemas que soluções
+// Proteções suficientes via: botão oculto + isActivating + isDragging + listener cleanup
+
+/**
+ * Converte Base64 para Blob
+ * @param {string} base64 - String Base64 (com ou sem prefixo data:image/...)
+ * @param {string} mimeType - Tipo MIME (padrão: image/jpeg)
+ * @returns {Blob} Blob da imagem
+ */
+function base64ToBlob(base64, mimeType = 'image/jpeg') {
+    // Remove prefixo se existir (data:image/jpeg;base64,...)
+    const base64Data = base64.includes(',') ? base64.split(',')[1] : base64;
+
+    // Decodifica Base64
+    const byteCharacters = atob(base64Data);
+    const byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+        const slice = byteCharacters.slice(offset, offset + 512);
+        const byteNumbers = new Array(slice.length);
+
+        for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+        }
+
+        byteArrays.push(new Uint8Array(byteNumbers));
+    }
+
+    return new Blob(byteArrays, { type: mimeType });
+}
+
 // Estado da aplicação
 const state = {
     token: localStorage.getItem('token') || null,
@@ -9,6 +118,7 @@ const state = {
     currentPhotoFile: null,
     uploadedImageId: null, // ID da imagem armazenada no servidor
     uploadInProgress: false, // ✨ FIX: Flag para indicar upload em andamento
+    isGeneratingMockup: false, // ✨ FIX: Flag para prevenir cliques duplos ao gerar mockups
     // ✨ NOVA ARQUITETURA: Coordenadas de crop (enviadas ao servidor ao invés de arquivo)
     cropCoordinates: null, // { x, y, width, height } ou null se não tem crop
     originalPhoto: null, // Foto original para ambiente
@@ -32,17 +142,35 @@ const state = {
         selectedType: null,     // 'bancada1' ou 'bancada2'
         flip: false            // Opção global de flip
     },
-    // Estado para crop overlay na Integração
-    cropOverlayState: {
-        isActive: false,
-        isDragging: false,
-        startX: 0,
-        startY: 0,
-        endX: 0,
-        endY: 0,
-        originalImageSrc: null,
-        canvasRect: null
+    // Estado específico para banheiros (bathrooms) - DRY com countertopState
+    bathroomState: {
+        selectedType: null      // 'banho1' ou 'banho2'
     },
+    // Estado para crop overlay na Integração
+    cropOverlayState: (() => {
+        let _isActive = false;
+        const obj = {
+            get isActive() {
+                return _isActive;
+            },
+            set isActive(value) {
+                const stack = new Error().stack;
+                debugLog(`🔄 isActive mudando de ${_isActive} para ${value}`, {
+                    stack: stack.split('\n').slice(2, 4).join('\n')  // Mostra caller
+                });
+                _isActive = value;
+            },
+            isActivating: false, // ✨ FIX: Previne cliques duplos no botão de crop
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            endX: 0,
+            endY: 0,
+            originalImageSrc: null,
+            canvasRect: null
+        };
+        return obj;
+    })(),
     // Estado compartilhado de imagem entre todos os cards
     sharedImageState: {
         originalImage: null,      // Base64 da imagem original
@@ -124,8 +252,11 @@ const elements = {
     cancelAmbienteBtn: document.getElementById('cancelAmbienteBtn'),
     continuarCropAmbienteBtn: document.getElementById('continuarCropAmbienteBtn'),
     countertopsBtn: document.getElementById('countertopsBtn'),
+    bathroomsBtn: document.getElementById('bathroomsBtn'),
     countertopSelectionScreen: document.getElementById('countertopSelectionScreen'),
     cancelCountertopSelectionBtn: document.getElementById('cancelCountertopSelectionBtn'),
+    bathroomSelectionScreen: document.getElementById('bathroomSelectionScreen'),
+    cancelBathroomSelectionBtn: document.getElementById('cancelBathroomSelectionBtn'),
     flipCountertop: document.getElementById('flipCountertop'),
     backToMainBtn: document.getElementById('backToMainBtn'),
     downloadAllAmbientesBtn: document.getElementById('downloadAllAmbientesBtn'),
@@ -420,8 +551,10 @@ function setupEventListeners() {
     // Ambiente event listeners
     elements.ambienteBtn.addEventListener('click', startAmbienteFlow);
     elements.countertopsBtn.addEventListener('click', startCountertopFlow);
+    elements.bathroomsBtn.addEventListener('click', startBathroomsFlow);
     elements.cancelAmbienteBtn.addEventListener('click', () => showMainScreen());
     elements.cancelCountertopSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
+    elements.cancelBathroomSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
     elements.continuarCropAmbienteBtn.addEventListener('click', abrirCropParaAmbiente);
     elements.backToMainBtn.addEventListener('click', handleBackFromResults);
     elements.newAmbienteBtn.addEventListener('click', startAmbienteFlow);
@@ -451,6 +584,23 @@ function setupEventListeners() {
             }
             const type = preview.dataset.type;
             selectCountertopAndGenerate(type);
+        }
+    });
+
+    // Event delegation para seleção de bathroom via click no thumb
+    document.addEventListener('click', (e) => {
+        const preview = e.target.closest('.countertop-preview');
+        if (preview && preview.dataset.type) {
+            const type = preview.dataset.type;
+            // Verifica se é um bathroom (banho1, banho2, etc)
+            if (type.startsWith('banho')) {
+                // Verifica se o card pai está desabilitado
+                const card = preview.closest('.countertop-card');
+                if (card && card.classList.contains('disabled')) {
+                    return; // Ignora clique em cards desabilitados
+                }
+                selectBathroomAndGenerate(type);
+            }
         }
     });
 
@@ -636,13 +786,15 @@ function showLoginScreen() {
 
 /**
  * Gerencia o botão "Voltar" da tela de resultados
- * Se há crop de countertop salvo, volta para seleção
- * Caso contrário, volta para tela principal
+ * DRY: Verifica o flow atual e volta para tela correta
  */
 function handleBackFromResults() {
     if (state.countertopState.croppedImage) {
-        // Está no flow de countertop: volta para seleção
+        // Está no flow de countertop: volta para seleção de bancadas
         showScreen(elements.countertopSelectionScreen);
+    } else if (state.bathroomState.selectedType) {
+        // Está no flow de bathroom: volta para seleção de banheiros
+        showScreen(elements.bathroomSelectionScreen);
     } else if (state.ambienteConfig.tipo === 'cavalete') {
         // Está no flow de cavalete: volta para ambientes com foto
         backToAmbientesWithPhoto();
@@ -751,8 +903,34 @@ function showAmbientesScreen() {
             state.originalPhoto = new Image();
             state.originalPhoto.src = sharedImage.originalImage;
             state.currentPhotoFile = sharedImage.file;
-            state.cropOverlayState.originalImageSrc = sharedImage.currentImage;
-            elements.previewImageAmbientes.src = sharedImage.currentImage;
+
+            // ✅ FIX: Só setar originalImageSrc se há crop ativo (state.cropCoordinates existe)
+            // Sem crop: originalImageSrc = null → mostra botão crop
+            // Com crop: originalImageSrc = imagem original → mostra botão reverter
+            if (state.cropCoordinates) {
+                // Tem crop ativo: originalImageSrc recebe a imagem ORIGINAL
+                state.cropOverlayState.originalImageSrc = sharedImage.originalImage;
+                elements.previewImageAmbientes.src = sharedImage.currentImage; // Exibe cropada
+                // Garante que botão reverter está visível
+                if (elements.resetImageBtnAmbientes) {
+                    elements.resetImageBtnAmbientes.classList.remove('hidden');
+                }
+                if (elements.adjustImageBtnAmbientes) {
+                    elements.adjustImageBtnAmbientes.classList.add('hidden');
+                }
+            } else {
+                // Sem crop: limpa originalImageSrc
+                state.cropOverlayState.originalImageSrc = null;
+                elements.previewImageAmbientes.src = sharedImage.currentImage; // Exibe original
+                // Garante que botão crop está visível
+                if (elements.resetImageBtnAmbientes) {
+                    elements.resetImageBtnAmbientes.classList.add('hidden');
+                }
+                if (elements.adjustImageBtnAmbientes) {
+                    elements.adjustImageBtnAmbientes.classList.remove('hidden');
+                }
+            }
+
             elements.photoPreviewAmbientes.classList.remove('hidden');
             if (elements.captureSectionAmbientes) {
                 elements.captureSectionAmbientes.classList.add('hidden');
@@ -912,6 +1090,7 @@ function clearPhoto() {
     elements.submitBtn.disabled = true;
     elements.ambienteBtn.classList.add('hidden');
     elements.countertopsBtn.classList.add('hidden');
+    elements.bathroomsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -923,6 +1102,7 @@ function clearPhotoState() {
     elements.submitBtn.disabled = true;
     elements.ambienteBtn.classList.add('hidden');
     elements.countertopsBtn.classList.add('hidden');
+    elements.bathroomsBtn.classList.add('hidden');
     elements.photoIndicator.classList.add('hidden');
 }
 
@@ -968,6 +1148,15 @@ function compressAndPreviewImageIntegracao(file) {
             elements.photoPreviewIntegracao.classList.remove('hidden');
             elements.submitBtn.disabled = false;
 
+            // ✨ FIX: Garantir que botões estejam no estado inicial ao carregar nova imagem
+            // Estado inicial = crop visível, reverter oculto
+            if (elements.adjustImageBtnIntegracao) {
+                elements.adjustImageBtnIntegracao.classList.remove('hidden');
+            }
+            if (elements.resetarImagemBtnIntegracao) {
+                elements.resetarImagemBtnIntegracao.classList.add('hidden');
+            }
+
             // Salva imagem no estado compartilhado
             const originalImageData = state.originalPhoto ? state.originalPhoto.src : dataUrl;
             saveSharedImage(originalImageData, dataUrl, file.name, processedFile, 'integracao');
@@ -981,6 +1170,8 @@ function compressAndPreviewImageIntegracao(file) {
 }
 
 function clearPhotoIntegracao() {
+    debugLog('🗑️ clearPhotoIntegracao() CHAMADO', {});
+
     // ✨ NOVO: Deleta imagem do servidor
     deleteImageFromServer();
 
@@ -992,6 +1183,7 @@ function clearPhotoIntegracao() {
     elements.submitBtn.disabled = true;
     // Reset crop overlay state
     state.cropOverlayState.isActive = false;
+    debugLog('❌ isActive SET TO FALSE (clearPhotoIntegracao)', {});
     state.cropOverlayState.originalImageSrc = null;
     elements.cropOverlayIntegracao.classList.add('hidden');
     elements.resetImageBtnIntegracao.classList.add('hidden');
@@ -1001,8 +1193,29 @@ function clearPhotoIntegracao() {
 // ========== INTEGRAÇÃO - CROP OVERLAY ==========
 
 // Função genérica para ativar crop overlay (usada por BookMatch, Ambientes, etc.)
-function ativarCropOverlay(imgElement, canvasElement, resetBtnElement, onCropComplete, indicatorElement = null) {
-    if (!imgElement || !imgElement.src) return;
+function ativarCropOverlay(imgElement, canvasElement, resetBtnElement, onCropComplete, indicatorElement = null, adjustImageBtn = null) {
+    debugState.activationCount++;
+    debugLog('🎯 ativarCropOverlay() CHAMADO', {
+        isActivating: state.cropOverlayState.isActivating,
+        isActive: state.cropOverlayState.isActive,
+        hasButton: !!adjustImageBtn
+    });
+
+    // ✨ FIX: Previne cliques duplos no botão de crop
+    if (state.cropOverlayState.isActivating) {
+        debugLog('❌ BLOQUEADO - Já está ativando!', {});
+        console.warn('⚠️ Crop overlay já está sendo ativado, ignorando clique duplo');
+        return;
+    }
+
+    if (!imgElement || !imgElement.src) {
+        debugLog('❌ BLOQUEADO - Sem imagem!', {});
+        return;
+    }
+
+    // ✨ FIX: Marca que está ativando o crop overlay
+    state.cropOverlayState.isActivating = true;
+    debugLog('✅ Flag isActivating = TRUE', {});
 
     // Store original image if not already stored
     if (!state.cropOverlayState.originalImageSrc) {
@@ -1014,7 +1227,23 @@ function ativarCropOverlay(imgElement, canvasElement, resetBtnElement, onCropCom
     state.cropOverlayState.currentImage = imgElement;
     state.cropOverlayState.currentResetBtn = resetBtnElement;
     state.cropOverlayState.currentIndicator = indicatorElement;
+    state.cropOverlayState.currentAdjustBtn = adjustImageBtn; // ✨ FIX: Guardar referência ao botão
     state.cropOverlayState.onCropComplete = onCropComplete;
+
+    // ✨ FIX: Ocultar botão de crop para prevenir cliques múltiplos
+    if (adjustImageBtn) {
+        adjustImageBtn.classList.add('hidden');
+        debugLog('👁️ Botão crop OCULTO', {});
+    }
+
+    // ✨ FIX: Ocultar botão reverter (modo original = só crop visível)
+    if (resetBtnElement) {
+        resetBtnElement.classList.add('hidden');
+        debugLog('👁️ Botão reverter OCULTO (modo crop ativo)', {});
+    }
+
+    // ✨ REMOVIDO: lockClicks() causava travamento em botões após múltiplos crops
+    // Proteção já existe via: botão oculto + isActivating + isDragging + listener cleanup
 
     // Setup canvas to match image EXACTLY
     canvasElement.width = imgElement.naturalWidth;
@@ -1029,6 +1258,11 @@ function ativarCropOverlay(imgElement, canvasElement, resetBtnElement, onCropCom
     // Show canvas overlay
     canvasElement.classList.remove('hidden');
     state.cropOverlayState.isActive = true;
+    debugLog('✅ isActive SETADO PARA TRUE', {
+        canvasHidden: canvasElement.classList.contains('hidden'),
+        canvasWidth: canvasElement.width,
+        canvasHeight: canvasElement.height
+    });
 
     // Mostrar indicador visual APENAS em mobile (se fornecido)
     if (indicatorElement) {
@@ -1048,6 +1282,11 @@ function ativarCropOverlay(imgElement, canvasElement, resetBtnElement, onCropCom
     // Update canvas rect AFTER showing it
     setTimeout(() => {
         state.cropOverlayState.canvasRect = canvasElement.getBoundingClientRect();
+
+        // ✨ FIX: Libera flag após setup completo do canvas (300ms é suficiente para prevenir cliques rápidos)
+        setTimeout(() => {
+            state.cropOverlayState.isActivating = false;
+        }, 300);
     }, 10);
 
     // Clear canvas
@@ -1066,7 +1305,8 @@ function ativarCropOverlayIntegracao() {
             // Coordenadas já foram armazenadas em state.cropCoordinates
             elements.previewImageIntegracao.src = croppedBase64;
         },
-        elements.cropIndicatorIntegracao
+        elements.cropIndicatorIntegracao,
+        elements.adjustImageBtnIntegracao // ✨ FIX: Passar botão para ocultar
     );
 }
 
@@ -1080,8 +1320,15 @@ function ativarCropOverlayAmbientes() {
             // ✨ NOVA ARQUITETURA: Apenas atualiza preview, mantém arquivo original
             // Coordenadas já foram armazenadas em state.cropCoordinates
             elements.previewImageAmbientes.src = croppedBase64;
+
+            // ✅ FIX: Atualiza sharedImage com imagem cropada para manter sincronia
+            if (state.sharedImageState) {
+                state.sharedImageState.currentImage = croppedBase64;
+                console.log('📸 sharedImage.currentImage atualizado com imagem cropada');
+            }
         },
-        elements.cropIndicatorAmbientes
+        elements.cropIndicatorAmbientes,
+        elements.adjustImageBtnAmbientes // ✨ FIX: Passar botão para ocultar
     );
 }
 
@@ -1092,19 +1339,52 @@ async function resetarParaOriginalAmbientes() {
         state.cropCoordinates = null;
 
         elements.previewImageAmbientes.src = state.cropOverlayState.originalImageSrc;
-        state.currentPhotoFile = null; // Reset to original file
+
+        // ✅ FIX CRÍTICO: NÃO resetar currentPhotoFile!
+        // O arquivo original ainda é válido após reverter o crop (crop só altera coordenadas, não o arquivo)
+        // Resetar para null causava validações a falharem em startCountertopFlow() e startBathroomsFlow()
+        // state.currentPhotoFile = null; // ❌ REMOVIDO - causava bug após múltiplos crops
+
         elements.resetImageBtnAmbientes.classList.add('hidden');
         elements.cropOverlayAmbientes.classList.add('hidden');
         elements.cropIndicatorAmbientes.classList.add('hidden');
         state.cropOverlayState.originalImageSrc = null;
+
+        // ✨ FIX: Resetar TODOS os estados do crop overlay para evitar conflitos
+        state.cropOverlayState.isActive = false;
+        state.cropOverlayState.isActivating = false;
+
+        // ✨ FIX: Mostrar botão de crop novamente ao resetar
+        if (elements.adjustImageBtnAmbientes) {
+            elements.adjustImageBtnAmbientes.classList.remove('hidden');
+        }
     }
 }
 
 function iniciarSelecaoCrop(e) {
-    if (!state.cropOverlayState.isActive) return;
+    debugState.clickCount++;
+    debugLog('🖱️ iniciarSelecaoCrop() - Clique no canvas', {
+        isActive: state.cropOverlayState.isActive,
+        isDragging: state.cropOverlayState.isDragging,
+        globalLocked: globalClickLock
+    });
+
+    if (!state.cropOverlayState.isActive) {
+        debugLog('❌ IGNORADO - Crop overlay não está ativo', {});
+        return;
+    }
+
+    // ✨ FIX: Previne múltiplas seleções simultâneas
+    if (state.cropOverlayState.isDragging) {
+        debugLog('❌ BLOQUEADO - Já está dragging!', {});
+        console.warn('⚠️ Seleção de crop já em andamento, ignorando clique');
+        return;
+    }
 
     e.preventDefault();
     state.cropOverlayState.isDragging = true;
+    debugState.dragStartCount++;
+    debugLog('✅ Drag iniciado - isDragging = TRUE', {});
 
     // Esconde o indicador visual quando o usuário começa a selecionar
     if (state.cropOverlayState.currentIndicator) {
@@ -1122,6 +1402,10 @@ function iniciarSelecaoCrop(e) {
     state.cropOverlayState.startY = (e.clientY - rect.top) * scaleY;
     state.cropOverlayState.endX = state.cropOverlayState.startX;
     state.cropOverlayState.endY = state.cropOverlayState.startY;
+
+    // ✨ FIX: Remove listeners antigos antes de adicionar novos (previne duplicação)
+    document.removeEventListener('mousemove', atualizarSelecaoCrop);
+    document.removeEventListener('mouseup', finalizarEAplicarCrop);
 
     // Add document listeners for move and up
     document.addEventListener('mousemove', atualizarSelecaoCrop);
@@ -1167,12 +1451,22 @@ function atualizarSelecaoCrop(e) {
 }
 
 function finalizarEAplicarCrop(e) {
-    if (!state.cropOverlayState.isDragging) return;
+    debugLog('🏁 finalizarEAplicarCrop() - Drag FINALIZADO', {
+        isDragging: state.cropOverlayState.isDragging
+    });
+
+    if (!state.cropOverlayState.isDragging) {
+        debugLog('❌ IGNORADO - Não estava dragging', {});
+        return;
+    }
 
     e.preventDefault();
     state.cropOverlayState.isDragging = false;
+    debugState.dragEndCount++;
+    debugLog('✅ isDragging = FALSE', {});
 
     // Remove document listeners
+    debugLog('🗑️ Removendo event listeners', {});
     document.removeEventListener('mousemove', atualizarSelecaoCrop);
     document.removeEventListener('mouseup', finalizarEAplicarCrop);
 
@@ -1181,12 +1475,24 @@ function finalizarEAplicarCrop(e) {
     const width = Math.abs(state.cropOverlayState.endX - state.cropOverlayState.startX);
     const height = Math.abs(state.cropOverlayState.endY - state.cropOverlayState.startY);
 
-    // Check if selection is valid (minimum 10x10 pixels)
-    if (width < 10 || height < 10) {
+    // Check if selection is valid (minimum 30x30 pixels)
+    if (width < 30 || height < 30) {
+        debugLog('⚠️ Seleção muito pequena - CANCELANDO', { width, height });
         // Selection too small, just hide overlay
         const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
         canvas.classList.add('hidden');
         state.cropOverlayState.isActive = false;
+        debugLog('❌ isActive SET TO FALSE (seleção pequena)', {});
+
+        // ✨ FIX: MUTUAMENTE EXCLUSIVO - Volta ao estado original (apenas crop visível)
+        if (state.cropOverlayState.currentAdjustBtn) {
+            state.cropOverlayState.currentAdjustBtn.classList.remove('hidden');
+            debugLog('👁️ Botão CROP revelado (cancelamento)', {});
+        }
+        if (state.cropOverlayState.currentResetBtn) {
+            state.cropOverlayState.currentResetBtn.classList.add('hidden');
+            debugLog('🙈 Botão REVERTER oculto (cancelamento)', {});
+        }
         return;
     }
 
@@ -1221,10 +1527,13 @@ async function aplicarCropGenerico(x, y, width, height) {
         const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
         canvas.classList.add('hidden');
         state.cropOverlayState.isActive = false;
+        debugLog('❌ isActive SET TO FALSE (aplicarCropGenerico - sucesso)', {});
 
-        // Show reset button (se fornecido)
+        // ✨ FIX: MUTUAMENTE EXCLUSIVO - Apenas botão REVERTER visível (crop aplicado)
+        // Botão CROP permanece oculto (só volta ao resetar)
         if (state.cropOverlayState.currentResetBtn) {
             state.cropOverlayState.currentResetBtn.classList.remove('hidden');
+            debugLog('👁️ Botão REVERTER revelado (crop aplicado)', {});
         }
 
         // Call callback com preview visual (base64) - SEM arquivo
@@ -1238,6 +1547,12 @@ async function aplicarCropGenerico(x, y, width, height) {
 
 function iniciarSelecaoCropTouch(e) {
     if (!state.cropOverlayState.isActive) return;
+
+    // ✨ FIX: Previne múltiplas seleções simultâneas
+    if (state.cropOverlayState.isDragging) {
+        console.warn('⚠️ Seleção de crop já em andamento, ignorando toque');
+        return;
+    }
 
     e.preventDefault();
     const touch = e.touches[0];
@@ -1258,6 +1573,10 @@ function iniciarSelecaoCropTouch(e) {
     state.cropOverlayState.startY = (touch.clientY - rect.top) * scaleY;
     state.cropOverlayState.endX = state.cropOverlayState.startX;
     state.cropOverlayState.endY = state.cropOverlayState.startY;
+
+    // ✨ FIX: Remove listeners antigos antes de adicionar novos (previne duplicação)
+    document.removeEventListener('touchmove', atualizarSelecaoCropTouch);
+    document.removeEventListener('touchend', finalizarEAplicarCropTouch);
 
     // Add document listeners for touch move and end
     document.addEventListener('touchmove', atualizarSelecaoCropTouch, { passive: false });
@@ -1311,11 +1630,26 @@ function finalizarEAplicarCropTouch(e) {
     const width = Math.abs(state.cropOverlayState.endX - state.cropOverlayState.startX);
     const height = Math.abs(state.cropOverlayState.endY - state.cropOverlayState.startY);
 
-    // Check if selection is valid (minimum 10x10 pixels)
-    if (width < 10 || height < 10) {
+    // Check if selection is valid (minimum 30x30 pixels)
+    if (width < 30 || height < 30) {
+        debugLog('⚠️ Seleção TOUCH muito pequena - CANCELANDO', { width, height });
         // Selection too small, just hide overlay
-        elements.cropOverlayIntegracao.classList.add('hidden');
+        const canvas = state.cropOverlayState.currentCanvas || elements.cropOverlayIntegracao;
+        canvas.classList.add('hidden');
+        debugLog('🙈 Canvas OCULTO após cancelamento TOUCH', { canvasId: canvas.id });
+
         state.cropOverlayState.isActive = false;
+        debugLog('❌ isActive SET TO FALSE (finalizarEAplicarCropTouch - seleção pequena)', {});
+
+        // ✨ FIX: MUTUAMENTE EXCLUSIVO - Volta ao estado original (apenas crop visível)
+        if (state.cropOverlayState.currentAdjustBtn) {
+            state.cropOverlayState.currentAdjustBtn.classList.remove('hidden');
+            debugLog('👁️ Botão CROP revelado (cancelamento TOUCH)', {});
+        }
+        if (state.cropOverlayState.currentResetBtn) {
+            state.cropOverlayState.currentResetBtn.classList.add('hidden');
+            debugLog('🙈 Botão REVERTER oculto (cancelamento TOUCH)', {});
+        }
         return;
     }
 
@@ -1333,15 +1667,17 @@ async function resetarParaOriginalIntegracao() {
     // Restore original image
     elements.previewImageIntegracao.src = state.cropOverlayState.originalImageSrc;
 
-    // Recreate the file from the original image
-    fetch(state.cropOverlayState.originalImageSrc)
-        .then(res => res.blob())
-        .then(blob => {
-            state.currentPhotoFile = new File([blob], 'original.jpg', {
-                type: 'image/jpeg',
-                lastModified: Date.now()
-            });
-        });
+    // ✅ FIX CRÍTICO: NÃO resetar currentPhotoFile!
+    // O arquivo original ainda é válido após reverter o crop (crop só altera coordenadas, não o arquivo)
+    // Não é necessário recriar o arquivo via fetch - o original em state.currentPhotoFile permanece válido
+    // fetch(state.cropOverlayState.originalImageSrc)
+    //     .then(res => res.blob())
+    //     .then(blob => {
+    //         state.currentPhotoFile = new File([blob], 'original.jpg', {
+    //             type: 'image/jpeg',
+    //             lastModified: Date.now()
+    //         });
+    //     });
 
     // Hide reset button and clear stored original since we're back to original
     elements.resetImageBtnIntegracao.classList.add('hidden');
@@ -1350,6 +1686,13 @@ async function resetarParaOriginalIntegracao() {
     // Also hide the crop overlay if it was visible
     elements.cropOverlayIntegracao.classList.add('hidden');
     state.cropOverlayState.isActive = false;
+    state.cropOverlayState.isActivating = false;
+    debugLog('❌ isActive e isActivating SET TO FALSE (resetarParaOriginalIntegracao)', {});
+
+    // ✨ FIX: Mostrar botão de crop novamente ao resetar
+    if (elements.adjustImageBtnIntegracao) {
+        elements.adjustImageBtnIntegracao.classList.remove('hidden');
+    }
 }
 
 // ========== UPLOAD DE IMAGEM PARA SERVIDOR ==========
@@ -1598,6 +1941,15 @@ function compressAndPreviewImageAmbientes(file) {
             // Mostra opções de ambiente
             elements.ambienteOptions.classList.remove('hidden');
 
+            // ✨ FIX: Garantir que botões estejam no estado inicial ao carregar nova imagem
+            // Estado inicial = crop visível, reverter oculto
+            if (elements.adjustImageBtnAmbientes) {
+                elements.adjustImageBtnAmbientes.classList.remove('hidden');
+            }
+            if (elements.resetarImagemBtnAmbientes) {
+                elements.resetarImagemBtnAmbientes.classList.add('hidden');
+            }
+
             // Salva imagem no estado compartilhado
             const originalImageData = state.originalPhoto ? state.originalPhoto.src : dataUrl;
             saveSharedImage(originalImageData, dataUrl, file.name, processedFile, 'ambientes');
@@ -1686,6 +2038,7 @@ async function handleUpload(e) {
         elements.ambienteBtn.classList.remove('hidden');
         elements.nichoBtn.classList.remove('hidden');
         elements.countertopsBtn.classList.remove('hidden');
+        elements.bathroomsBtn.classList.remove('hidden');
 
         // Limpa apenas o preview e formulário (mantém imagem original)
         setTimeout(() => {
@@ -2350,6 +2703,9 @@ function resetToOriginalImage() {
 
 // ========== MOCKUP DE CAVALETES ==========
 async function startAmbienteFlow() {
+    // 🔧 EMERGENCY FIX: Reseta flag travada se usuário voltar ao menu principal
+    state.isGeneratingMockup = false;
+
     if (!state.originalPhoto) {
         showMessage('Nenhuma foto disponível para ambiente', 'error');
         return;
@@ -2361,6 +2717,11 @@ async function startAmbienteFlow() {
 }
 
 function abrirCropParaAmbiente() {
+    // ✅ FIX: Check de isGeneratingMockup REMOVIDO
+    // Motivo: Se flag ficar travada após erro, usuário fica bloqueado permanentemente
+    // A função gerarAmbiente() já tem proteção no try/finally que reseta a flag (linha 2830)
+    // Múltiplas chamadas são controladas pelo loading overlay que bloqueia a UI
+
     // Verifica se tem imagem disponível
     if (!state.currentPhotoFile) {
         showMessage('Por favor, selecione uma foto primeiro', 'error');
@@ -2379,6 +2740,9 @@ function abrirCropParaAmbiente() {
     state.countertopState.croppedImage = null;
     state.countertopState.selectedType = null;
     state.countertopState.flip = false;
+
+    // ✨ FIX: Marca que está gerando mockup
+    state.isGeneratingMockup = true;
 
     // Gera ambiente direto com a imagem atual (cropada ou original)
     gerarAmbiente(state.currentPhotoFile);
@@ -2580,6 +2944,9 @@ async function gerarAmbiente(imagemCropada) {
         elements.loadingOverlay.classList.add('hidden');
         elements.progressContainer.classList.add('hidden');
         elements.progressBar.style.width = '0%';
+
+        // ✨ FIX: Libera flag de geração para permitir novas gerações
+        state.isGeneratingMockup = false;
     }
 }
 
@@ -2667,6 +3034,15 @@ function showAmbienteMessage(message, type) {
  * Passo 1: Inicia o flow de countertop - mostra tela de seleção de tipo
  */
 async function startCountertopFlow() {
+    // 🔧 EMERGENCY FIX: Reseta flag travada se usuário voltar ao menu principal
+    state.isGeneratingMockup = false;
+
+    // 🔧 FIX: Garantir que crop overlay esteja oculto (pode estar bloqueando cliques)
+    if (elements.cropOverlayAmbientes) {
+        elements.cropOverlayAmbientes.classList.add('hidden');
+    }
+    state.cropOverlayState.isActive = false;
+
     if (!state.currentPhotoFile) {
         showMessage('Por favor, selecione uma foto primeiro', 'error');
         return;
@@ -2715,6 +3091,11 @@ function showCountertopSelection(croppedImageBlob) {
  * Passo 3: Usuário selecionou tipo de bancada e clicou em gerar
  */
 async function selectCountertopAndGenerate(type) {
+    // ✅ FIX: Check de isGeneratingMockup REMOVIDO
+    // Motivo: Se flag ficar travada após erro, usuário fica bloqueado permanentemente
+    // A função generateCountertopAmbiente() já tem proteção no try/finally que reseta a flag (linha 3081)
+    // Múltiplas chamadas são controladas pelo loading overlay que bloqueia a UI
+
     if (!state.countertopState.croppedImage) {
         showMessage('Erro: Imagem cortada não encontrada', 'error');
         return;
@@ -2723,6 +3104,9 @@ async function selectCountertopAndGenerate(type) {
     // Salva seleção
     state.countertopState.selectedType = type;
     state.countertopState.flip = elements.flipCountertop ? elements.flipCountertop.checked : false;
+
+    // ✨ FIX: Marca que está gerando mockup
+    state.isGeneratingMockup = true;
 
     // Gera ambiente
     await generateCountertopAmbiente();
@@ -2820,6 +3204,8 @@ async function generateCountertopAmbiente() {
         elements.loadingOverlay.classList.add('hidden');
         // Limpa flag de countertop
         state.ambienteConfig.tipo = 'simples';
+        // ✨ FIX: Libera flag de geração para permitir novas gerações
+        state.isGeneratingMockup = false;
     }
 }
 
@@ -3382,6 +3768,175 @@ async function loadAppVersion() {
 window.addEventListener('DOMContentLoaded', () => {
     loadAppVersion();
 });
+
+// ========== BATHROOMS MOCKUP FLOW ==========
+
+/**
+ * Inicia o flow de Bathroom - gera ambos bathroom1 e bathroom2
+ */
+async function startBathroomsFlow() {
+    // 🔧 EMERGENCY FIX: Reseta flag travada se usuário voltar ao menu principal
+    state.isGeneratingMockup = false;
+
+    if (!state.currentPhotoFile) {
+        showMessage('Por favor, selecione uma foto primeiro', 'error');
+        return;
+    }
+
+    // Mostra tela de seleção de banheiro
+    showScreen(elements.bathroomSelectionScreen);
+}
+
+/**
+ * Seleciona banheiro e inicia geração
+ */
+async function selectBathroomAndGenerate(type) {
+    if (!state.currentPhotoFile) {
+        showMessage('Erro: Foto não encontrada', 'error');
+        return;
+    }
+
+    // ✨ FIX: Marca que está gerando mockup
+    state.isGeneratingMockup = true;
+
+    try {
+        // Prepara para receber os mockups
+        state.ambienteUrls = [];
+        state.ambienteMode = true;
+
+        // Mostra tela de resultados
+        showScreen(elements.ambienteResultScreen);
+        elements.ambientesGallery.innerHTML = '<div class="loading">Gerando Bathroom...</div>';
+
+        // Extrai número do tipo (banho1 → 1)
+        const bathroomNumber = parseInt(type.replace('banho', ''));
+
+        // Salva tipo selecionado no estado (para navegação do botão Voltar)
+        state.bathroomState.selectedType = type;
+
+        // Gera Bathroom selecionado
+        await gerarBathroomProgressivo(bathroomNumber);
+
+        // Atualiza mensagem de sucesso
+        const totalGerados = state.ambienteUrls.length;
+        showAmbienteMessage(`${totalGerados} quadrante${totalGerados > 1 ? 's' : ''} gerado${totalGerados > 1 ? 's' : ''} com sucesso!`, 'success');
+
+    } catch (error) {
+        console.error('Erro ao gerar bathroom:', error);
+        showAmbienteMessage('Erro ao gerar bathroom: ' + error.message, 'error');
+    } finally {
+        // ✨ FIX: Libera flag de geração para permitir novas gerações
+        state.isGeneratingMockup = false;
+    }
+}
+
+/**
+ * Gera um Bathroom específico via SSE Progressive
+ */
+async function gerarBathroomProgressivo(numero) {
+    const formData = new FormData();
+
+    // ✅ FIX: Usar imagem CROPADA ao invés da original
+    // Se existe imagem cropada em Base64, converte para Blob e usa
+    if (state.sharedImageState && state.sharedImageState.currentImage) {
+        const croppedBlob = base64ToBlob(state.sharedImageState.currentImage);
+        formData.append('imagemCropada', croppedBlob, 'cropped.jpg');
+        console.log('✅ Usando imagem CROPADA para bathroom');
+    } else {
+        // Fallback: usa arquivo original se não houver crop
+        formData.append('imagemCropada', state.currentPhotoFile);
+        console.log('⚠️ Usando imagem ORIGINAL para bathroom (sem crop)');
+    }
+
+    formData.append('fundo', 'claro'); // Pode ser parametrizado depois
+
+    const endpoint = `${API_URL}/api/mockup/bathroom${numero}/progressive`;
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const jsonStr = line.slice(6);
+                    try {
+                        const event = JSON.parse(jsonStr);
+
+                        if (event.type === 'inicio') {
+                            console.log(`Bathroom ${numero}: ${event.data.mensagem}`);
+                        } else if (event.type === 'progresso') {
+                            console.log(`Bathroom ${numero}: ${event.data.etapa}`);
+                            elements.ambientesGallery.innerHTML = `<div class="loading">${event.data.etapa}</div>`;
+                        } else if (event.type === 'sucesso') {
+                            // Adiciona os 4 quadrantes à galeria
+                            event.data.caminhos.forEach(caminho => {
+                                const imageUrl = `${API_URL}/uploads/mockups/${caminho}`;
+                                state.ambienteUrls.push(imageUrl);
+                                adicionarImagemAGaleria(imageUrl, `Bathroom #${numero}`);
+                            });
+                        } else if (event.type === 'erro') {
+                            throw new Error(event.data.mensagem);
+                        }
+                    } catch (parseError) {
+                        console.warn('Erro ao parsear evento SSE:', parseError);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Erro ao gerar Bathroom ${numero}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Adiciona uma imagem à galeria de resultados
+ */
+function adicionarImagemAGaleria(imageUrl, label) {
+    if (elements.ambientesGallery.querySelector('.loading')) {
+        elements.ambientesGallery.innerHTML = '';
+    }
+
+    const ambienteItem = document.createElement('div');
+    ambienteItem.className = 'ambiente-item';
+
+    ambienteItem.innerHTML = `
+        <img src="${imageUrl}" alt="${label}">
+        <div class="ambiente-actions">
+            <button class="btn btn-secondary btn-download-single"
+                    data-url="${imageUrl}"
+                    data-nome="${label}">
+                ⬇️ Baixar
+            </button>
+            <button class="btn btn-primary btn-share-single"
+                    data-url="${imageUrl}"
+                    data-nome="${label}">
+                📤 Compartilhar
+            </button>
+        </div>
+    `;
+
+    elements.ambientesGallery.appendChild(ambienteItem);
+}
 
 // ========== SERVICE WORKER (para PWA futuro) ==========
 if ('serviceWorker' in navigator) {

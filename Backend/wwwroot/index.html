@@ -401,6 +401,7 @@
                 <h3>Escolha o tipo de ambiente:</h3>
                 <button id="ambienteBtn" class="btn btn-ambiente">📐 Simular Cavalete</button>
                 <button id="countertopsBtn" class="btn btn-countertops">🪑 Simular Bancadas</button>
+                <button id="bathroomsBtn" class="btn btn-bathrooms">🛁 Simular Bathrooms</button>
             </div>
         </div>
     </div>
@@ -605,6 +606,36 @@
         </div>
     </div>
 
+    <!-- Tela de Seleção de Banheiro -->
+    <div id="bathroomSelectionScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelBathroomSelectionBtn" class="btn-icon">← Voltar</button>
+                <h1>Escolha o Banheiro</h1>
+            </div>
+
+            <div class="ambiente-config-card">
+                <div class="config-section">
+                    <h3>Escolha o Design</h3>
+                    <div class="countertop-options">
+                        <div class="countertop-card" data-type="banho1">
+                            <div class="countertop-preview" data-type="banho1">
+                                <img src="/images/thumb-banho1.webp" alt="Preview Banheiro #1">
+                            </div>
+                            <h4>Banheiro #1</h4>
+                        </div>
+                        <div class="countertop-card" data-type="banho2">
+                            <div class="countertop-preview" data-type="banho2">
+                                <img src="/images/thumb-banho2.webp" alt="Preview Banheiro #2">
+                            </div>
+                            <h4>Banheiro #2</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Tela de Resultado do Ambiente -->
     <div id="ambienteResultScreen" class="screen">
         <div class="container">
@@ -619,7 +650,6 @@
 
             <div class="ambiente-actions">
                 <button id="downloadAllAmbientesBtn" class="btn btn-primary">⬇️ Baixar Todos</button>
-                <button id="modifyCropBtn" class="btn btn-secondary">✂️ Modificar Crop</button>
                 <button id="newAmbienteBtn" class="btn btn-secondary">🔄 Gerar Novos</button>
             </div>
 
@@ -1001,8 +1031,8 @@
         </div>
     </div>
 
-    <script src="app.js?v=20251114023000"></script>
-    <script src="bookmatch.js?v=20251110190000"></script>
+    <script src="app.js?v=20251114230000"></script>
+    <script src="bookmatch.js?v=20251114144500"></script>
     <script src="history.js?v=20251111120000"></script>
 </body>
 </html>

@@ -35,7 +35,7 @@ python "D:\Script Python\Monitor ETH\modo.py" remoto-pid 12345
 
 **PASSO 3:** Envie notificação Telegram se identificando:
 ```bash
-python "D:\Script Python\Monitor ETH\notificar.py" info "🟢 Instância Claude ativada em modo remoto! PID configurado: [PID]. Identificação estável - não muda durante a sessão. O sistema auto_despertar.py agora enviará comandos APENAS para este PID. Aguardando comandos." "Monitor ETH"
+python "D:\Script Python\Monitor ETH\notificar.py" info "🟢 Instância Claude ativada em modo remoto! PID configurado: [PID]. Identificação estável - não muda durante a sessão. O sistema auto_despertar.py agora enviará comandos APENAS para este PID. Aguardando comandos." "Claude Remoto"
 ```
 
 **PASSO 4:** Responda no console: "✅ Modo remoto ativado. Configurada como alvo - PID: [PID]"
