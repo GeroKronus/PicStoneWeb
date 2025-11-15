@@ -27,7 +27,6 @@ const bookmatchElements = {
 
     // Options
     bookmatchOptions: document.getElementById('bookmatchOptions'),
-    targetWidth: document.getElementById('targetWidth'),
     addSeparatorLines: document.getElementById('addSeparatorLines'),
     generateBookmatchBtn: document.getElementById('generateBookmatchBtn'),
 
@@ -233,7 +232,7 @@ async function generateBookmatch() {
             cropY: 0,
             cropWidth: img.naturalWidth,
             cropHeight: img.naturalHeight,
-            targetWidth: parseInt(bookmatchElements.targetWidth.value) || 800,
+            targetWidth: 700,  // Valor fixo conforme solicitado
             addSeparatorLines: bookmatchElements.addSeparatorLines.checked
         };
 

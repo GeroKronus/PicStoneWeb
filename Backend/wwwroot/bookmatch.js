@@ -27,7 +27,6 @@ const bookmatchElements = {
 
     // Options
     bookmatchOptions: document.getElementById('bookmatchOptions'),
-    targetWidth: document.getElementById('targetWidth'),
     addSeparatorLines: document.getElementById('addSeparatorLines'),
     generateBookmatchBtn: document.getElementById('generateBookmatchBtn'),
 
@@ -49,8 +48,18 @@ function initBookMatch() {
     }
     if (bookmatchElements.backToMainFromBookmatchBtn) {
         bookmatchElements.backToMainFromBookmatchBtn.addEventListener('click', () => {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('mainScreen').classList.add('active');
+            // ✅ FIX: Se estiver na tela de resultados, volta para bookmatchOptions
+            // Padrão DRY igual aos Bathrooms e Countertops (handleBackFromResults)
+            if (!bookmatchElements.bookmatchResults.classList.contains('hidden')) {
+                // Esconde resultados, mostra opções novamente
+                bookmatchElements.bookmatchResults.classList.add('hidden');
+                bookmatchElements.bookmatchOptions.classList.remove('hidden');
+                bookmatchElements.photoPreviewBookmatch.classList.remove('hidden');
+            } else {
+                // Se não está em resultados, volta para tela principal
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('mainScreen').classList.add('active');
+            }
         });
     }
 
@@ -223,7 +232,7 @@ async function generateBookmatch() {
             cropY: 0,
             cropWidth: img.naturalWidth,
             cropHeight: img.naturalHeight,
-            targetWidth: parseInt(bookmatchElements.targetWidth.value) || 800,
+            targetWidth: 700,  // Valor fixo conforme solicitado
             addSeparatorLines: bookmatchElements.addSeparatorLines.checked
         };
 
