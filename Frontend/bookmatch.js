@@ -49,8 +49,18 @@ function initBookMatch() {
     }
     if (bookmatchElements.backToMainFromBookmatchBtn) {
         bookmatchElements.backToMainFromBookmatchBtn.addEventListener('click', () => {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById('mainScreen').classList.add('active');
+            // ✅ FIX: Se estiver na tela de resultados, volta para bookmatchOptions
+            // Padrão DRY igual aos Bathrooms e Countertops (handleBackFromResults)
+            if (!bookmatchElements.bookmatchResults.classList.contains('hidden')) {
+                // Esconde resultados, mostra opções novamente
+                bookmatchElements.bookmatchResults.classList.add('hidden');
+                bookmatchElements.bookmatchOptions.classList.remove('hidden');
+                bookmatchElements.photoPreviewBookmatch.classList.remove('hidden');
+            } else {
+                // Se não está em resultados, volta para tela principal
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('mainScreen').classList.add('active');
+            }
         });
     }
 
