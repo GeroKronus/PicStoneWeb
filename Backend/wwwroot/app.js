@@ -577,12 +577,16 @@ function setupEventListeners() {
     document.addEventListener('click', (e) => {
         const preview = e.target.closest('.countertop-preview');
         if (preview && preview.dataset.type) {
+            const type = preview.dataset.type;
+            // 🔧 FIX: Ignora se for bathroom (será tratado pelo listener específico)
+            if (type.startsWith('banho')) {
+                return;
+            }
             // Verifica se o card pai está desabilitado
             const card = preview.closest('.countertop-card');
             if (card && card.classList.contains('disabled')) {
                 return; // Ignora clique em cards desabilitados
             }
-            const type = preview.dataset.type;
             selectCountertopAndGenerate(type);
         }
     });
