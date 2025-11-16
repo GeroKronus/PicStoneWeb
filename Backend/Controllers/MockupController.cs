@@ -1930,13 +1930,13 @@ namespace PicStoneFotoAPI.Controllers
                 for (int i = 0; i < quadrantesBitmaps.Count; i++)
                 {
                     var quadrante = i + 1;
-                    var nomeArquivo = $"liveroom2_q{quadrante}_user{usuarioId}_{DateTime.Now:yyyyMMddHHmmss}.jpg";
-                    var caminhoCompleto = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "mockups", nomeArquivo);
+                    var nomeArquivo = $"livingroom2_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
+                    var caminhoFinal = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva quadrante
                     using (var image = SKImage.FromBitmap(quadrantesBitmaps[i]))
                     using (var data = image.Encode(SKEncodedImageFormat.Jpeg, 95))
-                    using (var stream = System.IO.File.OpenWrite(caminhoCompleto))
+                    using (var stream = System.IO.File.OpenWrite(caminhoFinal))
                     {
                         data.SaveTo(stream);
                     }
@@ -1955,16 +1955,28 @@ namespace PicStoneFotoAPI.Controllers
                     _logger.LogInformation("Quadrante {Q}/4 salvo: {Nome}", quadrante, nomeArquivo);
                 }
 
-                // Dispose dos bitmaps após salvar
+                // Limpa bitmaps agora que foram salvos
                 foreach (var bitmap in quadrantesBitmaps)
                 {
                     bitmap.Dispose();
                 }
+                quadrantesBitmaps.Clear();
 
-                // Envia evento de sucesso
-                await EnviarEventoSSE("sucesso", new { caminhos = caminhos });
+                // Registra geração no histórico
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "LivingRoom2",
+                    detalhes: $"{{\"fundo\":\"{fundo}\"}}",
+                    quantidadeImagens: caminhos.Count
+                );
 
-                _logger.LogInformation("=== Living Room #2 Progressive CONCLUÍDO ===");
+                await EnviarEventoSSE("sucesso", new
+                {
+                    mensagem = "Living Room #2 gerado com sucesso!",
+                    caminhos = caminhos
+                });
+
+                _logger.LogInformation("=== FIM Living Room #2 Progressive ===");
             }
             catch (Exception ex)
             {
