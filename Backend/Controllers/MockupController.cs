@@ -1036,19 +1036,9 @@ namespace PicStoneFotoAPI.Controllers
 
                     var sufixo = i == 0 ? "normal" : "rotacionado";
                     var nomeArquivo = $"bancada1_{sufixo}_User{usuarioId}.jpg";
-                    var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
-                    // Salva com qualidade JPEG 95%
-                    using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
-                    {
-                        using (var image = SKImage.FromBitmap(mockups[i]))
-                        {
-                            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-                            data.SaveTo(fileStream);
-                        }
-                    }
-
-                    var caminhoUrl = $"/uploads/mockups/{nomeArquivo}";
+                    // Salva com cache-busting timestamp
+                    var caminhoUrl = SalvarMockupComCacheBusting(mockups[i], nomeArquivo, "/uploads/mockups");
                     caminhos.Add(caminhoUrl);
 
                     _logger.LogInformation($"Mockup Bancada1 salvo: {nomeArquivo}");
@@ -1144,20 +1134,26 @@ namespace PicStoneFotoAPI.Controllers
                 // 1. CavaletePronto - Duplo: original à esquerda, espelho à direita
                 await EnviarEventoSSE("progress", new { index = 0, total = 3, mensagem = "Gerando cavalete duplo (normal)..." });
                 var caminhoDuplo1 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, fundo, inverterLados: false, usuarioId: usuarioId);
-                caminhos.Add($"/uploads/{caminhoDuplo1}");
-                await EnviarEventoSSE("mockup", new { index = 0, total = 3, url = $"/uploads/{caminhoDuplo1}", mensagem = "Cavalete duplo 1/3 pronto!" });
+                var timestamp1 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var urlDuplo1 = $"/uploads/{caminhoDuplo1}?v={timestamp1}";
+                caminhos.Add(urlDuplo1);
+                await EnviarEventoSSE("mockup", new { index = 0, total = 3, url = urlDuplo1, mensagem = "Cavalete duplo 1/3 pronto!" });
 
                 // 2. CavaletePronto2 - Duplo invertido: espelho à esquerda, original à direita
                 await EnviarEventoSSE("progress", new { index = 1, total = 3, mensagem = "Gerando cavalete duplo (invertido)..." });
                 var caminhoDuplo2 = await _mockupService.GerarCavaleteDuplo(bitmapCropado, fundo, inverterLados: true, usuarioId: usuarioId);
-                caminhos.Add($"/uploads/{caminhoDuplo2}");
-                await EnviarEventoSSE("mockup", new { index = 1, total = 3, url = $"/uploads/{caminhoDuplo2}", mensagem = "Cavalete duplo 2/3 pronto!" });
+                var timestamp2 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var urlDuplo2 = $"/uploads/{caminhoDuplo2}?v={timestamp2}";
+                caminhos.Add(urlDuplo2);
+                await EnviarEventoSSE("mockup", new { index = 1, total = 3, url = urlDuplo2, mensagem = "Cavalete duplo 2/3 pronto!" });
 
                 // 3. CavaletePronto3 - Simples
                 await EnviarEventoSSE("progress", new { index = 2, total = 3, mensagem = "Gerando cavalete simples..." });
                 var caminhoSimples = await _mockupService.GerarCavaleteSimples(bitmapCropado, fundo, usuarioId: usuarioId);
-                caminhos.Add($"/uploads/{caminhoSimples}");
-                await EnviarEventoSSE("mockup", new { index = 2, total = 3, url = $"/uploads/{caminhoSimples}", mensagem = "Cavalete simples 3/3 pronto!" });
+                var timestamp3 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var urlSimples = $"/uploads/{caminhoSimples}?v={timestamp3}";
+                caminhos.Add(urlSimples);
+                await EnviarEventoSSE("mockup", new { index = 2, total = 3, url = urlSimples, mensagem = "Cavalete simples 3/3 pronto!" });
 
                 // Registra geração no histórico
                 await _historyService.RegistrarAmbienteAsync(
@@ -1247,19 +1243,9 @@ namespace PicStoneFotoAPI.Controllers
 
                     var sufixo = i == 0 ? "normal" : "rotacionado";
                     var nomeArquivo = $"nicho1_{sufixo}_User{usuarioId}.jpg";
-                    var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
-                    // Salva com qualidade JPEG 95%
-                    using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
-                    {
-                        using (var image = SKImage.FromBitmap(mockups[i]))
-                        {
-                            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-                            data.SaveTo(fileStream);
-                        }
-                    }
-
-                    var caminhoUrl = $"/uploads/mockups/{nomeArquivo}";
+                    // Salva com cache-busting timestamp
+                    var caminhoUrl = SalvarMockupComCacheBusting(mockups[i], nomeArquivo, "/uploads/mockups");
                     caminhos.Add(caminhoUrl);
 
                     _logger.LogInformation("Mockup Nicho1 salvo: {Caminho}", nomeArquivo);
@@ -1425,19 +1411,9 @@ namespace PicStoneFotoAPI.Controllers
 
                     var sufixo = i == 0 ? "normal" : $"variacao{i}";
                     var nomeArquivo = $"bancada{numeroBancada}_{sufixo}_User{usuarioId}.jpg";
-                    var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
-                    // Salva com qualidade JPEG 95%
-                    using (var fileStream = System.IO.File.OpenWrite(caminhoCompleto))
-                    {
-                        using (var image = SKImage.FromBitmap(mockups[i]))
-                        {
-                            var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-                            data.SaveTo(fileStream);
-                        }
-                    }
-
-                    var caminhoUrl = $"/uploads/mockups/{nomeArquivo}";
+                    // Salva com cache-busting timestamp
+                    var caminhoUrl = SalvarMockupComCacheBusting(mockups[i], nomeArquivo, "/uploads/mockups");
                     caminhos.Add(caminhoUrl);
 
                     _logger.LogInformation($"Mockup Bancada{numeroBancada} salvo: {nomeArquivo}");
@@ -1655,16 +1631,12 @@ namespace PicStoneFotoAPI.Controllers
                         _logger.LogWarning("Banho{Num}.webp não encontrado: {Path}. Canvas sem moldura.", numeroBathroom, caminhoBanho);
                     }
 
-                    // PASSO 5: Salva o quadrante final
+                    // PASSO 5: Salva o quadrante final com cache-busting
                     var nomeArquivo = $"bathroom{numeroBathroom}_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
-                    var caminhoFinal = Path.Combine(_uploadsPath, nomeArquivo);
 
-                    using var image = SKImage.FromBitmap(canvasBase);
-                    using var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-                    using var outputStream = System.IO.File.OpenWrite(caminhoFinal);
-                    data.SaveTo(outputStream);
-
-                    caminhos.Add(nomeArquivo);
+                    // Salva com cache-busting timestamp (sem prefixo de URL)
+                    var caminhoComTimestamp = SalvarMockupComCacheBusting(canvasBase, nomeArquivo);
+                    caminhos.Add(caminhoComTimestamp);
                     _logger.LogInformation("Quadrante {Q} salvo: {Path}", quadrante, nomeArquivo);
                 }
 
@@ -1805,14 +1777,10 @@ namespace PicStoneFotoAPI.Controllers
                     });
 
                     var nomeArquivo = $"livingroom1_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
-                    var caminhoFinal = Path.Combine(_uploadsPath, nomeArquivo);
 
-                    using var image = SKImage.FromBitmap(quadrantesBitmaps[i]);
-                    using var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-                    using var outputStream = System.IO.File.OpenWrite(caminhoFinal);
-                    data.SaveTo(outputStream);
-
-                    caminhos.Add(nomeArquivo);
+                    // Salva com cache-busting timestamp (sem prefixo de URL)
+                    var caminhoComTimestamp = SalvarMockupComCacheBusting(quadrantesBitmaps[i], nomeArquivo);
+                    caminhos.Add(caminhoComTimestamp);
                     _logger.LogInformation("Quadrante {Q} salvo: {Path}", quadrante, nomeArquivo);
                 }
 
@@ -1863,10 +1831,13 @@ namespace PicStoneFotoAPI.Controllers
             {
                 _logger.LogInformation("=== INÍCIO Living Room #2 Progressive (imageId + crop) ===");
 
+                // Obtém usuarioId para nomeação consistente dos arquivos
                 var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
                 await EnviarEventoSSE("inicio", new { mensagem = "Gerando Living Room #2..." });
 
-                // Carrega imagem do servidor usando imageId
+                // ✨ NOVA ARQUITETURA: Carrega imagem do servidor usando imageId (DRY com countertops)
+                // ✅ CORRIGIDO: Carrega de wwwroot/images (mesmo local que ImageController salva e CarregarImagemAsync usa)
                 var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
                 var caminhoImagemOriginal = Path.Combine(imagePath, imageId);
 
@@ -1886,7 +1857,7 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation("Imagem original carregada: {W}x{H}", bitmapOriginal.Width, bitmapOriginal.Height);
 
-                // Aplica crop se coordenadas foram fornecidas
+                // ✂️ Aplica crop se coordenadas foram fornecidas (CORRIGE BUG: estava usando imagem original)
                 SKBitmap bitmapCropado;
                 if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
                 {
@@ -1913,6 +1884,7 @@ namespace PicStoneFotoAPI.Controllers
                 // Gera os 4 quadrantes usando LivingRoomService
                 await EnviarEventoSSE("progresso", new { etapa = "Processando transformações...", porcentagem = 10 });
 
+                // NOTA: Não podemos fazer 'using' aqui porque o serviço retorna a lista e precisamos salvá-la primeiro
                 var quadrantesBitmaps = _livingRoomService.GerarLivingRoom2(bitmapCropado);
 
                 if (quadrantesBitmaps == null || quadrantesBitmaps.Count == 0)
@@ -1923,36 +1895,25 @@ namespace PicStoneFotoAPI.Controllers
 
                 _logger.LogInformation("Living Room #2 gerado: {Count} quadrantes", quadrantesBitmaps.Count);
 
-                // Salva cada quadrante e envia progressivamente
                 var caminhos = new List<string>();
-                var porcentagemPorQuadrante = 90 / quadrantesBitmaps.Count;
 
+                // Salva e envia cada quadrante progressivamente
                 for (int i = 0; i < quadrantesBitmaps.Count; i++)
                 {
-                    var quadrante = i + 1;
-                    var nomeArquivo = $"livingroom2_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
-                    var caminhoFinal = Path.Combine(_uploadsPath, nomeArquivo);
+                    int quadrante = i + 1;
 
-                    // Salva quadrante
-                    using (var image = SKImage.FromBitmap(quadrantesBitmaps[i]))
-                    using (var data = image.Encode(SKEncodedImageFormat.Jpeg, 95))
-                    using (var stream = System.IO.File.OpenWrite(caminhoFinal))
-                    {
-                        data.SaveTo(stream);
-                    }
-
-                    caminhos.Add(nomeArquivo);
-
-                    // Envia evento de progresso incremental
-                    var porcentagem = 10 + (porcentagemPorQuadrante * (i + 1));
                     await EnviarEventoSSE("progresso", new
                     {
-                        quadrante = quadrante,
-                        caminho = nomeArquivo,
-                        porcentagem = porcentagem
+                        etapa = $"Salvando quadrante {quadrante}/4",
+                        porcentagem = 10 + (quadrante * 20)
                     });
 
-                    _logger.LogInformation("Quadrante {Q}/4 salvo: {Nome}", quadrante, nomeArquivo);
+                    var nomeArquivo = $"livingroom2_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
+
+                    // Salva com cache-busting timestamp (sem prefixo de URL)
+                    var caminhoComTimestamp = SalvarMockupComCacheBusting(quadrantesBitmaps[i], nomeArquivo);
+                    caminhos.Add(caminhoComTimestamp);
+                    _logger.LogInformation("Quadrante {Q} salvo: {Path}", quadrante, nomeArquivo);
                 }
 
                 // Limpa bitmaps agora que foram salvos
@@ -1995,6 +1956,30 @@ namespace PicStoneFotoAPI.Controllers
             var json = JsonSerializer.Serialize(new { type = tipo, data = dados });
             await Response.WriteAsync($"data: {json}\n\n");
             await Response.Body.FlushAsync();
+        }
+
+        /// <summary>
+        /// Salva um mockup com cache-busting timestamp e retorna o caminho relativo com query string
+        /// </summary>
+        /// <param name="bitmap">Bitmap a ser salvo</param>
+        /// <param name="nomeArquivo">Nome do arquivo (ex: "nicho1_normal_User1.jpg")</param>
+        /// <param name="prefixoUrl">Prefixo da URL (ex: "/uploads/mockups" ou null para retornar só o nome)</param>
+        /// <returns>Caminho com timestamp (ex: "/uploads/mockups/nicho1_normal_User1.jpg?v=1763321819989")</returns>
+        private string SalvarMockupComCacheBusting(SKBitmap bitmap, string nomeArquivo, string? prefixoUrl = null)
+        {
+            var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
+
+            using var image = SKImage.FromBitmap(bitmap);
+            using var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
+            using var outputStream = System.IO.File.OpenWrite(caminhoCompleto);
+            data.SaveTo(outputStream);
+
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var nomeComTimestamp = $"{nomeArquivo}?v={timestamp}";
+
+            return prefixoUrl != null
+                ? $"{prefixoUrl}/{nomeComTimestamp}"
+                : nomeComTimestamp;
         }
 
         /// <summary>
