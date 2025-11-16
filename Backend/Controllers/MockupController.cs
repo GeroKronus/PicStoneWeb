@@ -18,16 +18,18 @@ namespace PicStoneFotoAPI.Controllers
         private readonly BancadaService _bancadaService;
         private readonly HistoryService _historyService;
         private readonly GraphicsTransformService _graphicsTransformService;
+        private readonly LivingRoomService _livingRoomService;
         private readonly ILogger<MockupController> _logger;
         private readonly string _uploadsPath;
 
-        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, HistoryService historyService, GraphicsTransformService graphicsTransformService, ILogger<MockupController> logger)
+        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, HistoryService historyService, GraphicsTransformService graphicsTransformService, LivingRoomService livingRoomService, ILogger<MockupController> logger)
         {
             _mockupService = mockupService;
             _nichoService = nichoService;
             _bancadaService = bancadaService;
             _historyService = historyService;
             _graphicsTransformService = graphicsTransformService;
+            _livingRoomService = livingRoomService;
             _logger = logger;
             _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
             Directory.CreateDirectory(_uploadsPath);
@@ -1705,6 +1707,273 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         // ==================== FIM BATHROOM ====================
+
+        // ==================== LIVING ROOM PROGRESSIVE ====================
+
+        [HttpPost("livingroom1/progressive")]
+        public async Task GerarLivingRoom1Progressive(
+            [FromForm] string imageId,
+            [FromForm] string fundo = "claro",
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
+        {
+            Response.ContentType = "text/event-stream";
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Living Room #1 Progressive (imageId + crop) ===");
+
+                // Obtém usuarioId para nomeação consistente dos arquivos
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                await EnviarEventoSSE("inicio", new { mensagem = "Gerando Living Room #1..." });
+
+                // ✨ NOVA ARQUITETURA: Carrega imagem do servidor usando imageId (DRY com countertops)
+                // ✅ CORRIGIDO: Carrega de wwwroot/images (mesmo local que ImageController salva e CarregarImagemAsync usa)
+                var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+                var caminhoImagemOriginal = Path.Combine(imagePath, imageId);
+
+                if (!System.IO.File.Exists(caminhoImagemOriginal))
+                {
+                    _logger.LogError("Imagem não encontrada em wwwroot/images: {ImageId}", imageId);
+                    await EnviarEventoSSE("erro", new { mensagem = $"Imagem não encontrada: {imageId}" });
+                    return;
+                }
+
+                using var bitmapOriginal = SKBitmap.Decode(caminhoImagemOriginal);
+                if (bitmapOriginal == null)
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Erro ao decodificar imagem original" });
+                    return;
+                }
+
+                _logger.LogInformation("Imagem original carregada: {W}x{H}", bitmapOriginal.Width, bitmapOriginal.Height);
+
+                // ✂️ Aplica crop se coordenadas foram fornecidas (CORRIGE BUG: estava usando imagem original)
+                SKBitmap bitmapCropado;
+                if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                {
+                    _logger.LogInformation("Aplicando crop: ({X},{Y}) {W}x{H}", cropX.Value, cropY.Value, cropWidth.Value, cropHeight.Value);
+
+                    var info = new SKImageInfo(cropWidth.Value, cropHeight.Value);
+                    bitmapCropado = new SKBitmap(info);
+
+                    using var canvas = new SKCanvas(bitmapCropado);
+                    var srcRect = new SKRect(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    var destRect = new SKRect(0, 0, cropWidth.Value, cropHeight.Value);
+                    canvas.DrawBitmap(bitmapOriginal, srcRect, destRect);
+
+                    _logger.LogInformation("Crop aplicado com sucesso: {W}x{H}", bitmapCropado.Width, bitmapCropado.Height);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Nenhuma coordenada de crop fornecida - usando imagem ORIGINAL");
+                    bitmapCropado = bitmapOriginal.Copy();
+                }
+
+                _logger.LogInformation("Imagem final para processamento: {W}x{H}", bitmapCropado.Width, bitmapCropado.Height);
+
+                // Gera os 4 quadrantes usando LivingRoomService
+                await EnviarEventoSSE("progresso", new { etapa = "Processando transformações...", porcentagem = 10 });
+
+                // NOTA: Não podemos fazer 'using' aqui porque o serviço retorna a lista e precisamos salvá-la primeiro
+                var quadrantesBitmaps = _livingRoomService.GerarLivingRoom1(bitmapCropado);
+
+                if (quadrantesBitmaps == null || quadrantesBitmaps.Count == 0)
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Erro ao gerar Living Room #1" });
+                    return;
+                }
+
+                _logger.LogInformation("Living Room #1 gerado: {Count} quadrantes", quadrantesBitmaps.Count);
+
+                var caminhos = new List<string>();
+
+                // Salva e envia cada quadrante progressivamente
+                for (int i = 0; i < quadrantesBitmaps.Count; i++)
+                {
+                    int quadrante = i + 1;
+
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Salvando quadrante {quadrante}/4",
+                        porcentagem = 10 + (quadrante * 20)
+                    });
+
+                    var nomeArquivo = $"livingroom1_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
+                    var caminhoFinal = Path.Combine(_uploadsPath, nomeArquivo);
+
+                    using var image = SKImage.FromBitmap(quadrantesBitmaps[i]);
+                    using var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
+                    using var outputStream = System.IO.File.OpenWrite(caminhoFinal);
+                    data.SaveTo(outputStream);
+
+                    caminhos.Add(nomeArquivo);
+                    _logger.LogInformation("Quadrante {Q} salvo: {Path}", quadrante, nomeArquivo);
+                }
+
+                // Limpa bitmaps agora que foram salvos
+                foreach (var bitmap in quadrantesBitmaps)
+                {
+                    bitmap.Dispose();
+                }
+                quadrantesBitmaps.Clear();
+
+                // Registra geração no histórico
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "LivingRoom1",
+                    detalhes: $"{{\"fundo\":\"{fundo}\"}}",
+                    quantidadeImagens: caminhos.Count
+                );
+
+                await EnviarEventoSSE("sucesso", new
+                {
+                    mensagem = "Living Room #1 gerado com sucesso!",
+                    caminhos = caminhos
+                });
+
+                _logger.LogInformation("=== FIM Living Room #1 Progressive ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Living Room #1");
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("livingroom2/progressive")]
+        public async Task GerarLivingRoom2Progressive(
+            [FromForm] string imageId,
+            [FromForm] string fundo = "claro",
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
+        {
+            Response.ContentType = "text/event-stream";
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Living Room #2 Progressive (imageId + crop) ===");
+
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await EnviarEventoSSE("inicio", new { mensagem = "Gerando Living Room #2..." });
+
+                // Carrega imagem do servidor usando imageId
+                var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+                var caminhoImagemOriginal = Path.Combine(imagePath, imageId);
+
+                if (!System.IO.File.Exists(caminhoImagemOriginal))
+                {
+                    _logger.LogError("Imagem não encontrada em wwwroot/images: {ImageId}", imageId);
+                    await EnviarEventoSSE("erro", new { mensagem = $"Imagem não encontrada: {imageId}" });
+                    return;
+                }
+
+                using var bitmapOriginal = SKBitmap.Decode(caminhoImagemOriginal);
+                if (bitmapOriginal == null)
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Erro ao decodificar imagem original" });
+                    return;
+                }
+
+                _logger.LogInformation("Imagem original carregada: {W}x{H}", bitmapOriginal.Width, bitmapOriginal.Height);
+
+                // Aplica crop se coordenadas foram fornecidas
+                SKBitmap bitmapCropado;
+                if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                {
+                    _logger.LogInformation("Aplicando crop: ({X},{Y}) {W}x{H}", cropX.Value, cropY.Value, cropWidth.Value, cropHeight.Value);
+
+                    var info = new SKImageInfo(cropWidth.Value, cropHeight.Value);
+                    bitmapCropado = new SKBitmap(info);
+
+                    using var canvas = new SKCanvas(bitmapCropado);
+                    var srcRect = new SKRect(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    var destRect = new SKRect(0, 0, cropWidth.Value, cropHeight.Value);
+                    canvas.DrawBitmap(bitmapOriginal, srcRect, destRect);
+
+                    _logger.LogInformation("Crop aplicado com sucesso: {W}x{H}", bitmapCropado.Width, bitmapCropado.Height);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Nenhuma coordenada de crop fornecida - usando imagem ORIGINAL");
+                    bitmapCropado = bitmapOriginal.Copy();
+                }
+
+                _logger.LogInformation("Imagem final para processamento: {W}x{H}", bitmapCropado.Width, bitmapCropado.Height);
+
+                // Gera os 4 quadrantes usando LivingRoomService
+                await EnviarEventoSSE("progresso", new { etapa = "Processando transformações...", porcentagem = 10 });
+
+                var quadrantesBitmaps = _livingRoomService.GerarLivingRoom2(bitmapCropado);
+
+                if (quadrantesBitmaps == null || quadrantesBitmaps.Count == 0)
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Erro ao gerar Living Room #2" });
+                    return;
+                }
+
+                _logger.LogInformation("Living Room #2 gerado: {Count} quadrantes", quadrantesBitmaps.Count);
+
+                // Salva cada quadrante e envia progressivamente
+                var caminhos = new List<string>();
+                var porcentagemPorQuadrante = 90 / quadrantesBitmaps.Count;
+
+                for (int i = 0; i < quadrantesBitmaps.Count; i++)
+                {
+                    var quadrante = i + 1;
+                    var nomeArquivo = $"liveroom2_q{quadrante}_user{usuarioId}_{DateTime.Now:yyyyMMddHHmmss}.jpg";
+                    var caminhoCompleto = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "mockups", nomeArquivo);
+
+                    // Salva quadrante
+                    using (var image = SKImage.FromBitmap(quadrantesBitmaps[i]))
+                    using (var data = image.Encode(SKEncodedImageFormat.Jpeg, 95))
+                    using (var stream = System.IO.File.OpenWrite(caminhoCompleto))
+                    {
+                        data.SaveTo(stream);
+                    }
+
+                    caminhos.Add(nomeArquivo);
+
+                    // Envia evento de progresso incremental
+                    var porcentagem = 10 + (porcentagemPorQuadrante * (i + 1));
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        quadrante = quadrante,
+                        caminho = nomeArquivo,
+                        porcentagem = porcentagem
+                    });
+
+                    _logger.LogInformation("Quadrante {Q}/4 salvo: {Nome}", quadrante, nomeArquivo);
+                }
+
+                // Dispose dos bitmaps após salvar
+                foreach (var bitmap in quadrantesBitmaps)
+                {
+                    bitmap.Dispose();
+                }
+
+                // Envia evento de sucesso
+                await EnviarEventoSSE("sucesso", new { caminhos = caminhos });
+
+                _logger.LogInformation("=== Living Room #2 Progressive CONCLUÍDO ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Living Room #2");
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
+            }
+        }
+
+        // ==================== FIM LIVING ROOM ====================
 
         /// <summary>
         /// Método auxiliar para enviar eventos SSE

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 
@@ -15,6 +16,7 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult GetVersion()
         {
             try

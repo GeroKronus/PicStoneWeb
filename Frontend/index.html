@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PicStone® mobile</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="style.css?v=20251111000000">
+    <link rel="stylesheet" href="style.css?v=20251115223000">
 </head>
 <body>
     <!-- Banner de Aviso de Expiração -->
@@ -398,6 +398,7 @@
                 <button id="ambienteBtn" class="btn btn-ambiente">Frames</button>
                 <button id="countertopsBtn" class="btn btn-countertops">Countertops</button>
                 <button id="bathroomsBtn" class="btn btn-bathrooms">Bathrooms</button>
+                <button id="livingRoomsBtn" class="btn btn-livingrooms">Living Room</button>
             </div>
         </div>
     </div>
@@ -625,6 +626,67 @@
                                 <img src="/images/thumb-banho2.webp" alt="Preview Banheiro #2">
                             </div>
                             <h4>Banheiro #2</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Seleção de Living Room -->
+    <div id="livingRoomSelectionScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelLivingRoomSelectionBtn" class="btn-icon">← Voltar</button>
+                <h1>Escolha a Sala</h1>
+            </div>
+
+            <div class="ambiente-config-card">
+                <div class="config-section">
+                    <h3>Escolha o Design</h3>
+                    <div class="countertop-options">
+                        <div class="countertop-card" data-type="sala1">
+                            <div class="countertop-preview" data-type="sala1">
+                                <img src="/images/thumb-sala1.webp" alt="Preview Living Room #1">
+                            </div>
+                            <h4>Living Room #1</h4>
+                        </div>
+                        <div class="countertop-card" data-type="sala2">
+                            <div class="countertop-preview" data-type="sala2">
+                                <img src="/images/thumb-liveroom2.webp" alt="Preview Living Room #2">
+                            </div>
+                            <h4>Living Room #2</h4>
+                            <p style="color: #6b7280; font-size: 0.875rem; margin-top: 4px;">BookMatch 2x2 + Skew</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Seleção de Living Room TESTE (cópia exata do Bathroom) -->
+    <div id="livingRoomTestSelectionScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelLivingRoomTestSelectionBtn" class="btn-icon">← Voltar</button>
+                <h1>Escolha a Sala (TESTE)</h1>
+            </div>
+
+            <div class="ambiente-config-card">
+                <div class="config-section">
+                    <h3>Escolha o Design</h3>
+                    <div class="countertop-options">
+                        <div class="countertop-card" data-type="testelivingroom1">
+                            <div class="countertop-preview" data-type="testelivingroom1">
+                                <img src="/images/thumb-sala1.webp" alt="Preview Living Room TESTE #1">
+                            </div>
+                            <h4>Living Room TESTE #1</h4>
+                        </div>
+                        <div class="countertop-card" data-type="testelivingroom2">
+                            <div class="countertop-preview" data-type="testelivingroom2">
+                                <img src="/images/thumb-liveroom2.webp" alt="Preview Living Room TESTE #2">
+                            </div>
+                            <h4>Living Room TESTE #2</h4>
                         </div>
                     </div>
                 </div>
@@ -1027,7 +1089,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=20251114230000"></script>
+    <script src="app.js?v=20251115223000"></script>
     <script src="bookmatch.js?v=20251114144500"></script>
     <script src="history.js?v=20251111120000"></script>
 </body>
