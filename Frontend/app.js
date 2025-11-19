@@ -3631,7 +3631,7 @@ async function loadPendingUsers() {
                     <h3>${usuario.nomeCompleto}</h3>
                     <p>${usuario.email}</p>
                     <p class="user-status pending">⏳ Aguardando aprovação</p>
-                    <p class="user-date">Cadastrado em: ${new Date(usuario.criadoEm).toLocaleDateString('pt-BR')}</p>
+                    <p class="user-date">Cadastrado em: ${new Date(usuario.dataCriacao).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <div class="user-actions">
                     <button class="btn btn-primary" onclick="approveUser('${usuario.id}', '${usuario.nomeCompleto}')">
