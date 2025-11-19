@@ -484,10 +484,13 @@ namespace PicStoneFotoAPI.Services
         /// <summary>
         /// Edita dados de um usuário existente
         /// </summary>
-        public async Task<(bool Success, string Message)> EditUserAsync(int userId, dynamic request)
+        public async Task<(bool Success, string Message)> EditUserAsync(int userId, object requestObj)
         {
             try
             {
+                // Converte para dynamic apenas para leitura de propriedades
+                dynamic request = requestObj;
+
                 var usuario = await _context.Usuarios.FindAsync(userId);
 
                 if (usuario == null)
@@ -503,17 +506,20 @@ namespace PicStoneFotoAPI.Services
 
                 if (request.Email != null)
                 {
+                    // Armazena email em variável local para usar no LINQ (evita dynamic em expression tree)
+                    string novoEmail = request.Email;
+
                     // Verifica se o novo email já existe (exceto para o próprio usuário)
                     var emailExiste = await _context.Usuarios
-                        .AnyAsync(u => u.Email == request.Email && u.Id != userId);
+                        .AnyAsync(u => u.Email == novoEmail && u.Id != userId);
 
                     if (emailExiste)
                     {
                         return (false, "Este email já está em uso por outro usuário");
                     }
 
-                    usuario.Email = request.Email;
-                    usuario.Username = request.Email; // Username = Email
+                    usuario.Email = novoEmail;
+                    usuario.Username = novoEmail; // Username = Email
                 }
 
                 if (request.DataExpiracao != null)
