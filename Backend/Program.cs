@@ -338,25 +338,6 @@ if (app.Environment.IsDevelopment())
 // Rota raiz
 app.MapGet("/", () => Results.Redirect("/index.html"));
 
-// Endpoint de versão da aplicação
-app.MapGet("/api/version", async () =>
-{
-    try
-    {
-        var versionFilePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "version.json");
-        if (File.Exists(versionFilePath))
-        {
-            var json = await File.ReadAllTextAsync(versionFilePath);
-            return Results.Content(json, "application/json");
-        }
-        return Results.Json(new { version = "1.0000" });
-    }
-    catch
-    {
-        return Results.Json(new { version = "1.0000" });
-    }
-});
-
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 app.Urls.Add($"http://0.0.0.0:{port}");
 
