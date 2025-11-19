@@ -172,6 +172,81 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Envia email de reativação de acesso
+        /// </summary>
+        public async Task<bool> SendReactivationEmailAsync(string email, string nome, DateTime? dataExpiracao = null)
+        {
+            try
+            {
+                var appUrl = _configuration["NEXTAUTH_URL"] ?? "http://localhost:5000";
+                var loginUrl = $"{appUrl}";
+
+                var expiracaoHtml = dataExpiracao.HasValue
+                    ? $"<p><strong>Seu acesso expira em:</strong> {dataExpiracao.Value:dd/MM/yyyy HH:mm}</p>"
+                    : "<p><strong>Seu acesso é por tempo indeterminado.</strong></p>";
+
+                var htmlBody = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+        .button {{ display: inline-block; padding: 15px 30px; background: #3b82f6; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }}
+        .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='margin: 0 0 10px 0; font-size: 32px;'>PicStone Mobile</h1>
+            <h2 style='margin: 10px 0 5px 0;'>Bem-vindo de volta!</h2>
+        </div>
+        <div class='content'>
+            <h2>Olá, {nome}!</h2>
+            <p>Seu acesso à plataforma <strong>PicStone Mobile</strong> foi <strong>reativado</strong> pelo administrador.</p>
+
+            {expiracaoHtml}
+
+            <p>Você já pode fazer login novamente e continuar utilizando todos os recursos disponíveis.</p>
+
+            <div style='text-align: center;'>
+                <a href='{loginUrl}' class='button'>Acessar Plataforma</a>
+            </div>
+
+            <p><strong>Suas credenciais:</strong></p>
+            <ul>
+                <li><strong>Email:</strong> {email}</li>
+                <li><strong>Senha:</strong> A mesma que você cadastrou anteriormente</li>
+            </ul>
+        </div>
+        <div class='footer'>
+            <p>&copy; 2025 PicStone Mobile. Todos os direitos reservados.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+                await SendEmailAsync(
+                    to: email,
+                    subject: "Seu acesso foi reativado - PicStone Mobile",
+                    htmlBody: htmlBody
+                );
+
+                _logger.LogInformation($"Email de reativação enviado para: {email}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao enviar email de reativação para: {email}");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Envia email de aviso de expiração de acesso
         /// </summary>
         public async Task<bool> SendExpirationWarningEmailAsync(string email, string nome, DateTime dataExpiracao, int diasRestantes)

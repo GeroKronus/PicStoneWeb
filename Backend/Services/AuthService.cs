@@ -466,7 +466,7 @@ namespace PicStoneFotoAPI.Services
                 {
                     try
                     {
-                        await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+                        await emailService.SendReactivationEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
                     }
                     catch (Exception ex)
                     {
@@ -767,7 +767,7 @@ namespace PicStoneFotoAPI.Services
                     {
                         try
                         {
-                            await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+                            await emailService.SendReactivationEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
                         }
                         catch (Exception ex)
                         {
