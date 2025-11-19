@@ -4946,7 +4946,8 @@ function openEditUserModal(userId, userData) {
 
     // Preenche os campos
     document.getElementById('editUserNome').value = userData.nomeCompleto || '';
-    document.getElementById('editUserEmail').value = userData.email || '';
+    // Tenta email primeiro, depois username (pois username = email no sistema)
+    document.getElementById('editUserEmail').value = userData.email || userData.username || '';
     document.getElementById('editUserAtivo').checked = userData.ativo || false;
 
     // Data de expiração - converte para formato datetime-local
