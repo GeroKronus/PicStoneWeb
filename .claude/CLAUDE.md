@@ -1,5 +1,22 @@
 # Sistema de Notificação Telegram
 
+## 🔴 IMPERATIVO: VERSÃO DA APLICAÇÃO 🔴
+
+**A CADA COMMIT DE CÓDIGO, VOCÊ DEVE INCREMENTAR A VERSÃO EM:**
+- `Backend/wwwroot/version.json`
+- `Frontend/version.json`
+
+**FORMATO:** Incremente o último dígito: `1.0005` → `1.0006`
+
+**SEM EXCEÇÕES!** Não importa quão pequena seja a mudança.
+
+**QUANDO:** ANTES de fazer o commit, edite ambos os arquivos version.json
+
+**COMO LEMBRAR:** Adicione ao seu TODO ao iniciar qualquer tarefa de código:
+- [ ] Incrementar versão antes do commit
+
+---
+
 ## ⚠️ IMPORTANTE: Idioma
 
 **TODAS as suas respostas e comunicações devem ser em PORTUGUÊS (pt-BR).**
