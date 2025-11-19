@@ -295,6 +295,9 @@ const elements = {
     usersScreen: document.getElementById('usersScreen'),
     usersList: document.getElementById('usersList'),
     backFromUsersBtn: document.getElementById('backFromUsersBtn'),
+    pendingUsersScreen: document.getElementById('pendingUsersScreen'),
+    pendingUsersList: document.getElementById('pendingUsersList'),
+    backFromPendingBtn: document.getElementById('backFromPendingBtn'),
     addUserBtn: document.getElementById('addUserBtn'),
     addUserScreen: document.getElementById('addUserScreen'),
     addUserForm: document.getElementById('addUserForm'),
@@ -715,8 +718,13 @@ function setupEventListeners() {
         elements.userMenuDropdown.classList.add('hidden');
         showUsersScreen();
     });
+    elements.pendingUsersBtn.addEventListener('click', () => {
+        elements.userMenuDropdown.classList.add('hidden');
+        showPendingUsersScreen();
+    });
     elements.backFromPasswordBtn.addEventListener('click', showMainScreen);
     elements.backFromUsersBtn.addEventListener('click', showMainScreen);
+    elements.backFromPendingBtn.addEventListener('click', showMainScreen);
     elements.backFromAddUserBtn.addEventListener('click', showUsersScreen);
     elements.changePasswordForm.addEventListener('submit', handleChangePassword);
     elements.addUserBtn.addEventListener('click', showAddUserScreen);
@@ -964,6 +972,15 @@ async function showUsersScreen() {
     }
     showScreen(elements.usersScreen);
     await loadUsers();
+}
+
+async function showPendingUsersScreen() {
+    if (state.username !== 'rogerio@picstone.com.br') {
+        alert('Acesso negado. Apenas admin pode gerenciar usuários.');
+        return;
+    }
+    showScreen(elements.pendingUsersScreen);
+    await loadPendingUsers();
 }
 
 function showAddUserScreen() {
@@ -3584,6 +3601,56 @@ async function loadUsers() {
         console.error('Erro ao carregar usuários:', error);
         elements.usersList.innerHTML = '<p class="error">Erro ao carregar usuários</p>';
         elements.usersManagementTableBody.innerHTML = '<tr><td colspan="6" class="error">Erro ao carregar usuários</td></tr>';
+    }
+}
+
+/**
+ * Carrega lista de usuários pendentes (apenas admin)
+ */
+async function loadPendingUsers() {
+    try {
+        const response = await fetch(`${API_URL}/api/auth/pending-users`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar usuários pendentes');
+        }
+
+        const usuarios = await response.json();
+
+        // Renderiza a lista de usuários pendentes
+        elements.pendingUsersList.innerHTML = '';
+
+        if (usuarios.length === 0) {
+            elements.pendingUsersList.innerHTML = '<p class="no-data">Nenhum usuário aguardando aprovação.</p>';
+            return;
+        }
+
+        usuarios.forEach(usuario => {
+            const userCard = document.createElement('div');
+            userCard.className = 'user-card';
+            userCard.innerHTML = `
+                <div class="user-info">
+                    <h3>${usuario.nomeCompleto}</h3>
+                    <p>${usuario.email}</p>
+                    <p class="user-status pending">⏳ Aguardando aprovação</p>
+                    <p class="user-date">Cadastrado em: ${new Date(usuario.criadoEm).toLocaleDateString('pt-BR')}</p>
+                </div>
+                <div class="user-actions">
+                    <button class="btn btn-primary" onclick="approveUser('${usuario.id}', '${usuario.nomeCompleto}')">
+                        ✅ Aprovar
+                    </button>
+                    <button class="btn btn-danger" onclick="rejectUser('${usuario.id}', '${usuario.nomeCompleto}')">
+                        ❌ Rejeitar
+                    </button>
+                </div>
+            `;
+            elements.pendingUsersList.appendChild(userCard);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar usuários pendentes:', error);
+        elements.pendingUsersList.innerHTML = '<p class="error">Erro ao carregar usuários pendentes.</p>';
     }
 }
 
