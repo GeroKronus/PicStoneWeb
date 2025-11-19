@@ -134,6 +134,7 @@ builder.Services.AddScoped<GraphicsTransformService>();
 builder.Services.AddScoped<NichoService>();
 builder.Services.AddScoped<BancadaService>();
 builder.Services.AddScoped<LivingRoomService>();
+builder.Services.AddScoped<StairsService>();
 builder.Services.AddScoped<BookMatchService>();
 
 // Service de histórico

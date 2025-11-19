@@ -10,11 +10,13 @@ namespace PicStoneFotoAPI.Services
     {
         private readonly GraphicsTransformService _transformService;
         private readonly ILogger<LivingRoomService> _logger;
+        private readonly ImageWatermarkService _watermark;
 
-        public LivingRoomService(GraphicsTransformService transformService, ILogger<LivingRoomService> logger)
+        public LivingRoomService(GraphicsTransformService transformService, ILogger<LivingRoomService> logger, ImageWatermarkService watermark)
         {
             _transformService = transformService;
             _logger = logger;
+            _watermark = watermark;
         }
 
         /// <summary>
@@ -140,6 +142,10 @@ namespace PicStoneFotoAPI.Services
                     {
                         _logger.LogWarning("Sala1.webp não encontrada: {Path}. Canvas sem moldura.", caminhoSala);
                     }
+
+                    // ✅ IMPERATIVO: Adiciona marca d'água (canto inferior direito)
+                    _watermark.AddWatermark(canvasFinal, canvasBase.Width, canvasBase.Height);
+                    _logger.LogInformation("Marca d'água adicionada ao quadrante {Q}", quadrante);
 
                     // Adiciona quadrante à lista (NÃO usa 'using' aqui pois será retornado)
                     quadrantes.Add(canvasBase);
@@ -285,6 +291,10 @@ namespace PicStoneFotoAPI.Services
                             _logger.LogInformation("Overlay aplicado no quadrante {Q}", quadrante);
                         }
                     }
+
+                    // ✅ IMPERATIVO: Adiciona marca d'água (canto inferior direito)
+                    _watermark.AddWatermark(canvasCanvas, canvasFinal.Width, canvasFinal.Height);
+                    _logger.LogInformation("Marca d'água adicionada ao quadrante {Q}", quadrante);
 
                     quadrantes.Add(canvasFinal);
                 }

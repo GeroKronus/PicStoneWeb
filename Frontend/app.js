@@ -150,6 +150,10 @@ const state = {
     livingRoomState: {
         selectedType: null      // 'sala1'
     },
+    // Estado específico para escadas (stairs) - DRY com livingRoomState
+    stairsState: {
+        selectedType: null      // 'stairs1'
+    },
     // Estado para crop overlay na Integração
     cropOverlayState: (() => {
         let _isActive = false;
@@ -264,6 +268,9 @@ const elements = {
     cancelBathroomSelectionBtn: document.getElementById('cancelBathroomSelectionBtn'),
     livingRoomSelectionScreen: document.getElementById('livingRoomSelectionScreen'),
     cancelLivingRoomSelectionBtn: document.getElementById('cancelLivingRoomSelectionBtn'),
+    stairsBtn: document.getElementById('stairsBtn'),
+    stairsSelectionScreen: document.getElementById('stairsSelectionScreen'),
+    cancelStairsSelectionBtn: document.getElementById('cancelStairsSelectionBtn'),
     livingRoomTestSelectionScreen: document.getElementById('livingRoomTestSelectionScreen'),
     cancelLivingRoomTestSelectionBtn: document.getElementById('cancelLivingRoomTestSelectionBtn'),
     livingRoomsTestBtn: document.getElementById('livingRoomsTestBtn'),
@@ -453,6 +460,8 @@ function clearSharedImage() {
         lastUpdated: null,
         source: null
     };
+    // ✅ FIX: Limpa coordenadas de crop junto com estado compartilhado
+    state.cropCoordinates = null;
 }
 
 // ========== INICIALIZAÇÃO ==========
@@ -572,6 +581,9 @@ function setupEventListeners() {
     if (elements.livingRoomsBtn) {
         elements.livingRoomsBtn.addEventListener('click', startLivingRoomsFlow);
     }
+    if (elements.stairsBtn) {
+        elements.stairsBtn.addEventListener('click', startStairsFlow);
+    }
     if (elements.livingRoomsTestBtn) {
         elements.livingRoomsTestBtn.addEventListener('click', startLivingRoomTestFlow);
     }
@@ -580,6 +592,9 @@ function setupEventListeners() {
     elements.cancelBathroomSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
     if (elements.cancelLivingRoomSelectionBtn) {
         elements.cancelLivingRoomSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
+    }
+    if (elements.cancelStairsSelectionBtn) {
+        elements.cancelStairsSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
     }
     if (elements.cancelLivingRoomTestSelectionBtn) {
         elements.cancelLivingRoomTestSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
@@ -659,6 +674,23 @@ function setupEventListeners() {
                     return; // Ignora clique em cards desabilitados
                 }
                 selectLivingRoomTestAndGenerate(type);
+            }
+        }
+    });
+
+    // Event delegation para seleção de stairs via click no thumb
+    document.addEventListener('click', (e) => {
+        const preview = e.target.closest('.countertop-preview');
+        if (preview && preview.dataset.type) {
+            const type = preview.dataset.type;
+            // Verifica se é um stairs (stairs1, stairs2, etc)
+            if (type.startsWith('stairs')) {
+                // Verifica se o card pai está desabilitado
+                const card = preview.closest('.countertop-card');
+                if (card && card.classList.contains('disabled')) {
+                    return; // Ignora clique em cards desabilitados
+                }
+                selectStairsAndGenerate(type);
             }
         }
     });
@@ -854,6 +886,9 @@ function handleBackFromResults() {
     } else if (state.bathroomState.selectedType) {
         // Está no flow de bathroom: volta para seleção de banheiros
         showScreen(elements.bathroomSelectionScreen);
+    } else if (state.stairsState.selectedType) {
+        // Está no flow de stairs: volta para seleção de escadas
+        showScreen(elements.stairsSelectionScreen);
     } else if (state.livingRoomState.selectedType) {
         // Está no flow de living room: volta para seleção de salas
         showScreen(elements.livingRoomSelectionScreen);
@@ -1009,6 +1044,13 @@ function showAmbientesScreen() {
  * Usado ao clicar "Voltar" na tela de seleção de bancadas
  */
 function backToAmbientesWithPhoto() {
+    console.log('🔙 [BACK] backToAmbientesWithPhoto chamado');
+
+    // 🔧 FIX: Limpa estado de countertop ao voltar para Ambientes
+    state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null;
+    console.log('✅ [BACK] Estados de countertop limpos');
+
     showScreen(elements.ambientesScreen);
 
     // Garante que a foto e os botões permanecem visíveis
@@ -1146,6 +1188,7 @@ function clearPhoto() {
     // Limpa TUDO incluindo imagem original (usuário clicou no X)
     state.currentPhotoFile = null;
     state.originalPhoto = null;
+    state.cropCoordinates = null; // ✅ FIX: Limpa coordenadas de crop quando limpa foto
     elements.previewImage.src = '';
     elements.photoPreview.classList.add('hidden');
     elements.fileInput.value = '';
@@ -1159,6 +1202,7 @@ function clearPhoto() {
 function clearPhotoState() {
     // Limpa apenas estado atual (para preparar nova foto)
     state.currentPhotoFile = null;
+    state.cropCoordinates = null; // ✅ FIX: Limpa coordenadas de crop quando limpa foto
     elements.previewImage.src = '';
     elements.photoPreview.classList.add('hidden');
     elements.submitBtn.disabled = true;
@@ -1239,6 +1283,7 @@ function clearPhotoIntegracao() {
 
     state.currentPhotoFile = null;
     state.originalPhoto = null;
+    state.cropCoordinates = null; // ✅ FIX: Limpa coordenadas de crop quando limpa foto
     elements.previewImageIntegracao.src = '';
     elements.photoPreviewIntegracao.classList.add('hidden');
     elements.fileInputIntegracao.value = '';
@@ -2040,6 +2085,7 @@ function clearPhotoAmbientes() {
 
     // Reset crop state
     state.cropOverlayState.originalImageSrc = null;
+    state.cropCoordinates = null; // ✅ FIX: Limpa coordenadas de crop quando limpa foto
     if (elements.resetImageBtnAmbientes) {
         elements.resetImageBtnAmbientes.classList.add('hidden');
     }
@@ -2969,7 +3015,7 @@ async function gerarAmbiente(imagemCropada) {
                             <h3>${labels[event.data.index] || `Mockup ${event.data.index + 1}`}</h3>
                             <img src="${ambienteUrl}" alt="${labels[event.data.index]}">
                             <div class="ambiente-actions">
-                                <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${labels[event.data.index] || `Mockup ${event.data.index + 1}`}">
+                                <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${event.data.url.split('/').pop().split('?')[0] || `Mockup_${event.data.index + 1}.jpg`}">
                                     ⬇️ Baixar
                                 </button>
                                 <button class="btn btn-primary btn-share-single" data-url="${ambienteUrl}" data-nome="${labels[event.data.index] || `Mockup ${event.data.index + 1}`}">
@@ -2982,6 +3028,8 @@ async function gerarAmbiente(imagemCropada) {
                         // Mostra tela de resultado após primeiro mockup
                         if (mockupCount === 1) {
                             showScreen(elements.ambienteResultScreen);
+                            // Configura botão "Gerar Novos" corretamente para cavalete/frame
+                            configurarBotaoGerarNovos();
                         }
                     }
                     else if (event.type === 'done') {
@@ -2990,6 +3038,8 @@ async function gerarAmbiente(imagemCropada) {
                         elements.progressBar.style.width = '100%';
                         elements.progressText.textContent = `${totalMockups} de ${totalMockups} mockups prontos`;
                         showAmbienteMessage(event.data.mensagem || 'Mockups gerados!', 'success');
+                        // Garante que o botão está configurado corretamente ao final
+                        configurarBotaoGerarNovos();
                     }
                     else if (event.type === 'error') {
                         console.error('❌ SSE: Erro!', event.data);
@@ -3023,7 +3073,17 @@ async function gerarAmbiente(imagemCropada) {
 function downloadAmbiente(url, nome) {
     const link = document.createElement('a');
     link.href = url;
-    link.download = nome || `ambiente_${Date.now()}.jpg`;
+
+    // Extrai apenas o nome do arquivo limpo (sem path e sem query parameters)
+    let fileName = nome || `ambiente_${Date.now()}.jpg`;
+
+    // Remove query parameters (?v=xxx ou &v=xxx)
+    fileName = fileName.split('?')[0].split('&')[0];
+
+    // Remove path (extrai apenas última parte após /)
+    fileName = fileName.split('/').pop();
+
+    link.download = fileName;
     link.click();
 }
 
@@ -3298,6 +3358,51 @@ async function generateCountertopAmbiente() {
 }
 
 /**
+ * Configura botão "Gerar Novos" baseado no tipo de mockup atual
+ */
+function configurarBotaoGerarNovos() {
+    console.log('🔍 [DEBUG GERAR NOVOS] Verificando estado:');
+    console.log('  livingRoomState.selectedType:', state.livingRoomState?.selectedType);
+    console.log('  bathroomState.selectedType:', state.bathroomState.selectedType);
+    console.log('  countertopState.selectedType:', state.countertopState.selectedType);
+    console.log('  ambienteConfig.tipo:', state.ambienteConfig.tipo);
+
+    if (state.livingRoomState?.selectedType) {
+        // Flow de Living Room
+        console.log('✅ [DEBUG] Configurando botão para LIVING ROOM');
+        elements.newAmbienteBtn.textContent = '🔄 Tentar Outro Living Room (Mesmo Crop)';
+        elements.newAmbienteBtn.onclick = () => {
+            console.log('🎯 [DEBUG] Clicou em Gerar Novos - Navegando para livingRoomSelectionScreen');
+            showScreen(elements.livingRoomSelectionScreen);
+        };
+    } else if (state.bathroomState.selectedType) {
+        // Flow de Bathrooms
+        console.log('✅ [DEBUG] Configurando botão para BATHROOM');
+        elements.newAmbienteBtn.textContent = '🔄 Tentar Outro Banheiro (Mesmo Crop)';
+        elements.newAmbienteBtn.onclick = () => {
+            console.log('🎯 [DEBUG] Clicou em Gerar Novos - Navegando para bathroomSelectionScreen');
+            showScreen(elements.bathroomSelectionScreen);
+        };
+    } else if (state.ambienteConfig.tipo === 'cavalete') {
+        // Flow de Frame (Cavalete)
+        console.log('✅ [DEBUG] Configurando botão para FRAME (CAVALETE)');
+        elements.newAmbienteBtn.textContent = '🔄 Tentar Outro Frame (Mesmo Crop)';
+        elements.newAmbienteBtn.onclick = () => {
+            console.log('🎯 [DEBUG] Clicou em Gerar Novos - Navegando para ambientes com foto');
+            backToAmbientesWithPhoto();
+        };
+    } else {
+        // Flow de Countertops (padrão)
+        console.log('✅ [DEBUG] Configurando botão para COUNTERTOP (padrão)');
+        elements.newAmbienteBtn.textContent = '🔄 Tentar Outra Bancada (Mesmo Crop)';
+        elements.newAmbienteBtn.onclick = () => {
+            console.log('🎯 [DEBUG] Clicou em Gerar Novos - Navegando para countertopSelectionScreen');
+            showScreen(elements.countertopSelectionScreen);
+        };
+    }
+}
+
+/**
  * Passo 5: Exibe resultados com opção de tentar outra bancada
  */
 function displayCountertopResults(data) {
@@ -3334,7 +3439,7 @@ function displayCountertopResults(data) {
             <h3>${labels[index]}</h3>
             <img src="${ambienteUrl}" alt="${labels[index]}">
             <div class="ambiente-actions">
-                <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${caminho}">
+                <button class="btn btn-secondary btn-download-single" data-url="${ambienteUrl}" data-nome="${caminho.split('/').pop().split('?')[0]}">
                     ⬇️ Baixar
                 </button>
                 <button class="btn btn-primary btn-share-single" data-url="${ambienteUrl}" data-nome="${labels[index]}">
@@ -3348,38 +3453,8 @@ function displayCountertopResults(data) {
     // Salva URLs para download em lote
     state.ambienteUrls = caminhos.map(c => `${API_URL}${c}`);
 
-    // Modifica botão "Novo Ambiente" para permitir tentar outra bancada/banheiro/living room
-    // WHY: Condicional baseado em livingRoomState/bathroomState/countertopState para diferenciar flows
-    console.log('🔍 [DEBUG GERAR NOVOS] Verificando estado:');
-    console.log('  livingRoomState.selectedType:', state.livingRoomState?.selectedType);
-    console.log('  bathroomState.selectedType:', state.bathroomState.selectedType);
-    console.log('  countertopState.selectedType:', state.countertopState.selectedType);
-
-    if (state.livingRoomState?.selectedType) {
-        // Flow de Living Room
-        console.log('✅ [DEBUG] Configurando botão para LIVING ROOM');
-        elements.newAmbienteBtn.textContent = '🔄 Tentar Outro Living Room (Mesmo Crop)';
-        elements.newAmbienteBtn.onclick = () => {
-            console.log('🎯 [DEBUG] Clicou em Gerar Novos - Navegando para livingRoomSelectionScreen');
-            showScreen(elements.livingRoomSelectionScreen);
-        };
-    } else if (state.bathroomState.selectedType) {
-        // Flow de Bathrooms
-        console.log('✅ [DEBUG] Configurando botão para BATHROOM');
-        elements.newAmbienteBtn.textContent = '🔄 Tentar Outro Banheiro (Mesmo Crop)';
-        elements.newAmbienteBtn.onclick = () => {
-            console.log('🎯 [DEBUG] Clicou em Gerar Novos - Navegando para bathroomSelectionScreen');
-            showScreen(elements.bathroomSelectionScreen);
-        };
-    } else {
-        // Flow de Countertops (padrão)
-        console.log('✅ [DEBUG] Configurando botão para COUNTERTOP (padrão)');
-        elements.newAmbienteBtn.textContent = '🔄 Tentar Outra Bancada (Mesmo Crop)';
-        elements.newAmbienteBtn.onclick = () => {
-            console.log('🎯 [DEBUG] Clicou em Gerar Novos - Navegando para countertopSelectionScreen');
-            showScreen(elements.countertopSelectionScreen);
-        };
-    }
+    // Configura botão "Gerar Novos" baseado no tipo de mockup
+    configurarBotaoGerarNovos();
 
     // Configura botão "Modificar Crop" para voltar à tela de crop (somente se o botão existir)
     if (elements.modifyCropBtn) {
@@ -3905,6 +3980,126 @@ async function startBathroomsFlow() {
     showScreen(elements.bathroomSelectionScreen);
 }
 
+// ========== PROGRESSIVE MOCKUP GENERIC FUNCTION (DRY) ==========
+
+/**
+ * 🎯 FUNÇÃO GENÉRICA para gerar mockups progressivos (Living Room, Stairs, etc)
+ * ✅ DRY: Elimina duplicação entre generateLivingRoomProgressive e generateStairsProgressive
+ */
+async function generateProgressiveMockup(config) {
+    const {
+        endpoint,           // Ex: `${API_URL}/api/mockup/livingroom1/progressive`
+        formData,          // FormData já preparado
+        tipoMockup,        // Ex: 'Living Room', 'Stairs'
+        numero,            // Número do mockup (1, 2, etc)
+        totalItems,        // Total de itens esperados (4 para Living Room, 2 para Stairs)
+        stateKey,          // Ex: 'livingRoomState', 'stairsState'
+        selectionScreen,   // Ex: elements.livingRoomSelectionScreen
+        buttonText         // Ex: '🔄 Tentar Outro Living Room (Mesmo Crop)'
+    } = config;
+
+    try {
+        console.log(`📡 [DEBUG] Iniciando fetch para ${tipoMockup}...`);
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+
+        console.log(`📥 [DEBUG] Response recebido. Status: ${response.status}, OK: ${response.ok}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let itemsGerados = 0;
+
+        const progressBar = elements.progressBar;
+        const progressText = elements.progressText;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const jsonStr = line.slice(6);
+                    try {
+                        const event = JSON.parse(jsonStr);
+
+                        if (event.type === 'inicio') {
+                            console.log(`✅ [SSE] ${tipoMockup} ${numero}: ${event.data.mensagem}`);
+                            if (progressText) progressText.textContent = event.data.mensagem || 'Iniciando geração...';
+                        } else if (event.type === 'progresso') {
+                            console.log(`⏳ [SSE] ${tipoMockup} ${numero}: ${event.data.etapa}`);
+                            itemsGerados++;
+                            const percentage = event.data.porcentagem || Math.round((itemsGerados / totalItems) * 100);
+                            if (progressBar) progressBar.style.width = `${percentage}%`;
+                            if (progressText) progressText.textContent = event.data.etapa || `${itemsGerados} de ${totalItems} prontos`;
+                        } else if (event.type === 'sucesso') {
+                            console.log(`🎉 [SSE] SUCESSO recebido! Caminhos:`, event.data.caminhos);
+
+                            // Atualiza progresso para 100%
+                            if (progressBar) progressBar.style.width = '100%';
+                            if (progressText) progressText.textContent = `${event.data.caminhos.length} de ${event.data.caminhos.length} prontos`;
+
+                            // Pequeno delay para mostrar 100% antes de limpar
+                            setTimeout(() => {
+                                // Esconde loading overlay
+                                elements.loadingOverlay.classList.add('hidden');
+
+                                // Mostra tela de resultados
+                                showScreen(elements.ambienteResultScreen);
+                                elements.ambientesGallery.innerHTML = '';
+
+                                // Adiciona imagens à galeria
+                                event.data.caminhos.forEach((caminho, index) => {
+                                    console.log(`📸 [DEBUG] Adicionando imagem ${index + 1}/${event.data.caminhos.length}: ${caminho}`);
+                                    const imageUrl = `${API_URL}/uploads/mockups/${caminho}`;
+                                    state.ambienteUrls.push(imageUrl);
+                                    adicionarImagemAGaleria(imageUrl, `${tipoMockup} #${numero}`);
+                                });
+                            }, 500); // 500ms delay para mostrar progresso completo
+
+                            console.log(`✅ [DEBUG] Total de imagens adicionadas: ${event.data.caminhos.length}`);
+
+                            // Configura botão "Gerar Novos"
+                            console.log(`🔍 [${tipoMockup.toUpperCase()}] Configurando botão Gerar Novos`);
+                            console.log(`  ${stateKey}.selectedType:`, state[stateKey]?.selectedType);
+
+                            if (state[stateKey]?.selectedType) {
+                                console.log(`✅ [${tipoMockup.toUpperCase()}] Configurando botão`);
+                                elements.newAmbienteBtn.textContent = buttonText;
+                                elements.newAmbienteBtn.onclick = () => {
+                                    console.log(`🎯 [${tipoMockup.toUpperCase()}] Clicou em Gerar Novos`);
+                                    state.cropCoordinates = null;
+                                    showScreen(selectionScreen);
+                                };
+                            } else {
+                                console.warn(`⚠️ [${tipoMockup.toUpperCase()}] selectedType está undefined!`);
+                            }
+                        } else if (event.type === 'erro') {
+                            throw new Error(event.data.mensagem);
+                        }
+                    } catch (parseError) {
+                        console.warn('Erro ao parsear evento SSE:', parseError);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Erro ao gerar ${tipoMockup} ${numero}:`, error);
+        throw error;
+    }
+}
+
 // ========== LIVING ROOMS MOCKUP FLOW ==========
 
 /**
@@ -3995,15 +4190,12 @@ async function selectLivingRoomAndGenerate(type) {
 }
 
 /**
- * Gera mockup de living room usando progressive rendering (Server-Sent Events) - USA imageId + coordenadas
+ * Gera mockup de living room usando progressive rendering - ✅ USA FUNÇÃO GENÉRICA (DRY)
  */
 async function generateLivingRoomProgressive(numero) {
     const formData = new FormData();
 
-    // ✅ ARQUITETURA LIVING ROOM: Usa imageId + cropCoordinates (DIFERENTE de Bathroom que usa IFormFile)
-    console.log(`📎 Usando imagem do servidor: ${state.uploadedImageId}`);
-
-    // ✅ Restaura uploadedImageId se foi perdido
+    // Restaura uploadedImageId se foi perdido
     if (!state.uploadedImageId && state.sharedImageState?.uploadedImageId) {
         console.warn('⚠️ [LIVING ROOM] uploadedImageId foi perdido, restaurando de sharedImageState...');
         state.uploadedImageId = state.sharedImageState.uploadedImageId;
@@ -4028,112 +4220,152 @@ async function generateLivingRoomProgressive(numero) {
         formData.append('cropHeight', state.cropCoordinates.height);
     }
 
-    const endpoint = `${API_URL}/api/mockup/livingroom${numero}/progressive`;
+    // ✅ DRY: Usa função genérica
+    await generateProgressiveMockup({
+        endpoint: `${API_URL}/api/mockup/livingroom${numero}/progressive`,
+        formData: formData,
+        tipoMockup: 'Living Room',
+        numero: numero,
+        totalItems: 4,
+        stateKey: 'livingRoomState',
+        selectionScreen: elements.livingRoomSelectionScreen,
+        buttonText: '🔄 Tentar Outro Living Room (Mesmo Crop)'
+    });
+}
+
+// ========== STAIRS MOCKUP FLOW ==========
+
+/**
+ * Inicia o flow de Stairs - DRY com Living Rooms
+ */
+async function startStairsFlow() {
+    // 🔧 EMERGENCY FIX: Reseta flag travada se usuário voltar ao menu principal
+    state.isGeneratingMockup = false;
+
+    // 🔧 FIX: Limpa estado de countertop, bathroom, living room E stairs para evitar interferência entre flows
+    state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null;
+    state.bathroomState.selectedType = null;
+    state.livingRoomState.selectedType = null;
+    state.stairsState.selectedType = null; // ✨ FIX: Limpa estado anterior de stairs
+
+    if (!state.currentPhotoFile) {
+        showMessage('Por favor, selecione uma foto primeiro', 'error');
+        return;
+    }
+
+    // Mostra tela de seleção de stairs
+    showScreen(elements.stairsSelectionScreen);
+}
+
+/**
+ * Seleciona stairs e inicia geração - DRY com Living Rooms
+ */
+async function selectStairsAndGenerate(type) {
+    console.log('🎯 [STAIRS] selectStairsAndGenerate chamado com type:', type);
+    console.log('🔍 [DEBUG] state.uploadedImageId:', state.uploadedImageId);
+    console.log('🔍 [DEBUG] state.cropCoordinates:', state.cropCoordinates);
+    console.log('🔍 [DEBUG] state.sharedImageState:', state.sharedImageState);
+    console.log('🔍 [DEBUG] state.currentPhotoFile:', state.currentPhotoFile);
+
+    // ✅ FIX CRÍTICO: Limpa countertopState COMPLETO para não contaminar navegação
+    state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null;
+    console.log('✅ [STAIRS] Limpou countertopState completo');
+
+    // ✅ FIX: Verifica sharedImageState primeiro (mesma lógica que Countertops)
+    if (!state.sharedImageState?.currentImage && !state.currentPhotoFile) {
+        showMessage('Erro: Imagem não encontrada', 'error');
+        console.error('❌ [STAIRS] Nem sharedImageState nem currentPhotoFile disponíveis');
+        return;
+    }
+
+    // ✅ FIX: Restaura currentPhotoFile se foi perdido (usando sharedImageState)
+    if (!state.currentPhotoFile && state.sharedImageState?.currentImage) {
+        console.log('⚠️ [STAIRS] currentPhotoFile foi perdido, restaurando de sharedImageState...');
+        state.currentPhotoFile = base64ToBlob(state.sharedImageState.currentImage);
+        console.log('✅ [STAIRS] Restaurado com sucesso');
+    }
+
+    // ✨ FIX: Marca que está gerando mockup
+    state.isGeneratingMockup = true;
 
     try {
-        console.log('📡 [DEBUG] Iniciando fetch...');
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: formData
-        });
+        // Prepara para receber os mockups
+        state.ambienteUrls = [];
+        state.ambienteMode = true;
 
-        console.log('📥 [DEBUG] Response recebido. Status:', response.status, 'OK:', response.ok);
+        // Mostra loading overlay (IGUAL BANCADAS)
+        elements.loadingOverlay.classList.remove('hidden');
+        elements.loadingMessage.textContent = 'Gerando Stairs...';
+        elements.loadingSubmessage.textContent = 'Você verá cada versão assim que ficar pronta';
+        elements.progressContainer.classList.remove('hidden');
+        elements.progressBar.style.width = '0%';
+        elements.progressText.textContent = 'Preparando...';
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
+        // Extrai número do tipo (stairs1 → 1)
+        const stairsNumber = parseInt(type.replace('stairs', ''));
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        const totalQuadrantes = 4; // Living Room gera 4 quadrantes
-        let quadrantesGerados = 0;
+        // Salva tipo selecionado no estado (para navegação do botão Voltar)
+        state.stairsState.selectedType = type;
+        console.log('✅ [STAIRS] selectedType salvo no estado:', state.stairsState.selectedType);
 
-        const progressBar = document.getElementById('livingRoomProgress');
-        const progressText = document.getElementById('livingRoomProgressText');
+        // Chama geração do stairs (usa mesmo padrão progressive)
+        await generateStairsProgressive(stairsNumber);
 
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
+        // ✨ FIX: Reseta flag após geração bem-sucedida
+        state.isGeneratingMockup = false;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const jsonStr = line.slice(6);
-                    try {
-                        const event = JSON.parse(jsonStr);
-
-                        if (event.type === 'inicio') {
-                            console.log(`✅ [SSE] Living Room ${numero}: ${event.data.mensagem}`);
-                            if (progressText) progressText.textContent = event.data.mensagem || 'Iniciando geração...';
-                        } else if (event.type === 'progresso') {
-                            console.log(`⏳ [SSE] Living Room ${numero}: ${event.data.etapa}`);
-                            quadrantesGerados++;
-                            const percentage = Math.round((quadrantesGerados / totalQuadrantes) * 100);
-                            if (progressBar) progressBar.style.width = `${percentage}%`;
-                            if (progressText) progressText.textContent = `${quadrantesGerados} de ${totalQuadrantes} quadrantes prontos`;
-                        } else if (event.type === 'sucesso') {
-                            console.log(`🎉 [SSE] SUCESSO recebido! Caminhos:`, event.data.caminhos);
-                            console.log(`🔍 [DEBUG] elements.ambientesGallery:`, elements.ambientesGallery);
-
-                            // Atualiza progresso para 100%
-                            if (progressBar) progressBar.style.width = '100%';
-                            if (progressText) progressText.textContent = `${event.data.caminhos.length} de ${event.data.caminhos.length} quadrantes prontos`;
-
-                            // Pequeno delay para mostrar 100% antes de limpar
-                            setTimeout(() => {
-                                // Esconde loading overlay (IGUAL BANCADAS)
-                                elements.loadingOverlay.classList.add('hidden');
-
-                                // Mostra tela de resultados
-                                showScreen(elements.ambienteResultScreen);
-                                elements.ambientesGallery.innerHTML = '';
-
-                                // Adiciona os 4 quadrantes à galeria
-                                event.data.caminhos.forEach((caminho, index) => {
-                                    console.log(`📸 [DEBUG] Adicionando imagem ${index + 1}/${event.data.caminhos.length}: ${caminho}`);
-                                    const imageUrl = `${API_URL}/uploads/mockups/${caminho}`;
-                                    state.ambienteUrls.push(imageUrl);
-                                    adicionarImagemAGaleria(imageUrl, `Living Room #${numero}`);
-                                });
-                            }, 500); // 500ms delay para mostrar progresso completo
-
-                            console.log(`✅ [DEBUG] Total de imagens adicionadas: ${event.data.caminhos.length}`);
-
-                            // ✅ FIX: Configura botão "Gerar Novos" após sucesso
-                            // Copia mesma lógica de displayCountertopResults (linhas 3308-3339)
-                            console.log('🔍 [LIVING ROOM] Configurando botão "Gerar Novos"');
-                            console.log('  livingRoomState.selectedType:', state.livingRoomState?.selectedType);
-                            console.log('  bathroomState.selectedType:', state.bathroomState?.selectedType);
-                            console.log('  countertopState.selectedType:', state.countertopState?.selectedType);
-
-                            if (state.livingRoomState?.selectedType) {
-                                console.log('✅ [LIVING ROOM] Configurando botão para LIVING ROOM');
-                                elements.newAmbienteBtn.textContent = '🔄 Tentar Outro Living Room (Mesmo Crop)';
-                                elements.newAmbienteBtn.onclick = () => {
-                                    console.log('🎯 [LIVING ROOM] Clicou em Gerar Novos - Navegando para livingRoomSelectionScreen');
-                                    showScreen(elements.livingRoomSelectionScreen);
-                                };
-                            } else {
-                                console.warn('⚠️ [LIVING ROOM] selectedType está undefined! Botão não configurado corretamente.');
-                            }
-                        } else if (event.type === 'erro') {
-                            throw new Error(event.data.mensagem);
-                        }
-                    } catch (parseError) {
-                        console.warn('Erro ao parsear evento SSE:', parseError);
-                    }
-                }
-            }
-        }
     } catch (error) {
-        console.error(`Erro ao gerar Living Room ${numero}:`, error);
-        throw error;
+        console.error('Erro ao gerar Stairs:', error);
+        state.isGeneratingMockup = false;
+        elements.ambientesGallery.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+        showMessage('Erro ao gerar Stairs: ' + error.message, 'error');
     }
+}
+
+/**
+ * Gera mockup de stairs usando progressive rendering - ✅ USA FUNÇÃO GENÉRICA (DRY)
+ */
+async function generateStairsProgressive(numero) {
+    const formData = new FormData();
+
+    // Restaura uploadedImageId se foi perdido
+    if (!state.uploadedImageId && state.sharedImageState?.uploadedImageId) {
+        console.warn('⚠️ [STAIRS] uploadedImageId foi perdido, restaurando de sharedImageState...');
+        state.uploadedImageId = state.sharedImageState.uploadedImageId;
+        console.log(`✅ [STAIRS] uploadedImageId restaurado: ${state.uploadedImageId}`);
+    }
+
+    if (!state.uploadedImageId) {
+        console.error('❌ [CRITICAL] state.uploadedImageId está vazio/null!');
+        showMessage('Erro: ID da imagem não encontrado. Faça upload da imagem novamente.', 'error');
+        return;
+    }
+
+    formData.append('imageId', state.uploadedImageId);
+    formData.append('fundo', 'claro');
+
+    // Adiciona coordenadas de crop se existirem
+    if (state.cropCoordinates) {
+        console.log('✂️ Enviando coordenadas de crop para stairs:', state.cropCoordinates);
+        formData.append('cropX', state.cropCoordinates.x);
+        formData.append('cropY', state.cropCoordinates.y);
+        formData.append('cropWidth', state.cropCoordinates.width);
+        formData.append('cropHeight', state.cropCoordinates.height);
+    }
+
+    // ✅ DRY: Usa função genérica
+    await generateProgressiveMockup({
+        endpoint: `${API_URL}/api/mockup/stairs${numero}/progressive`,
+        formData: formData,
+        tipoMockup: 'Stairs',
+        numero: numero,
+        totalItems: 2, // Stairs gera 2 versões (normal + rotacionado)
+        stateKey: 'stairsState',
+        selectionScreen: elements.stairsSelectionScreen,
+        buttonText: '🔄 Tentar Outro Stairs (Mesmo Crop)'
+    });
 }
 
 /**
@@ -4484,12 +4716,15 @@ function adicionarImagemAGaleria(imageUrl, label) {
     const ambienteItem = document.createElement('div');
     ambienteItem.className = 'ambiente-item';
 
+    // Extrai o nome do arquivo da URL (remove path e query params)
+    const fileName = imageUrl.split('/').pop().split('?')[0];
+
     ambienteItem.innerHTML = `
         <img src="${imageUrl}" alt="${label}">
         <div class="ambiente-actions">
             <button class="btn btn-secondary btn-download-single"
                     data-url="${imageUrl}"
-                    data-nome="${label}">
+                    data-nome="${fileName}">
                 ⬇️ Baixar
             </button>
             <button class="btn btn-primary btn-share-single"

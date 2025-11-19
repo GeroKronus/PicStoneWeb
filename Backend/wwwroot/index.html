@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PicStone® mobile</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="style.css?v=20251115223000">
+    <link rel="stylesheet" href="style.css?v=20251116001500">
 </head>
 <body>
     <!-- Banner de Aviso de Expiração -->
@@ -398,7 +398,8 @@
                 <button id="ambienteBtn" class="btn btn-ambiente">Frames</button>
                 <button id="countertopsBtn" class="btn btn-countertops">Countertops</button>
                 <button id="bathroomsBtn" class="btn btn-bathrooms">Bathrooms</button>
-                <button id="livingRoomsBtn" class="btn btn-livingrooms">Living Room</button>
+                <button id="livingRoomsBtn" class="btn btn-livingrooms">Living Rooms</button>
+                <button id="stairsBtn" class="btn btn-stairs">Stairs</button>
             </div>
         </div>
     </div>
@@ -653,7 +654,7 @@
                         </div>
                         <div class="countertop-card" data-type="sala2">
                             <div class="countertop-preview" data-type="sala2">
-                                <img src="/images/thumb-liveroom2.webp" alt="Preview Living Room #2">
+                                <img src="/images/thumb-livingroom2.webp" alt="Preview Living Room #2">
                             </div>
                             <h4>Living Room #2</h4>
                             <p style="color: #6b7280; font-size: 0.875rem; margin-top: 4px;">BookMatch 2x2 + Skew</p>
@@ -684,10 +685,59 @@
                         </div>
                         <div class="countertop-card" data-type="testelivingroom2">
                             <div class="countertop-preview" data-type="testelivingroom2">
-                                <img src="/images/thumb-liveroom2.webp" alt="Preview Living Room TESTE #2">
+                                <img src="/images/thumb-livingroom2.webp" alt="Preview Living Room TESTE #2">
                             </div>
                             <h4>Living Room TESTE #2</h4>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Seleção de Stairs -->
+    <div id="stairsSelectionScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="cancelStairsSelectionBtn" class="btn-icon">← Voltar</button>
+                <h1>Escolha a Escada</h1>
+            </div>
+
+            <div class="ambiente-config-card">
+                <div class="config-section">
+                    <h3>Escolha o Design</h3>
+                    <div class="countertop-options">
+                        <div class="countertop-card" data-type="stairs1">
+                            <div class="countertop-preview" data-type="stairs1">
+                                <img src="/images/thumb-escada1.webp?v=20251118234600" alt="Preview Escada #1">
+                            </div>
+                            <h4>Escada #1</h4>
+                        </div>
+
+                        <div class="countertop-card" data-type="stairs2">
+                            <div class="countertop-preview" data-type="stairs2">
+                                <img src="/images/thumb-escada2.webp?v=20251118234600" alt="Preview Escada #2">
+                            </div>
+                            <h4>Escada #2</h4>
+                        </div>
+
+                        <!-- TODO: Implementar Escada #3
+                        <div class="countertop-card" data-type="stairs3">
+                            <div class="countertop-preview" data-type="stairs3">
+                                <img src="/images/thumb-escada3.webp?v=20251118234600" alt="Preview Escada #3">
+                            </div>
+                            <h4>Escada #3</h4>
+                        </div>
+                        -->
+
+                        <!-- TODO: Implementar Escada #4
+                        <div class="countertop-card" data-type="stairs4">
+                            <div class="countertop-preview" data-type="stairs4">
+                                <img src="/images/thumb-escada4.webp?v=20251118234600" alt="Preview Escada #4">
+                            </div>
+                            <h4>Escada #4</h4>
+                        </div>
+                        -->
                     </div>
                 </div>
             </div>
@@ -1089,7 +1139,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=20251115223000"></script>
+    <script src="app.js?v=20251119005000"></script>
     <script src="bookmatch.js?v=20251114144500"></script>
     <script src="history.js?v=20251111120000"></script>
 </body>

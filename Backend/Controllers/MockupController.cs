@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PicStoneFotoAPI.Helpers;
 using PicStoneFotoAPI.Models;
 using PicStoneFotoAPI.Services;
 using SkiaSharp;
@@ -19,10 +20,12 @@ namespace PicStoneFotoAPI.Controllers
         private readonly HistoryService _historyService;
         private readonly GraphicsTransformService _graphicsTransformService;
         private readonly LivingRoomService _livingRoomService;
+        private readonly StairsService _stairsService;
+        private readonly ImageWatermarkService _watermark;
         private readonly ILogger<MockupController> _logger;
         private readonly string _uploadsPath;
 
-        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, HistoryService historyService, GraphicsTransformService graphicsTransformService, LivingRoomService livingRoomService, ILogger<MockupController> logger)
+        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, HistoryService historyService, GraphicsTransformService graphicsTransformService, LivingRoomService livingRoomService, StairsService stairsService, ImageWatermarkService watermark, ILogger<MockupController> logger)
         {
             _mockupService = mockupService;
             _nichoService = nichoService;
@@ -30,6 +33,8 @@ namespace PicStoneFotoAPI.Controllers
             _historyService = historyService;
             _graphicsTransformService = graphicsTransformService;
             _livingRoomService = livingRoomService;
+            _stairsService = stairsService;
+            _watermark = watermark;
             _logger = logger;
             _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
             Directory.CreateDirectory(_uploadsPath);
@@ -146,7 +151,7 @@ namespace PicStoneFotoAPI.Controllers
                 for (int i = 0; i < mockups.Count; i++)
                 {
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"nicho1_{sufixo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateNichoFileName(1, sufixo, usuarioId);
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -242,7 +247,7 @@ namespace PicStoneFotoAPI.Controllers
                 for (int i = 0; i < mockups.Count; i++)
                 {
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"bancada1_{sufixo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateBancadaFileName(1, sufixo, usuarioId);
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -338,7 +343,7 @@ namespace PicStoneFotoAPI.Controllers
                 for (int i = 0; i < mockups.Count; i++)
                 {
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"bancada2_{sufixo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateBancadaFileName(2, sufixo, usuarioId);
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -685,7 +690,7 @@ namespace PicStoneFotoAPI.Controllers
                 for (int i = 0; i < mockups.Count; i++)
                 {
                     var sufixo = i == 0 ? "normal" : $"variacao{i}";
-                    var nomeArquivo = $"bancada{numeroBancada}_{sufixo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateBancadaFileName(numeroBancada, sufixo, usuarioId);
                     var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
                     // Salva com qualidade JPEG 95%
@@ -1035,7 +1040,7 @@ namespace PicStoneFotoAPI.Controllers
                     });
 
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"bancada1_{sufixo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateBancadaFileName(1, sufixo, usuarioId);
 
                     // Salva com cache-busting timestamp
                     var caminhoUrl = SalvarMockupComCacheBusting(mockups[i], nomeArquivo, "/uploads/mockups");
@@ -1242,7 +1247,7 @@ namespace PicStoneFotoAPI.Controllers
                     });
 
                     var sufixo = i == 0 ? "normal" : "rotacionado";
-                    var nomeArquivo = $"nicho1_{sufixo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateNichoFileName(1, sufixo, usuarioId);
 
                     // Salva com cache-busting timestamp
                     var caminhoUrl = SalvarMockupComCacheBusting(mockups[i], nomeArquivo, "/uploads/mockups");
@@ -1410,7 +1415,7 @@ namespace PicStoneFotoAPI.Controllers
                     });
 
                     var sufixo = i == 0 ? "normal" : $"variacao{i}";
-                    var nomeArquivo = $"bancada{numeroBancada}_{sufixo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateBancadaFileName(numeroBancada, sufixo, usuarioId);
 
                     // Salva com cache-busting timestamp
                     var caminhoUrl = SalvarMockupComCacheBusting(mockups[i], nomeArquivo, "/uploads/mockups");
@@ -1631,8 +1636,12 @@ namespace PicStoneFotoAPI.Controllers
                         _logger.LogWarning("Banho{Num}.webp não encontrado: {Path}. Canvas sem moldura.", numeroBathroom, caminhoBanho);
                     }
 
+                    // ✅ IMPERATIVO: Adiciona marca d'água (canto inferior direito)
+                    _watermark.AddWatermark(canvasFinal, canvasBase.Width, canvasBase.Height);
+                    _logger.LogInformation("Marca d'água adicionada ao quadrante {Q}", quadrante);
+
                     // PASSO 5: Salva o quadrante final com cache-busting
-                    var nomeArquivo = $"bathroom{numeroBathroom}_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateBathroomFileName(numeroBathroom, quadrante, fundo, usuarioId);
 
                     // Salva com cache-busting timestamp (sem prefixo de URL)
                     var caminhoComTimestamp = SalvarMockupComCacheBusting(canvasBase, nomeArquivo);
@@ -1776,7 +1785,7 @@ namespace PicStoneFotoAPI.Controllers
                         porcentagem = 10 + (quadrante * 20)
                     });
 
-                    var nomeArquivo = $"livingroom1_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateLivingRoomFileName(1, quadrante, fundo, usuarioId);
 
                     // Salva com cache-busting timestamp (sem prefixo de URL)
                     var caminhoComTimestamp = SalvarMockupComCacheBusting(quadrantesBitmaps[i], nomeArquivo);
@@ -1908,7 +1917,7 @@ namespace PicStoneFotoAPI.Controllers
                         porcentagem = 10 + (quadrante * 20)
                     });
 
-                    var nomeArquivo = $"livingroom2_quadrant{quadrante}_{fundo}_User{usuarioId}.jpg";
+                    var nomeArquivo = FileNamingHelper.GenerateLivingRoomFileName(2, quadrante, fundo, usuarioId);
 
                     // Salva com cache-busting timestamp (sem prefixo de URL)
                     var caminhoComTimestamp = SalvarMockupComCacheBusting(quadrantesBitmaps[i], nomeArquivo);
@@ -1948,6 +1957,504 @@ namespace PicStoneFotoAPI.Controllers
 
         // ==================== FIM LIVING ROOM ====================
 
+        // ==================== STAIRS ====================
+
+        [HttpPost("stairs1/progressive")]
+        public async Task GerarStairs1Progressive(
+            [FromForm] string? imageId,
+            [FromForm] IFormFile? imagem,
+            [FromForm] string fundo = "claro",
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
+        {
+            Response.Headers.Add("Content-Type", "text/event-stream");
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Stairs #1 Progressive (imageId + crop) ===");
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Carregando imagem...",
+                    porcentagem = 5
+                });
+
+                // Carrega imagem (igual LivingRoom)
+                SKBitmap imagemOriginal;
+                if (!string.IsNullOrEmpty(imageId))
+                {
+                    var caminhoImagem = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", imageId);
+                    using var stream = System.IO.File.OpenRead(caminhoImagem);
+                    imagemOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem carregada do servidor: {ImageId}", imageId);
+                }
+                else if (imagem != null)
+                {
+                    using var stream = imagem.OpenReadStream();
+                    imagemOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem recebida do upload");
+                }
+                else
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Nenhuma imagem fornecida" });
+                    return;
+                }
+
+                _logger.LogInformation("Imagem original carregada: {Width}x{Height}", imagemOriginal.Width, imagemOriginal.Height);
+
+                // Crop se necessário
+                SKBitmap imagemFinal;
+                if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                {
+                    _logger.LogInformation("Aplicando crop: x={X}, y={Y}, w={W}, h={H}", cropX, cropY, cropWidth, cropHeight);
+                    var rectCrop = new SKRectI(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    imagemFinal = new SKBitmap(cropWidth.Value, cropHeight.Value);
+                    imagemOriginal.ExtractSubset(imagemFinal, rectCrop);
+                    imagemOriginal.Dispose();
+                    _logger.LogInformation("Imagem cropada: {Width}x{Height}", imagemFinal.Width, imagemFinal.Height);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Nenhuma coordenada de crop fornecida - usando imagem ORIGINAL");
+                    imagemFinal = imagemOriginal;
+                }
+
+                _logger.LogInformation("Imagem final para processamento: {Width}x{Height}", imagemFinal.Width, imagemFinal.Height);
+
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var caminhos = new List<string>();
+
+                // Gera 2 versões: normal e rotacionada
+                for (int versao = 1; versao <= 2; versao++)
+                {
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Gerando escada versão {versao}/2...",
+                        porcentagem = 10 + (versao == 1 ? 30 : 60)
+                    });
+
+                    bool rotacionado = versao == 2;
+                    var mockup = _stairsService.GerarStairs1(imagemFinal, rotacionado);
+
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Salvando versão {versao}/2...",
+                        porcentagem = 10 + (versao == 1 ? 35 : 85)
+                    });
+
+                    var sufixo = versao == 1 ? "normal" : "rotate";
+                    var nomeArquivo = FileNamingHelper.GenerateStairsFileName(1, sufixo, fundo, usuarioId);
+
+                    // Salva com cache-busting timestamp (sem prefixo de URL)
+                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockup, nomeArquivo);
+                    caminhos.Add(caminhoComTimestamp);
+                    _logger.LogInformation("Stairs versão {V} salvo: {Path}", versao, nomeArquivo);
+
+                    mockup.Dispose();
+                }
+
+                imagemFinal.Dispose();
+
+                // Registra geração no histórico
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Stairs1",
+                    detalhes: $"{{\"fundo\":\"{fundo}\"}}",
+                    quantidadeImagens: caminhos.Count
+                );
+
+                await EnviarEventoSSE("sucesso", new
+                {
+                    mensagem = "Stairs #1 gerado com sucesso!",
+                    caminhos = caminhos
+                });
+
+                _logger.LogInformation("=== FIM Stairs #1 Progressive ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Stairs #1");
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("stairs2/progressive")]
+        public async Task GerarStairs2Progressive(
+            [FromForm] string? imageId,
+            [FromForm] IFormFile? imagem,
+            [FromForm] string fundo = "claro",
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
+        {
+            Response.Headers.Add("Content-Type", "text/event-stream");
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Stairs #2 Progressive (imageId + crop) ===");
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Carregando imagem...",
+                    porcentagem = 5
+                });
+
+                // Carrega imagem (igual LivingRoom)
+                SKBitmap imagemOriginal;
+                if (!string.IsNullOrEmpty(imageId))
+                {
+                    var caminhoImagem = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", imageId);
+                    using var stream = System.IO.File.OpenRead(caminhoImagem);
+                    imagemOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem carregada do servidor: {ImageId}", imageId);
+                }
+                else if (imagem != null)
+                {
+                    using var stream = imagem.OpenReadStream();
+                    imagemOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem recebida do upload");
+                }
+                else
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Nenhuma imagem fornecida" });
+                    return;
+                }
+
+                _logger.LogInformation("Imagem original carregada: {Width}x{Height}", imagemOriginal.Width, imagemOriginal.Height);
+
+                // Crop se necessário
+                SKBitmap imagemFinal;
+                if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                {
+                    _logger.LogInformation("Aplicando crop: x={X}, y={Y}, w={W}, h={H}", cropX, cropY, cropWidth, cropHeight);
+                    var rectCrop = new SKRectI(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    imagemFinal = new SKBitmap(cropWidth.Value, cropHeight.Value);
+                    imagemOriginal.ExtractSubset(imagemFinal, rectCrop);
+                    imagemOriginal.Dispose();
+                    _logger.LogInformation("Imagem cropada: {Width}x{Height}", imagemFinal.Width, imagemFinal.Height);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Nenhuma coordenada de crop fornecida - usando imagem ORIGINAL");
+                    imagemFinal = imagemOriginal;
+                }
+
+                _logger.LogInformation("Imagem final para processamento: {Width}x{Height}", imagemFinal.Width, imagemFinal.Height);
+
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var caminhos = new List<string>();
+
+                // Gera 2 versões: normal e rotacionada
+                for (int versao = 1; versao <= 2; versao++)
+                {
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Gerando escada versão {versao}/2...",
+                        porcentagem = 10 + (versao == 1 ? 30 : 60)
+                    });
+
+                    bool rotacionado = versao == 2;
+                    var mockup = _stairsService.GerarStairs2(imagemFinal, rotacionado);
+
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Salvando versão {versao}/2...",
+                        porcentagem = 10 + (versao == 1 ? 35 : 85)
+                    });
+
+                    var sufixo = versao == 1 ? "normal" : "rotate";
+                    var nomeArquivo = FileNamingHelper.GenerateStairsFileName(2, sufixo, fundo, usuarioId);
+
+                    // Salva com cache-busting timestamp (sem prefixo de URL)
+                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockup, nomeArquivo);
+                    caminhos.Add(caminhoComTimestamp);
+                    _logger.LogInformation("Stairs versão {V} salvo: {Path}", versao, nomeArquivo);
+
+                    mockup.Dispose();
+                }
+
+                imagemFinal.Dispose();
+
+                // Registra geração no histórico
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Stairs2",
+                    detalhes: $"{{\"fundo\":\"{fundo}\"}}",
+                    quantidadeImagens: caminhos.Count
+                );
+
+                await EnviarEventoSSE("sucesso", new
+                {
+                    mensagem = "Stairs #2 gerado com sucesso!",
+                    caminhos = caminhos
+                });
+
+                _logger.LogInformation("=== FIM Stairs #2 Progressive ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Stairs #2");
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("stairs3/progressive")]
+        public async Task GerarStairs3Progressive(
+            [FromForm] string? imageId,
+            [FromForm] IFormFile? imagem,
+            [FromForm] string fundo = "claro",
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
+        {
+            Response.Headers.Add("Content-Type", "text/event-stream");
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Stairs #3 Progressive (imageId + crop) ===");
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Carregando imagem...",
+                    porcentagem = 5
+                });
+
+                // Carrega imagem (igual LivingRoom)
+                SKBitmap imagemOriginal;
+                if (!string.IsNullOrEmpty(imageId))
+                {
+                    var caminhoImagem = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", imageId);
+                    using var stream = System.IO.File.OpenRead(caminhoImagem);
+                    imagemOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem carregada do servidor: {ImageId}", imageId);
+                }
+                else if (imagem != null)
+                {
+                    using var stream = imagem.OpenReadStream();
+                    imagemOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem recebida do upload");
+                }
+                else
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Nenhuma imagem fornecida" });
+                    return;
+                }
+
+                _logger.LogInformation("Imagem original carregada: {Width}x{Height}", imagemOriginal.Width, imagemOriginal.Height);
+
+                // Crop se necessário
+                SKBitmap imagemFinal;
+                if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                {
+                    _logger.LogInformation("Aplicando crop: x={X}, y={Y}, w={W}, h={H}", cropX, cropY, cropWidth, cropHeight);
+                    var rectCrop = new SKRectI(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    imagemFinal = new SKBitmap(cropWidth.Value, cropHeight.Value);
+                    imagemOriginal.ExtractSubset(imagemFinal, rectCrop);
+                    imagemOriginal.Dispose();
+                    _logger.LogInformation("Imagem cropada: {Width}x{Height}", imagemFinal.Width, imagemFinal.Height);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Nenhuma coordenada de crop fornecida - usando imagem ORIGINAL");
+                    imagemFinal = imagemOriginal;
+                }
+
+                _logger.LogInformation("Imagem final para processamento: {Width}x{Height}", imagemFinal.Width, imagemFinal.Height);
+
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var caminhos = new List<string>();
+
+                // Gera 2 versões: normal e rotacionada
+                for (int versao = 1; versao <= 2; versao++)
+                {
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Gerando escada versão {versao}/2...",
+                        porcentagem = 10 + (versao == 1 ? 30 : 60)
+                    });
+
+                    bool rotacionado = versao == 2;
+                    // TODO: Implementar GerarStairs3
+                    var mockup = _stairsService.GerarStairs1(imagemFinal, rotacionado);
+
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Salvando versão {versao}/2...",
+                        porcentagem = 10 + (versao == 1 ? 35 : 85)
+                    });
+
+                    var sufixo = versao == 1 ? "normal" : "rotate";
+                    var nomeArquivo = FileNamingHelper.GenerateStairsFileName(3, sufixo, fundo, usuarioId);
+
+                    // Salva com cache-busting timestamp (sem prefixo de URL)
+                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockup, nomeArquivo);
+                    caminhos.Add(caminhoComTimestamp);
+                    _logger.LogInformation("Stairs versão {V} salvo: {Path}", versao, nomeArquivo);
+
+                    mockup.Dispose();
+                }
+
+                imagemFinal.Dispose();
+
+                // Registra geração no histórico
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Stairs3",
+                    detalhes: $"{{\"fundo\":\"{fundo}\"}}",
+                    quantidadeImagens: caminhos.Count
+                );
+
+                await EnviarEventoSSE("sucesso", new
+                {
+                    mensagem = "Stairs #3 gerado com sucesso!",
+                    caminhos = caminhos
+                });
+
+                _logger.LogInformation("=== FIM Stairs #3 Progressive ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Stairs #3");
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
+            }
+        }
+
+        [HttpPost("stairs4/progressive")]
+        public async Task GerarStairs4Progressive(
+            [FromForm] string? imageId,
+            [FromForm] IFormFile? imagem,
+            [FromForm] string fundo = "claro",
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
+        {
+            Response.Headers.Add("Content-Type", "text/event-stream");
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Stairs #4 Progressive (imageId + crop) ===");
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Carregando imagem...",
+                    porcentagem = 5
+                });
+
+                // Carrega imagem (igual LivingRoom)
+                SKBitmap imagemOriginal;
+                if (!string.IsNullOrEmpty(imageId))
+                {
+                    var caminhoImagem = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", imageId);
+                    using var stream = System.IO.File.OpenRead(caminhoImagem);
+                    imagemOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem carregada do servidor: {ImageId}", imageId);
+                }
+                else if (imagem != null)
+                {
+                    using var stream = imagem.OpenReadStream();
+                    imagemOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem recebida do upload");
+                }
+                else
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Nenhuma imagem fornecida" });
+                    return;
+                }
+
+                _logger.LogInformation("Imagem original carregada: {Width}x{Height}", imagemOriginal.Width, imagemOriginal.Height);
+
+                // Crop se necessário
+                SKBitmap imagemFinal;
+                if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                {
+                    _logger.LogInformation("Aplicando crop: x={X}, y={Y}, w={W}, h={H}", cropX, cropY, cropWidth, cropHeight);
+                    var rectCrop = new SKRectI(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    imagemFinal = new SKBitmap(cropWidth.Value, cropHeight.Value);
+                    imagemOriginal.ExtractSubset(imagemFinal, rectCrop);
+                    imagemOriginal.Dispose();
+                    _logger.LogInformation("Imagem cropada: {Width}x{Height}", imagemFinal.Width, imagemFinal.Height);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ Nenhuma coordenada de crop fornecida - usando imagem ORIGINAL");
+                    imagemFinal = imagemOriginal;
+                }
+
+                _logger.LogInformation("Imagem final para processamento: {Width}x{Height}", imagemFinal.Width, imagemFinal.Height);
+
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var caminhos = new List<string>();
+
+                // Gera 2 versões: normal e rotacionada
+                for (int versao = 1; versao <= 2; versao++)
+                {
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Gerando escada versão {versao}/2...",
+                        porcentagem = 10 + (versao == 1 ? 30 : 60)
+                    });
+
+                    bool rotacionado = versao == 2;
+                    // TODO: Reimplementar GerarStairs4 sem TransformacaoConfig
+                    var mockup = _stairsService.GerarStairs2(imagemFinal, rotacionado);
+
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Salvando versão {versao}/2...",
+                        porcentagem = 10 + (versao == 1 ? 35 : 85)
+                    });
+
+                    var sufixo = versao == 1 ? "normal" : "rotate";
+                    var nomeArquivo = FileNamingHelper.GenerateStairsFileName(4, sufixo, fundo, usuarioId);
+
+                    // Salva com cache-busting timestamp (sem prefixo de URL)
+                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockup, nomeArquivo);
+                    caminhos.Add(caminhoComTimestamp);
+                    _logger.LogInformation("Stairs versão {V} salvo: {Path}", versao, nomeArquivo);
+
+                    mockup.Dispose();
+                }
+
+                imagemFinal.Dispose();
+
+                // Registra geração no histórico
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Stairs4",
+                    detalhes: $"{{\"fundo\":\"{fundo}\"}}",
+                    quantidadeImagens: caminhos.Count
+                );
+
+                await EnviarEventoSSE("sucesso", new
+                {
+                    mensagem = "Stairs #4 gerado com sucesso!",
+                    caminhos = caminhos
+                });
+
+                _logger.LogInformation("=== FIM Stairs #4 Progressive ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Stairs #4");
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
+            }
+        }
+
+        // ==================== FIM STAIRS ====================
+
         /// <summary>
         /// Método auxiliar para enviar eventos SSE
         /// </summary>
@@ -1969,6 +2476,21 @@ namespace PicStoneFotoAPI.Controllers
         {
             var caminhoCompleto = Path.Combine(_uploadsPath, nomeArquivo);
 
+            // ✅ FIX: Deleta arquivo antigo se existir (evita erro de arquivo bloqueado)
+            if (System.IO.File.Exists(caminhoCompleto))
+            {
+                try
+                {
+                    System.IO.File.Delete(caminhoCompleto);
+                    _logger.LogInformation("Arquivo antigo deletado: {Path}", caminhoCompleto);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Não foi possível deletar arquivo antigo: {Path}", caminhoCompleto);
+                    // Continua mesmo se não conseguir deletar (tentará sobrescrever)
+                }
+            }
+
             using var image = SKImage.FromBitmap(bitmap);
             using var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
             using var outputStream = System.IO.File.OpenWrite(caminhoCompleto);
@@ -1980,6 +2502,37 @@ namespace PicStoneFotoAPI.Controllers
             return prefixoUrl != null
                 ? $"{prefixoUrl}/{nomeComTimestamp}"
                 : nomeComTimestamp;
+        }
+
+        /// <summary>
+        /// ENDPOINT DE TESTE: Processa apenas degrau1 e espelho1
+        /// </summary>
+        [HttpPost("test/degrau1-espelho1")]
+        public IActionResult TestarDegrau1Espelho1(IFormFile imagem)
+        {
+            try
+            {
+                if (imagem == null || imagem.Length == 0)
+                    return BadRequest("Nenhuma imagem fornecida");
+
+                using var stream = imagem.OpenReadStream();
+                using var imagemOriginal = SKBitmap.Decode(stream);
+
+                var resultado = _stairsService.TestarDegrau1Espelho1(imagemOriginal);
+
+                // Retornar a imagem salva em debug
+                var debugPath = Path.Combine("wwwroot", "debug", "test_degrau1_espelho1.jpg");
+                return Ok(new {
+                    success = true,
+                    debugPath = $"/debug/test_degrau1_espelho1.jpg?v={DateTime.Now.Ticks}",
+                    message = "Teste executado! Veja o resultado em /debug/test_degrau1_espelho1.jpg"
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro no teste degrau1+espelho1");
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
 
         /// <summary>

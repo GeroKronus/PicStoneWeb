@@ -1,4 +1,5 @@
 using SkiaSharp;
+using PicStoneFotoAPI.Helpers;
 using PicStoneFotoAPI.Models;
 
 namespace PicStoneFotoAPI.Services
@@ -158,7 +159,7 @@ namespace PicStoneFotoAPI.Services
 
             // Salva resultado - usa usuarioId se fornecido, senão usa timestamp
             var nomeArquivo = usuarioId.HasValue
-                ? $"cavalete_simples_{fundo}_User{usuarioId.Value}.jpg"
+                ? FileNamingHelper.GenerateCavaleteSimpleFileName(fundo, usuarioId.Value)
                 : $"mockup_simples_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
             var caminhoFinal = Path.Combine(_uploadPath, nomeArquivo);
 
@@ -250,7 +251,7 @@ namespace PicStoneFotoAPI.Services
             // Salva resultado - usa usuarioId se fornecido, senão usa timestamp
             var sufixo = inverterLados ? "invertido" : "normal";
             var nomeArquivo = usuarioId.HasValue
-                ? $"cavalete_duplo_{sufixo}_{fundo}_User{usuarioId.Value}.jpg"
+                ? FileNamingHelper.GenerateCavaleteDuploFileName(sufixo, fundo, usuarioId.Value)
                 : $"mockup_duplo_{sufixo}_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
             var caminhoFinal = Path.Combine(_uploadPath, nomeArquivo);
 

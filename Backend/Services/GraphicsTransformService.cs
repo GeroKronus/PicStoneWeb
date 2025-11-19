@@ -17,6 +17,84 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Cria matriz de perspectiva mapeando retângulo para quadrilátero arbitrário
+        /// Baseado na documentação oficial Microsoft/Xamarin SkiaSharp
+        /// Fonte: https://learn.microsoft.com/en-us/previous-versions/xamarin/xamarin-forms/user-interface/graphics/skiasharp/transforms/non-affine
+        /// </summary>
+        public SKMatrix ComputeMatrix(SKSize size, SKPoint ptUL, SKPoint ptUR, SKPoint ptLL, SKPoint ptLR)
+        {
+            // 1. Transformação de escala - normaliza para 0-1
+            SKMatrix S = SKMatrix.CreateScale(1 / size.Width, 1 / size.Height);
+
+            // 2. Transformação afim - mapeia 3 pontos
+            SKMatrix A = new SKMatrix
+            {
+                ScaleX = ptUR.X - ptUL.X,
+                SkewY = ptUR.Y - ptUL.Y,
+                SkewX = ptLL.X - ptUL.X,
+                ScaleY = ptLL.Y - ptUL.Y,
+                TransX = ptUL.X,
+                TransY = ptUL.Y,
+                Persp2 = 1
+            };
+
+            // 3. Transformação não-afim - calcula perspectiva para 4º ponto
+            SKMatrix inverseA;
+            A.TryInvert(out inverseA);
+            SKPoint abPoint = inverseA.MapPoint(ptLR);
+            float a = abPoint.X;
+            float b = abPoint.Y;
+
+            float scaleX = a / (a + b - 1);
+            float scaleY = b / (a + b - 1);
+
+            SKMatrix N = new SKMatrix
+            {
+                ScaleX = scaleX,
+                ScaleY = scaleY,
+                Persp0 = scaleX - 1,
+                Persp1 = scaleY - 1,
+                Persp2 = 1
+            };
+
+            // 4. Multiplica S × N × A
+            SKMatrix result = SKMatrix.CreateIdentity();
+            result = result.PostConcat(S);
+            result = result.PostConcat(N);
+            result = result.PostConcat(A);
+
+            return result;
+        }
+
+        /// <summary>
+        /// Transforma bitmap usando matriz de perspectiva de 4 pontos
+        /// </summary>
+        public SKBitmap TransformPerspective(SKBitmap input, int canvasWidth, int canvasHeight,
+                                             SKPoint topLeft, SKPoint topRight,
+                                             SKPoint bottomLeft, SKPoint bottomRight)
+        {
+            var matrix = ComputeMatrix(
+                new SKSize(input.Width, input.Height),
+                topLeft, topRight, bottomLeft, bottomRight
+            );
+
+            var surface = SKSurface.Create(new SKImageInfo(canvasWidth, canvasHeight));
+            var canvas = surface.Canvas;
+            canvas.Clear(SKColors.Transparent);
+
+            using var paint = new SKPaint
+            {
+                FilterQuality = SKFilterQuality.High,
+                IsAntialias = true
+            };
+
+            canvas.SetMatrix(matrix);
+            canvas.DrawBitmap(input, 0, 0, paint);
+
+            return SKBitmap.FromImage(surface.Snapshot());
+        }
+
+        /// <summary>
         /// Aplica transformação Skew (inclinação) com perspectiva 3D
         /// </summary>
         /// <param name="input">Bitmap de entrada</param>
@@ -1027,26 +1105,61 @@ namespace PicStoneFotoAPI.Services
                 throw new ArgumentException($"Imagem de entrada inválida para Distortion");
             }
 
-            if (ladoMaior <= 0 || ladoMenor <= 0 || novaLargura <= 0 || novaAltura <= 0)
+            if (novaLargura <= 0 || novaAltura <= 0)
             {
-                _logger.LogError($"Distortion: Parâmetros inválidos!");
-                throw new ArgumentException($"Parâmetros inválidos para Distortion");
+                _logger.LogError($"Distortion: Dimensões inválidas!");
+                throw new ArgumentException($"Dimensões inválidas para Distortion");
             }
 
-            // CORREÇÃO: VB.NET faz apenas RESIZE UNIFORME (sem amostragem não-linear)
-            // Isso cria PARALELOGRAMO (sem convergência) em vez de TRAPÉZIO
+            // ✅ CORREÇÃO CRÍTICA: Implementar o algoritmo EXATO do VB.NET
+            // 1. Primeiro redimensiona a imagem para NovaLargura x NovaAltura
+            var bmpimage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
 
-            // Calcula altura final usando o fator
-            float fator = (float)ladoMaior / ladoMenor;
-            int alturaFinal = (int)(novaAltura / fator);
+            // 2. Cria bitmap de resultado com mesmas dimensões
+            var bmp2 = new SKBitmap(bmpimage.Width, bmpimage.Height);
 
-            _logger.LogInformation($"Distortion: fator={fator:F3}, alturaFinal={alturaFinal} (de {novaAltura})");
+            int largura = bmpimage.Width;
+            int altura = bmpimage.Height;
 
-            // APENAS RESIZE uniforme (mantém linhas paralelas = PARALELOGRAMO)
-            SKBitmap resultado;
+            // 3. Calcula fator de distorção e altura inicial
+            float fatorDeDistortion = (float)ladoMaior / ladoMenor;
+            int primeiroY = (int)(altura / fatorDeDistortion);
+
+            // 4. Loop horizontal - aplica compressão vertical PROGRESSIVA
+            for (int horizontal = 0; horizontal < largura; horizontal++)
+            {
+                // Calcula altura da coluna (cresce linearmente)
+                int loopEixoY = (int)(((float)horizontal / largura) * (altura - primeiroY) + primeiroY);
+
+                // Calcula passo vertical para esta coluna
+                float pixelVertical = (float)altura / loopEixoY;
+                float posicaoDosPixels = 0;
+
+                // Loop vertical - lê pixels com compressão
+                for (int vertical = 0; vertical < loopEixoY; vertical++)
+                {
+                    int sourceY = (int)posicaoDosPixels;
+                    if (sourceY >= altura) sourceY = altura - 1;
+
+                    // Copia pixel da posição calculada
+                    var neColor = bmpimage.GetPixel(horizontal, sourceY);
+                    bmp2.SetPixel(horizontal, vertical, neColor);
+
+                    posicaoDosPixels += pixelVertical;
+                    if (posicaoDosPixels >= altura)
+                    {
+                        posicaoDosPixels = altura - 1;
+                    }
+                }
+            }
+
+            // Libera imagem temporária
+            bmpimage.Dispose();
+
+            SKBitmap resultado = bmp2;
+
             try
             {
-                resultado = imagem.Resize(new SKImageInfo(novaLargura, alturaFinal), SKFilterQuality.High);
                 if (resultado == null || resultado.Width <= 0 || resultado.Height <= 0)
                 {
                     _logger.LogError($"Distortion: Resize retornou bitmap inválido!");
@@ -1192,7 +1305,7 @@ namespace PicStoneFotoAPI.Services
         ///   V1 (top-left):     (1056, 830)
         ///   V2 (top-right):    (2928, 1342) [FORA - X > 2500]
         ///   V3 (bottom-right): (1759, 1944) [FORA - Y > 1554]
-        ///   V4 (bottom-left):  (168, 875)
+        ///   V4 (bottom-left):  (158, 875)
         /// </summary>
         public SKBitmap MapToCustomQuadrilateral_Bancada8_Completa(SKBitmap input, int canvasWidth, int canvasHeight)
         {
@@ -1203,7 +1316,7 @@ namespace PicStoneFotoAPI.Services
             _logger.LogInformation("  V1 (top-left):     (1056, 830)");
             _logger.LogInformation("  V2 (top-right):    (2928, 1342) [FORA do canvas]");
             _logger.LogInformation("  V3 (bottom-right): (1759, 1944) [FORA do canvas]");
-            _logger.LogInformation("  V4 (bottom-left):  (168, 875)");
+            _logger.LogInformation("  V4 (bottom-left):  (158, 875)");
 
             return MapToVertices(
                 input: input,
@@ -1211,7 +1324,7 @@ namespace PicStoneFotoAPI.Services
                 canvasHeight: canvasHeight,
                 v1x: 1056, v1y: 830,   // top-left
                 v2x: 2928, v2y: 1342,  // top-right (FORA)
-                v4x: 168,  v4y: 875,   // bottom-left
+                v4x: 158,  v4y: 875,   // bottom-left
                 v3x: 1759, v3y: 1944   // bottom-right (FORA)
             );
         }
