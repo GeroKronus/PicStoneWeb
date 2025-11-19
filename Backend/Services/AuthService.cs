@@ -482,6 +482,64 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Edita dados de um usuário existente
+        /// </summary>
+        public async Task<(bool Success, string Message)> EditUserAsync(int userId, dynamic request)
+        {
+            try
+            {
+                var usuario = await _context.Usuarios.FindAsync(userId);
+
+                if (usuario == null)
+                {
+                    return (false, "Usuário não encontrado");
+                }
+
+                // Atualiza apenas os campos fornecidos
+                if (request.NomeCompleto != null)
+                {
+                    usuario.NomeCompleto = request.NomeCompleto;
+                }
+
+                if (request.Email != null)
+                {
+                    // Verifica se o novo email já existe (exceto para o próprio usuário)
+                    var emailExiste = await _context.Usuarios
+                        .AnyAsync(u => u.Email == request.Email && u.Id != userId);
+
+                    if (emailExiste)
+                    {
+                        return (false, "Este email já está em uso por outro usuário");
+                    }
+
+                    usuario.Email = request.Email;
+                    usuario.Username = request.Email; // Username = Email
+                }
+
+                if (request.DataExpiracao != null)
+                {
+                    usuario.DataExpiracao = request.DataExpiracao;
+                }
+
+                if (request.Ativo != null)
+                {
+                    usuario.Ativo = request.Ativo;
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Usuário editado: {usuario.Email} (ID: {userId})");
+
+                return (true, "Usuário atualizado com sucesso!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao editar usuário ID: {userId}");
+                return (false, "Erro ao editar usuário. Tente novamente.");
+            }
+        }
+
+        /// <summary>
         /// Registra novo usuário (cadastro público)
         /// Envia email de verificação
         /// </summary>

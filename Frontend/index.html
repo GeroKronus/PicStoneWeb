@@ -1125,6 +1125,43 @@
         </div>
     </div>
 
+    <!-- Modal de Edição de Usuário -->
+    <div id="editUserModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Editar Usuário</h2>
+
+            <div class="form-group">
+                <label for="editUserNome">Nome Completo</label>
+                <input type="text" id="editUserNome" name="editUserNome" required>
+            </div>
+
+            <div class="form-group">
+                <label for="editUserEmail">Email</label>
+                <input type="email" id="editUserEmail" name="editUserEmail" required>
+            </div>
+
+            <div class="form-group">
+                <label for="editUserDataExpiracao">Data de Expiração</label>
+                <input type="datetime-local" id="editUserDataExpiracao" name="editUserDataExpiracao">
+                <small style="color: #6b7280; display: block; margin-top: 5px;">
+                    Deixe em branco para acesso ilimitado
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="editUserAtivo" name="editUserAtivo">
+                    <span>Usuário Ativo</span>
+                </label>
+            </div>
+
+            <div class="modal-actions">
+                <button id="confirmEditUserBtn" class="btn btn-primary">💾 Salvar Alterações</button>
+                <button id="cancelEditUserBtn" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Verificação de Email -->
     <div id="emailVerificationModal" class="modal hidden">
         <div class="modal-content email-verification-modal">

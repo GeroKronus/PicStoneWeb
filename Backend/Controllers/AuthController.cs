@@ -368,6 +368,38 @@ namespace PicStoneFotoAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// PUT /api/auth/users/{id}
+        /// Edita dados de um usuário (apenas admin)
+        /// </summary>
+        [HttpPut("users/{id}")]
+        public async Task<IActionResult> EditUser(int id, [FromBody] EditUserRequest request)
+        {
+            try
+            {
+                // Verifica se é admin
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != ADMIN_USERNAME)
+                {
+                    return Forbid();
+                }
+
+                var (success, message) = await _authService.EditUserAsync(id, request);
+
+                if (!success)
+                {
+                    return BadRequest(new { mensagem = message });
+                }
+
+                return Ok(new { mensagem = message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Erro ao editar usuário {id}");
+                return StatusCode(500, new { mensagem = "Erro ao editar usuário" });
+            }
+        }
+
         // ========== CADASTRO PÚBLICO E VERIFICAÇÃO ==========
 
         /// <summary>
@@ -670,5 +702,16 @@ namespace PicStoneFotoAPI.Controllers
     public class RejectUserRequest
     {
         public string? Motivo { get; set; }
+    }
+
+    /// <summary>
+    /// Request para editar dados de usuário
+    /// </summary>
+    public class EditUserRequest
+    {
+        public string? NomeCompleto { get; set; }
+        public string? Email { get; set; }
+        public DateTime? DataExpiracao { get; set; }
+        public bool? Ativo { get; set; }
     }
 }

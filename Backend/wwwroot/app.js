@@ -3670,6 +3670,9 @@ function renderUsersCards(users) {
             </div>
             <div class="user-actions">
                 ${user.username !== 'admin' ? `
+                    <button class="btn btn-primary btn-edit-user" data-user-id="${user.id}" data-user-data='${JSON.stringify(user).replace(/'/g, "&apos;")}'>
+                        ✏️ Editar
+                    </button>
                     ${user.ativo ? `
                         <button class="btn btn-secondary btn-deactivate-user" data-user-id="${user.id}">
                             Desativar
@@ -3710,6 +3713,9 @@ function renderUsersTable(users) {
                 <td data-label="Status"><span class="user-status ${statusClass}">${user.ativo ? '●' : '○'} ${status}</span></td>
                 <td data-label="Ações">
                     ${user.username !== 'admin' ? `
+                        <button class="btn btn-small btn-primary btn-edit-user" data-user-id="${user.id}" data-user-data='${JSON.stringify(user).replace(/'/g, "&apos;")}'>
+                            ✏️ Editar
+                        </button>
                         ${user.ativo ? `
                             <button class="btn btn-small btn-secondary btn-deactivate-user" data-user-id="${user.id}">
                                 Desativar
@@ -4916,6 +4922,120 @@ if (document.getElementById('cancelApproveAllBtn')) {
 
         // Limpa o campo de data
         document.getElementById('dataExpiracaoLote').value = '';
+    });
+}
+
+// ========== EDIÇÃO DE USUÁRIO ==========
+
+/**
+ * Event listener delegado para botões de editar usuário
+ */
+let currentEditingUserId = null;
+
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.btn-edit-user')) {
+        const btn = e.target.closest('.btn-edit-user');
+        const userId = btn.getAttribute('data-user-id');
+        const userData = JSON.parse(btn.getAttribute('data-user-data').replace(/&apos;/g, "'"));
+
+        openEditUserModal(userId, userData);
+    }
+});
+
+/**
+ * Abre modal de edição e preenche com dados do usuário
+ */
+function openEditUserModal(userId, userData) {
+    currentEditingUserId = userId;
+
+    // Preenche os campos
+    document.getElementById('editUserNome').value = userData.nomeCompleto || '';
+    document.getElementById('editUserEmail').value = userData.email || '';
+    document.getElementById('editUserAtivo').checked = userData.ativo || false;
+
+    // Data de expiração - converte para formato datetime-local
+    if (userData.dataExpiracao) {
+        const dataExp = new Date(userData.dataExpiracao);
+        // Formato: YYYY-MM-DDTHH:MM
+        const year = dataExp.getFullYear();
+        const month = String(dataExp.getMonth() + 1).padStart(2, '0');
+        const day = String(dataExp.getDate()).padStart(2, '0');
+        const hours = String(dataExp.getHours()).padStart(2, '0');
+        const minutes = String(dataExp.getMinutes()).padStart(2, '0');
+        document.getElementById('editUserDataExpiracao').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    } else {
+        document.getElementById('editUserDataExpiracao').value = '';
+    }
+
+    // Abre o modal
+    document.getElementById('editUserModal').classList.remove('hidden');
+}
+
+/**
+ * Event listener para confirmar edição
+ */
+if (document.getElementById('confirmEditUserBtn')) {
+    document.getElementById('confirmEditUserBtn').addEventListener('click', async function() {
+        try {
+            const nomeCompleto = document.getElementById('editUserNome').value.trim();
+            const email = document.getElementById('editUserEmail').value.trim();
+            const dataExpiracaoInput = document.getElementById('editUserDataExpiracao').value;
+            const ativo = document.getElementById('editUserAtivo').checked;
+
+            if (!nomeCompleto || !email) {
+                alert('Nome e email são obrigatórios');
+                return;
+            }
+
+            const dataExpiracao = dataExpiracaoInput ? new Date(dataExpiracaoInput).toISOString() : null;
+
+            // Chama o endpoint de edição
+            const response = await fetch(`${API_URL}/api/auth/users/${currentEditingUserId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${state.token}`
+                },
+                body: JSON.stringify({
+                    NomeCompleto: nomeCompleto,
+                    Email: email,
+                    DataExpiracao: dataExpiracao,
+                    Ativo: ativo
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.mensagem || 'Erro ao editar usuário');
+            }
+
+            // Fecha o modal
+            document.getElementById('editUserModal').classList.add('hidden');
+
+            // Mostra mensagem de sucesso
+            alert(result.mensagem);
+
+            // Recarrega a lista de usuários
+            if (typeof showUsersScreen === 'function') {
+                await showUsersScreen();
+            } else if (typeof loadUsers === 'function') {
+                await loadUsers();
+            }
+        } catch (error) {
+            console.error('Erro ao editar usuário:', error);
+            alert(error.message || 'Erro ao editar usuário. Tente novamente.');
+        }
+    });
+}
+
+/**
+ * Event listener para cancelar edição
+ */
+if (document.getElementById('cancelEditUserBtn')) {
+    document.getElementById('cancelEditUserBtn').addEventListener('click', function() {
+        document.getElementById('editUserModal').classList.add('hidden');
+        currentEditingUserId = null;
     });
 }
 
