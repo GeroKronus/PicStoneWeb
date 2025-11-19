@@ -1093,6 +1093,38 @@ body {
     box-shadow: 0 8px 15px -3px rgba(30, 144, 255, 0.4);
 }
 
+.btn-livingrooms {
+    background: linear-gradient(135deg, #228B22 0%, #32CD32 100%);
+    color: white;
+    font-size: 18px;
+    padding: 14px;
+    margin-top: 10px;
+    width: 100% !important;
+    display: block;
+}
+
+.btn-livingrooms:hover {
+    background: linear-gradient(135deg, #32CD32 0%, #228B22 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(34, 139, 34, 0.4);
+}
+
+.btn-stairs {
+    background: linear-gradient(135deg, #8B008B 0%, #9932CC 100%);
+    color: white;
+    font-size: 18px;
+    padding: 14px;
+    margin-top: 10px;
+    width: 100% !important;
+    display: block;
+}
+
+.btn-stairs:hover {
+    background: linear-gradient(135deg, #9932CC 0%, #8B008B 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(139, 0, 139, 0.4);
+}
+
 .ambiente-config-card {
     background: var(--card-background);
     border-radius: 16px;
