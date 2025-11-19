@@ -381,7 +381,7 @@ namespace PicStoneFotoAPI.Services
             try
             {
                 var usuarios = await _context.Usuarios
-                    .OrderBy(u => u.Username)
+                    .OrderByDescending(u => u.UltimoAcesso ?? DateTime.MinValue)
                     .ToListAsync();
 
                 return usuarios.Select(u => new UserResponse
