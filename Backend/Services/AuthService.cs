@@ -388,8 +388,12 @@ namespace PicStoneFotoAPI.Services
                 {
                     Id = u.Id,
                     Username = u.Username,
+                    Email = u.Email,
                     NomeCompleto = u.NomeCompleto,
                     Ativo = u.Ativo,
+                    EmailVerificado = u.EmailVerificado,
+                    Status = u.Status.ToString(),
+                    DataExpiracao = u.DataExpiracao,
                     DataCriacao = u.DataCriacao
                 }).ToList();
             }
