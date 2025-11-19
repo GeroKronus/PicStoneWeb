@@ -731,5 +731,67 @@ namespace PicStoneFotoAPI.Services
                 return (false, "Erro ao rejeitar usuário. Tente novamente.");
             }
         }
+
+        /// <summary>
+        /// Aprova TODOS os usuários pendentes em lote (apenas admin)
+        /// Aplica a mesma data de expiração para todos
+        /// Envia emails de aprovação para todos
+        /// </summary>
+        public async Task<(bool Success, string Message, int Count)> ApproveAllPendingUsersAsync(DateTime? dataExpiracao, EmailService emailService)
+        {
+            try
+            {
+                // Busca TODOS os usuários aguardando aprovação
+                var usuariosPendentes = await _context.Usuarios
+                    .Where(u => u.Status == StatusUsuario.AguardandoAprovacao)
+                    .ToListAsync();
+
+                if (!usuariosPendentes.Any())
+                {
+                    return (false, "Não há usuários pendentes para aprovar", 0);
+                }
+
+                int count = usuariosPendentes.Count;
+
+                // Aprova todos os usuários
+                foreach (var usuario in usuariosPendentes)
+                {
+                    usuario.Status = StatusUsuario.Aprovado;
+                    usuario.Ativo = true;
+                    usuario.DataExpiracao = dataExpiracao;
+                }
+
+                await _context.SaveChangesAsync();
+
+                // 🚀 OTIMIZAÇÃO: Envia emails em background (não bloqueia aprovação)
+                _ = Task.Run(async () =>
+                {
+                    foreach (var usuario in usuariosPendentes)
+                    {
+                        try
+                        {
+                            await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Erro ao enviar email de aprovação em lote para: {Email}", usuario.Email);
+                        }
+                    }
+                });
+
+                _logger.LogInformation($"Aprovação em lote: {count} usuários aprovados");
+
+                string mensagem = dataExpiracao.HasValue
+                    ? $"{count} usuário(s) aprovado(s) com sucesso! Data de expiração: {dataExpiracao.Value:dd/MM/yyyy}"
+                    : $"{count} usuário(s) aprovado(s) com sucesso! Sem data de expiração.";
+
+                return (true, mensagem, count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao aprovar usuários em lote");
+                return (false, "Erro ao aprovar usuários em lote. Tente novamente.", 0);
+            }
+        }
     }
 }

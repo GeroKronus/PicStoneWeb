@@ -542,6 +542,43 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// POST /api/auth/approve-all-pending
+        /// Aprova TODOS os usuários pendentes de uma vez (apenas admin)
+        /// </summary>
+        [HttpPost("approve-all-pending")]
+        public async Task<IActionResult> ApproveAllPending([FromBody] ApproveUserRequest? request)
+        {
+            try
+            {
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != ADMIN_USERNAME)
+                {
+                    return Forbid();
+                }
+
+                var dataExpiracao = request?.DataExpiracao;
+
+                var (success, message, count) = await _authService.ApproveAllPendingUsersAsync(dataExpiracao, _emailService);
+
+                if (!success)
+                {
+                    return BadRequest(new { mensagem = message });
+                }
+
+                return Ok(new
+                {
+                    mensagem = message,
+                    usuariosAprovados = count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao aprovar usuários pendentes em lote");
+                return StatusCode(500, new { mensagem = "Erro ao aprovar usuários em lote" });
+            }
+        }
+
+        /// <summary>
         /// GET /api/auth/force-create-admin
         /// Força criação do usuário admin (público, use apenas uma vez)
         /// </summary>
