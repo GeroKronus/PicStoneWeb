@@ -700,6 +700,98 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Lista todos os usuários expirados (apenas admin)
+        /// </summary>
+        public async Task<List<UserResponse>> ListExpiredUsersAsync()
+        {
+            try
+            {
+                var usuarios = await _context.Usuarios
+                    .Where(u => u.Status == StatusUsuario.Expirado)
+                    .OrderBy(u => u.DataExpiracao)
+                    .ToListAsync();
+
+                return usuarios.Select(u => new UserResponse
+                {
+                    Id = u.Id,
+                    Username = u.Username,
+                    NomeCompleto = u.NomeCompleto,
+                    Ativo = u.Ativo,
+                    DataCriacao = u.DataCriacao,
+                    Email = u.Email,
+                    EmailVerificado = u.EmailVerificado,
+                    Status = u.Status.ToString(),
+                    DataExpiracao = u.DataExpiracao
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao listar usuários expirados");
+                return new List<UserResponse>();
+            }
+        }
+
+        /// <summary>
+        /// Reativa TODOS os usuários expirados de uma vez com nova data de expiração (apenas admin)
+        /// </summary>
+        public async Task<(bool Success, string Message, int Count)> ReactivateAllExpiredUsersAsync(DateTime? dataExpiracao, EmailService emailService)
+        {
+            try
+            {
+                // Busca TODOS os usuários expirados
+                var usuariosExpirados = await _context.Usuarios
+                    .Where(u => u.Status == StatusUsuario.Expirado)
+                    .ToListAsync();
+
+                if (!usuariosExpirados.Any())
+                {
+                    return (false, "Não há usuários expirados para reativar", 0);
+                }
+
+                int count = usuariosExpirados.Count;
+
+                // Reativa todos os usuários
+                foreach (var usuario in usuariosExpirados)
+                {
+                    usuario.Status = StatusUsuario.Aprovado;
+                    usuario.Ativo = true;
+                    usuario.DataExpiracao = dataExpiracao;
+                }
+
+                await _context.SaveChangesAsync();
+
+                // 🚀 OTIMIZAÇÃO: Envia emails em background (não bloqueia reativação)
+                _ = Task.Run(async () =>
+                {
+                    foreach (var usuario in usuariosExpirados)
+                    {
+                        try
+                        {
+                            await emailService.SendApprovalEmailAsync(usuario.Email, usuario.NomeCompleto, dataExpiracao);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Erro ao enviar email de reativação em lote para: {Email}", usuario.Email);
+                        }
+                    }
+                });
+
+                _logger.LogInformation($"Reativação em lote: {count} usuários expirados reativados");
+
+                string mensagem = dataExpiracao.HasValue
+                    ? $"{count} usuário(s) expirado(s) reativado(s) com sucesso! Nova data de expiração: {dataExpiracao.Value:dd/MM/yyyy}"
+                    : $"{count} usuário(s) expirado(s) reativado(s) com sucesso! Sem data de expiração.";
+
+                return (true, mensagem, count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao reativar usuários expirados em lote");
+                return (false, "Erro ao reativar usuários expirados. Tente novamente.", 0);
+            }
+        }
+
+        /// <summary>
         /// Aprova usuário (apenas admin)
         /// Envia email de aprovação
         /// </summary>

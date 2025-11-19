@@ -614,6 +614,68 @@ namespace PicStoneFotoAPI.Controllers
         }
 
         /// <summary>
+        /// GET /api/auth/expired-users
+        /// Lista usuários expirados (apenas admin)
+        /// </summary>
+        [HttpGet("expired-users")]
+        public async Task<IActionResult> ListExpiredUsers()
+        {
+            try
+            {
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != ADMIN_USERNAME)
+                {
+                    return Forbid();
+                }
+
+                var usuarios = await _authService.ListExpiredUsersAsync();
+                return Ok(usuarios);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao listar usuários expirados");
+                return StatusCode(500, new { mensagem = "Erro ao listar usuários expirados" });
+            }
+        }
+
+        /// <summary>
+        /// POST /api/auth/reactivate-all-expired
+        /// Reativa TODOS os usuários expirados de uma vez (apenas admin)
+        /// </summary>
+        [HttpPost("reactivate-all-expired")]
+        public async Task<IActionResult> ReactivateAllExpired([FromBody] ApproveUserRequest? request)
+        {
+            try
+            {
+                var username = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+                if (username != ADMIN_USERNAME)
+                {
+                    return Forbid();
+                }
+
+                var dataExpiracao = request?.DataExpiracao;
+
+                var (success, message, count) = await _authService.ReactivateAllExpiredUsersAsync(dataExpiracao, _emailService);
+
+                if (!success)
+                {
+                    return BadRequest(new { mensagem = message });
+                }
+
+                return Ok(new
+                {
+                    mensagem = message,
+                    usuariosReativados = count
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao reativar usuários expirados em lote");
+                return StatusCode(500, new { mensagem = "Erro ao reativar usuários expirados" });
+            }
+        }
+
+        /// <summary>
         /// GET /api/auth/force-create-admin
         /// Força criação do usuário admin (público, use apenas uma vez)
         /// </summary>

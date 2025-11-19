@@ -927,6 +927,9 @@
             </div>
 
             <button id="addUserBtn" class="btn btn-primary">+ Adicionar Usuário</button>
+            <button id="reactivateAllExpiredBtn" class="btn btn-success" style="margin-left: 10px;">
+                🔄 Ativar Todos Expirados
+            </button>
 
             <!-- Campo de Busca -->
             <div class="search-box">
@@ -1158,6 +1161,27 @@
             <div class="modal-actions">
                 <button id="confirmEditUserBtn" class="btn btn-primary">💾 Salvar Alterações</button>
                 <button id="cancelEditUserBtn" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Reativação de Expirados em Lote -->
+    <div id="reactivateAllExpiredModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Ativar Todos os Usuários Expirados</h2>
+            <p id="reactivateAllExpiredCount" style="color: #6b7280; margin-bottom: 20px;"></p>
+
+            <div class="form-group">
+                <label for="dataExpiracaoLoteExpirados">Data de Expiração (opcional)</label>
+                <input type="datetime-local" id="dataExpiracaoLoteExpirados" name="dataExpiracaoLoteExpirados">
+                <small style="color: #6b7280; display: block; margin-top: 5px;">
+                    Deixe em branco para acesso ilimitado. Esta data será aplicada a TODOS os usuários expirados.
+                </small>
+            </div>
+
+            <div class="modal-actions">
+                <button id="confirmReactivateAllExpiredBtn" class="btn btn-success">✅ Ativar Todos</button>
+                <button id="cancelReactivateAllExpiredBtn" class="btn btn-secondary">Cancelar</button>
             </div>
         </div>
     </div>

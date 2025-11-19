@@ -4925,6 +4925,120 @@ if (document.getElementById('cancelApproveAllBtn')) {
     });
 }
 
+// ========== REATIVAÇÃO DE EXPIRADOS EM LOTE ==========
+
+/**
+ * Variável global para armazenar a contagem de usuários expirados
+ */
+let expiredUsersCount = 0;
+
+/**
+ * Event listener para o botão "Ativar Todos Expirados"
+ */
+if (document.getElementById('reactivateAllExpiredBtn')) {
+    document.getElementById('reactivateAllExpiredBtn').addEventListener('click', async function() {
+        try {
+            // Busca quantos usuários estão expirados
+            const response = await fetch(`${API_URL}/api/auth/expired-users`, {
+                headers: { 'Authorization': `Bearer ${state.token}` }
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao buscar usuários expirados');
+            }
+
+            const usuarios = await response.json();
+            expiredUsersCount = usuarios.length;
+
+            if (expiredUsersCount === 0) {
+                alert('Não há usuários expirados para reativar.');
+                return;
+            }
+
+            // Atualiza o texto do modal com a contagem
+            document.getElementById('reactivateAllExpiredCount').textContent =
+                `Você está prestes a reativar ${expiredUsersCount} usuário(s) expirado(s).`;
+
+            // Abre o modal
+            document.getElementById('reactivateAllExpiredModal').classList.remove('hidden');
+        } catch (error) {
+            console.error('Erro ao abrir modal de reativação em lote:', error);
+            alert('Erro ao carregar usuários expirados. Tente novamente.');
+        }
+    });
+}
+
+/**
+ * Event listener para confirmar reativação em lote
+ */
+if (document.getElementById('confirmReactivateAllExpiredBtn')) {
+    document.getElementById('confirmReactivateAllExpiredBtn').addEventListener('click', async function() {
+        try {
+            // Pega a data de expiração (se fornecida)
+            const dataExpiracaoInput = document.getElementById('dataExpiracaoLoteExpirados').value;
+            const dataExpiracao = dataExpiracaoInput ? new Date(dataExpiracaoInput).toISOString() : null;
+
+            // DEBUG: Log do que está sendo enviado
+            console.log('🔍 DEBUG reactivate-all-expired FRONTEND:');
+            console.log('  - Input value:', dataExpiracaoInput);
+            console.log('  - Data parsed:', dataExpiracao);
+            console.log('  - JSON sendo enviado (PascalCase):', JSON.stringify({ DataExpiracao: dataExpiracao }));
+
+            // Chama o endpoint de reativação em lote
+            // IMPORTANTE: Enviando com PascalCase para garantir binding correto no C#
+            const response = await fetch(`${API_URL}/api/auth/reactivate-all-expired`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${state.token}`
+                },
+                body: JSON.stringify({ DataExpiracao: dataExpiracao })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.mensagem || 'Erro ao reativar usuários');
+            }
+
+            // Fecha o modal
+            document.getElementById('reactivateAllExpiredModal').classList.add('hidden');
+
+            // Limpa o campo de data
+            document.getElementById('dataExpiracaoLoteExpirados').value = '';
+
+            // Mostra mensagem de sucesso
+            alert(result.mensagem);
+
+            // Recarrega a lista de usuários
+            if (typeof showUsersScreen === 'function') {
+                await showUsersScreen();
+            } else if (typeof loadUsers === 'function') {
+                await loadUsers();
+            } else {
+                // Fallback: recarrega a página
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Erro ao reativar usuários em lote:', error);
+            alert(error.message || 'Erro ao reativar usuários. Tente novamente.');
+        }
+    });
+}
+
+/**
+ * Event listener para cancelar reativação em lote
+ */
+if (document.getElementById('cancelReactivateAllExpiredBtn')) {
+    document.getElementById('cancelReactivateAllExpiredBtn').addEventListener('click', function() {
+        // Fecha o modal
+        document.getElementById('reactivateAllExpiredModal').classList.add('hidden');
+
+        // Limpa o campo de data
+        document.getElementById('dataExpiracaoLoteExpirados').value = '';
+    });
+}
+
 // ========== EDIÇÃO DE USUÁRIO ==========
 
 /**
