@@ -1034,6 +1034,10 @@
                 <p>Usuários que confirmaram o email e aguardam sua aprovação para ter acesso à plataforma.</p>
             </div>
 
+            <button id="approveAllPendingBtn" class="btn btn-success" style="margin-bottom: 20px;">
+                ✅ Ativar Todos Pendentes
+            </button>
+
             <div id="pendingUsersList" class="users-list">
                 <p class="loading">Carregando...</p>
             </div>
@@ -1096,6 +1100,27 @@
             <div class="modal-actions">
                 <button id="confirmReactivateBtn" class="btn btn-primary">✅ Reativar</button>
                 <button id="cancelReactivateBtn" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Aprovação em Lote -->
+    <div id="approveAllModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Ativar Todos os Usuários Pendentes</h2>
+            <p id="approveAllCount" style="color: #6b7280; margin-bottom: 20px;"></p>
+
+            <div class="form-group">
+                <label for="dataExpiracaoLote">Data de Expiração (opcional)</label>
+                <input type="datetime-local" id="dataExpiracaoLote" name="dataExpiracaoLote">
+                <small style="color: #6b7280; display: block; margin-top: 5px;">
+                    Deixe em branco para acesso ilimitado. Esta data será aplicada a TODOS os usuários.
+                </small>
+            </div>
+
+            <div class="modal-actions">
+                <button id="confirmApproveAllBtn" class="btn btn-success">✅ Ativar Todos</button>
+                <button id="cancelApproveAllBtn" class="btn btn-secondary">Cancelar</button>
             </div>
         </div>
     </div>

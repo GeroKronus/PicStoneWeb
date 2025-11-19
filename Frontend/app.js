@@ -4740,6 +4740,110 @@ function adicionarImagemAGaleria(imageUrl, label) {
     elements.ambientesGallery.appendChild(ambienteItem);
 }
 
+// ========== APROVAÇÃO EM LOTE DE USUÁRIOS PENDENTES ==========
+// Variável global para contar usuários pendentes
+let pendingUsersCount = 0;
+
+/**
+ * Event listener para o botão "Ativar Todos Pendentes"
+ */
+if (document.getElementById('approveAllPendingBtn')) {
+    document.getElementById('approveAllPendingBtn').addEventListener('click', async function() {
+        try {
+            // Busca quantos usuários estão pendentes
+            const response = await fetch(`${API_URL}/api/auth/pending-users`, {
+                headers: { 'Authorization': `Bearer ${state.token}` }
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao buscar usuários pendentes');
+            }
+
+            const usuarios = await response.json();
+            pendingUsersCount = usuarios.length;
+
+            if (pendingUsersCount === 0) {
+                alert('Não há usuários pendentes para aprovar.');
+                return;
+            }
+
+            // Atualiza o texto do modal com a contagem
+            document.getElementById('approveAllCount').textContent =
+                `Você está prestes a ativar ${pendingUsersCount} usuário(s) pendente(s).`;
+
+            // Abre o modal
+            document.getElementById('approveAllModal').classList.remove('hidden');
+        } catch (error) {
+            console.error('Erro ao abrir modal de aprovação em lote:', error);
+            alert('Erro ao carregar usuários pendentes. Tente novamente.');
+        }
+    });
+}
+
+/**
+ * Event listener para confirmar aprovação em lote
+ */
+if (document.getElementById('confirmApproveAllBtn')) {
+    document.getElementById('confirmApproveAllBtn').addEventListener('click', async function() {
+        try {
+            // Pega a data de expiração (se fornecida)
+            const dataExpiracaoInput = document.getElementById('dataExpiracaoLote').value;
+            const dataExpiracao = dataExpiracaoInput ? new Date(dataExpiracaoInput).toISOString() : null;
+
+            // Chama o endpoint de aprovação em lote
+            const response = await fetch(`${API_URL}/api/auth/approve-all-pending`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${state.token}`
+                },
+                body: JSON.stringify({ dataExpiracao })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.mensagem || 'Erro ao aprovar usuários');
+            }
+
+            // Fecha o modal
+            document.getElementById('approveAllModal').classList.add('hidden');
+
+            // Limpa o campo de data
+            document.getElementById('dataExpiracaoLote').value = '';
+
+            // Mostra mensagem de sucesso
+            alert(result.mensagem);
+
+            // Recarrega a lista de usuários pendentes
+            if (typeof showPendingUsersScreen === 'function') {
+                await showPendingUsersScreen();
+            } else if (typeof loadPendingUsers === 'function') {
+                await loadPendingUsers();
+            } else {
+                // Fallback: recarrega a página
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Erro ao aprovar usuários em lote:', error);
+            alert(error.message || 'Erro ao aprovar usuários. Tente novamente.');
+        }
+    });
+}
+
+/**
+ * Event listener para cancelar aprovação em lote
+ */
+if (document.getElementById('cancelApproveAllBtn')) {
+    document.getElementById('cancelApproveAllBtn').addEventListener('click', function() {
+        // Fecha o modal
+        document.getElementById('approveAllModal').classList.add('hidden');
+
+        // Limpa o campo de data
+        document.getElementById('dataExpiracaoLote').value = '';
+    });
+}
+
 // ========== SERVICE WORKER (para PWA futuro) ==========
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
