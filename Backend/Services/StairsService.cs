@@ -18,11 +18,13 @@ namespace PicStoneFotoAPI.Services
     {
         private readonly ILogger<StairsService> _logger;
         private readonly GraphicsTransformService _graphicsTransformService;
+        private readonly ImageWatermarkService _watermark;
 
-        public StairsService(ILogger<StairsService> logger, GraphicsTransformService graphicsTransformService)
+        public StairsService(ILogger<StairsService> logger, GraphicsTransformService graphicsTransformService, ImageWatermarkService watermark)
         {
             _logger = logger;
             _graphicsTransformService = graphicsTransformService;
+            _watermark = watermark;
         }
 
         /// <summary>
@@ -158,6 +160,12 @@ namespace PicStoneFotoAPI.Services
             espelho4.Dispose();
             espelho5.Dispose();
             espelho6.Dispose();
+
+            // Adicionar marca d'água
+            using (var canvas = new SKCanvas(resultado))
+            {
+                _watermark.AddWatermark(canvas, resultado.Width, resultado.Height);
+            }
 
             _logger.LogInformation("Escada #1 gerada com sucesso!");
             return resultado;
@@ -691,6 +699,12 @@ namespace PicStoneFotoAPI.Services
 
             foreach (var degrau in degrausTransformados) { degrau?.Dispose(); }
             foreach (var espelho in espelhosTransformados) { espelho?.Dispose(); }
+
+            // Adicionar marca d'água
+            using (var canvas = new SKCanvas(canvasComOverlay))
+            {
+                _watermark.AddWatermark(canvas, canvasComOverlay.Width, canvasComOverlay.Height);
+            }
 
             _logger.LogInformation("✅ STAIRS #2 CONCLUÍDO (sem imagens de debug)");
             return canvasComOverlay;
