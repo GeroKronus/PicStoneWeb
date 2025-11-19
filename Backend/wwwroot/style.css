@@ -346,6 +346,100 @@ body {
     color: var(--error-color);
 }
 
+/* Seção do dropdown com header */
+.dropdown-section {
+    padding: 4px 0;
+}
+
+.dropdown-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.dropdown-section-header svg {
+    opacity: 0.7;
+    width: 14px;
+    height: 14px;
+}
+
+/* Item aninhado (nested) */
+.dropdown-item-nested {
+    padding-left: 36px;
+    position: relative;
+}
+
+/* Conteúdo do item com título e descrição */
+.dropdown-item-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.dropdown-item-title {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+/* Descrição do item (texto secundário) */
+.dropdown-item-description {
+    display: block;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 400;
+    line-height: 1.2;
+}
+
+/* Badge de notificação */
+.dropdown-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: #ef4444;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.dropdown-badge.hidden {
+    display: none;
+}
+
+.dropdown-item-with-badge {
+    justify-content: space-between;
+}
+
+/* Badge ADMIN */
+.admin-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.admin-badge.hidden {
+    display: none;
+}
+
 /* Logo PicStone */
 .logo-container {
     text-align: center;

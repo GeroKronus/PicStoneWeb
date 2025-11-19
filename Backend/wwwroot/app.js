@@ -288,6 +288,9 @@ const elements = {
     changePasswordBtn: document.getElementById('changePasswordBtn'),
     manageUsersBtn: document.getElementById('manageUsersBtn'),
     pendingUsersBtn: document.getElementById('pendingUsersBtn'),
+    adminSection: document.getElementById('adminSection'),
+    adminBadge: document.getElementById('adminBadge'),
+    pendingUsersBadge: document.getElementById('pendingUsersBadge'),
     changePasswordScreen: document.getElementById('changePasswordScreen'),
     changePasswordForm: document.getElementById('changePasswordForm'),
     changePasswordMessage: document.getElementById('changePasswordMessage'),
@@ -922,25 +925,29 @@ async function showMainScreen() {
     const initials = state.username.substring(0, 2).toUpperCase();
     elements.userInitials.textContent = initials;
 
-    // Mostra botão de gerenciar usuários apenas para admin
+    // Mostra seção de administração apenas para admin
     if (state.username === 'rogerio@picstone.com.br') {
-        if (elements.manageUsersBtn) {
-            elements.manageUsersBtn.classList.remove('hidden');
+        // Mostra seção de admin e badge ADMIN
+        if (elements.adminSection) {
+            elements.adminSection.classList.remove('hidden');
         }
-        if (elements.pendingUsersBtn) {
-            elements.pendingUsersBtn.classList.remove('hidden');
+        if (elements.adminBadge) {
+            elements.adminBadge.classList.remove('hidden');
         }
         // Salva no localStorage para uso no history.js
         localStorage.setItem('isAdmin', 'true');
-    } else {
-        if (elements.manageUsersBtn) elements.manageUsersBtn.classList.add('hidden');
-        if (elements.pendingUsersBtn) elements.pendingUsersBtn.classList.add('hidden');
-        localStorage.setItem('isAdmin', 'false');
-    }
 
-    // Mostra botão de histórico para todos os usuários
-    if (elements.historyBtn) {
-        elements.historyBtn.classList.remove('hidden');
+        // Atualiza badge de pendentes ao carregar
+        atualizarBadgePendentes();
+    } else {
+        // Oculta seção de admin e badge ADMIN
+        if (elements.adminSection) {
+            elements.adminSection.classList.add('hidden');
+        }
+        if (elements.adminBadge) {
+            elements.adminBadge.classList.add('hidden');
+        }
+        localStorage.setItem('isAdmin', 'false');
     }
 
     await loadMaterials();
@@ -952,6 +959,38 @@ async function showMainScreen() {
 function toggleUserMenu(e) {
     e.stopPropagation();
     elements.userMenuDropdown.classList.toggle('hidden');
+
+    // Atualiza badge de pendentes ao abrir menu (se admin)
+    if (state.username === 'rogerio@picstone.com.br') {
+        atualizarBadgePendentes();
+    }
+}
+
+/**
+ * Atualiza badge dinâmico de usuários pendentes
+ */
+async function atualizarBadgePendentes() {
+    try {
+        const response = await fetch(`${API_URL}/api/auth/pending-users`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+
+        if (response.ok) {
+            const usuarios = await response.json();
+            const count = usuarios.length;
+
+            if (elements.pendingUsersBadge) {
+                if (count > 0) {
+                    elements.pendingUsersBadge.textContent = count;
+                    elements.pendingUsersBadge.classList.remove('hidden');
+                } else {
+                    elements.pendingUsersBadge.classList.add('hidden');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar badge de pendentes:', error);
+    }
 }
 
 async function showHistoryScreen() {
@@ -4905,6 +4944,9 @@ if (document.getElementById('confirmApproveAllBtn')) {
                 // Fallback: recarrega a página
                 location.reload();
             }
+
+            // Atualiza badge de pendentes
+            atualizarBadgePendentes();
         } catch (error) {
             console.error('Erro ao aprovar usuários em lote:', error);
             alert(error.message || 'Erro ao aprovar usuários. Tente novamente.');
