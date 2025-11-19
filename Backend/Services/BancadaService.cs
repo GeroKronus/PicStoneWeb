@@ -1,6 +1,7 @@
 using SkiaSharp;
 using System;
 using System.IO;
+using PicStoneFotoAPI.Helpers;
 
 namespace PicStoneFotoAPI.Services
 {
@@ -82,7 +83,7 @@ namespace PicStoneFotoAPI.Services
                 SalvarDebug(imagemUmTerco, $"DEBUG_Bancada1_P{contaProcesso}_02_UmTerco.png");
 
                 // Redimensiona a parte lateral (1/3)
-                var bitmapORI2 = imagemUmTerco.Resize(new SKImageInfo(460, 1150), SKFilterQuality.High);
+                var bitmapORI2 = imagemUmTerco.Resize(new SKImageInfo(460, 1150), SKBitmapHelper.HighQuality);
                 SalvarDebug(bitmapORI2, $"DEBUG_Bancada1_P{contaProcesso}_03_LateralResized.png");
 
                 // Aplica distorção no topo (2/3)
@@ -127,7 +128,6 @@ namespace PicStoneFotoAPI.Services
 
                     using var paint = new SKPaint
                     {
-                        FilterQuality = SKFilterQuality.High,
                         IsAntialias = true
                     };
 
@@ -148,7 +148,6 @@ namespace PicStoneFotoAPI.Services
                 {
                     using var paint = new SKPaint
                     {
-                        FilterQuality = SKFilterQuality.High,
                         IsAntialias = true
                     };
 
@@ -241,9 +240,9 @@ namespace PicStoneFotoAPI.Services
                 SalvarDebug(imagemUmTerco, $"DEBUG_Bancada2_P{contaProcesso}_02_UmTerco.png");
 
                 // Redimensiona ambas as partes para 524x1520
-                var bitmapORI = imagemDoisTercos.Resize(new SKImageInfo(524, 1520), SKFilterQuality.High);
-                var bitmapORI2 = imagemUmTerco.Resize(new SKImageInfo(524, 1520), SKFilterQuality.High);
-                var bitmapORI3 = imagemUmTerco.Resize(new SKImageInfo(524, 1520), SKFilterQuality.High);
+                var bitmapORI = imagemDoisTercos.Resize(new SKImageInfo(524, 1520), SKBitmapHelper.HighQuality);
+                var bitmapORI2 = imagemUmTerco.Resize(new SKImageInfo(524, 1520), SKBitmapHelper.HighQuality);
+                var bitmapORI3 = imagemUmTerco.Resize(new SKImageInfo(524, 1520), SKBitmapHelper.HighQuality);
 
                 // Rotaciona bitmapORI3 270° (equivalente a Rotate270FlipNone)
                 bitmapORI3 = RotateImage90(bitmapORI3, 270);
@@ -306,7 +305,6 @@ namespace PicStoneFotoAPI.Services
 
                     using var paint = new SKPaint
                     {
-                        FilterQuality = SKFilterQuality.High,
                         IsAntialias = true
                     };
 
@@ -327,7 +325,6 @@ namespace PicStoneFotoAPI.Services
 
                     using var paint = new SKPaint
                     {
-                        FilterQuality = SKFilterQuality.High,
                         IsAntialias = true
                     };
 
@@ -336,7 +333,7 @@ namespace PicStoneFotoAPI.Services
                 SalvarDebug(quadroSkew2, $"DEBUG_Bancada2_P{contaProcesso}_10_QuadroSkew2_Retangulo.png");
 
                 // Redimensionar Quadro3 (parte lateral) para 796x366
-                var quadroSkew3 = bitmapORI3.Resize(new SKImageInfo(796, 366), SKFilterQuality.High);
+                var quadroSkew3 = bitmapORI3.Resize(new SKImageInfo(796, 366), SKBitmapHelper.HighQuality);
                 SalvarDebug(quadroSkew3, $"DEBUG_Bancada2_P{contaProcesso}_11_QuadroSkew3_796x366.png");
 
                 // Criar canvas intermediários 1550x1550
@@ -349,12 +346,11 @@ namespace PicStoneFotoAPI.Services
                     canvas.Clear(SKColors.Transparent);
                     using var paint = new SKPaint
                     {
-                        FilterQuality = SKFilterQuality.High,
                         IsAntialias = true
                     };
 
                     // VB.NET: DrawImage(Imgbit, 556, 28) onde Imgbit é QuadroSkew redimensionado
-                    var imgbit = quadroSkew.Resize(new SKImageInfo(524, 1520), SKFilterQuality.High);
+                    var imgbit = quadroSkew.Resize(new SKImageInfo(524, 1520), SKBitmapHelper.HighQuality);
                     canvas.DrawBitmap(imgbit, 556, 28, paint);
                 }
                 SalvarDebug(emBrancoQuad1, $"DEBUG_Bancada2_P{contaProcesso}_12_EmBrancoQuad1_Antes90.png");
@@ -365,7 +361,6 @@ namespace PicStoneFotoAPI.Services
                     canvas.Clear(SKColors.Transparent);
                     using var paint = new SKPaint
                     {
-                        FilterQuality = SKFilterQuality.High,
                         IsAntialias = true
                     };
 
@@ -400,7 +395,6 @@ namespace PicStoneFotoAPI.Services
 
                     using var paint = new SKPaint
                     {
-                        FilterQuality = SKFilterQuality.High,
                         IsAntialias = true
                     };
 
@@ -421,7 +415,6 @@ namespace PicStoneFotoAPI.Services
                 {
                     using var paint = new SKPaint
                     {
-                        FilterQuality = SKFilterQuality.High,
                         IsAntialias = true
                     };
 
@@ -559,7 +552,6 @@ namespace PicStoneFotoAPI.Services
 
             using var paint = new SKPaint
             {
-                FilterQuality = SKFilterQuality.High,
                 IsAntialias = true
             };
 
@@ -584,7 +576,6 @@ namespace PicStoneFotoAPI.Services
 
             using var paint = new SKPaint
             {
-                FilterQuality = SKFilterQuality.High,
                 IsAntialias = true
             };
 
@@ -834,7 +825,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
 
                     // ORDEM CORRETA:
                     // 1. Mármore transformado (bmp7 - topo) - FUNDO
@@ -1008,7 +999,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
 
                     // ORDEM: mármore primeiro, moldura por cima (overlay)
                     // Desenha as transformações alinhadas por (0,0) - se ultrapassar será cortado automaticamente
@@ -1138,7 +1129,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
 
                     // Desenha imagem completa
                     canvas.DrawBitmap(imagemCompleta, 0, 0, paint);
@@ -1148,7 +1139,7 @@ namespace PicStoneFotoAPI.Services
                 // ============ SOBREPÕE MOLDURA ============
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
                     var moldura = CarregarRecurso("bancada7.webp");
                     if (moldura != null)
                     {
@@ -1241,7 +1232,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
 
                     // Desenha imagem completa
                     canvas.DrawBitmap(imagemCompleta, 0, 0, paint);
@@ -1251,7 +1242,7 @@ namespace PicStoneFotoAPI.Services
                 // ============ SOBREPÕE MOLDURA ============
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
                     var moldura = CarregarRecurso("bancada8.webp");
                     if (moldura != null)
                     {
@@ -1325,7 +1316,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
 
                     // GEOMETRIA: Alinhar no ponto de interseção X=391
                     // Skew lateral=90, skew frente=220
@@ -1336,7 +1327,7 @@ namespace PicStoneFotoAPI.Services
 
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
                     var moldura = CarregarRecurso("bancada4.webp");
                     if (moldura != null) canvas.DrawBitmap(moldura, 0, 0, paint);
 
@@ -1441,7 +1432,7 @@ namespace PicStoneFotoAPI.Services
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
                     canvas.Clear(SKColors.Transparent);
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
 
                     // Desenha as 3 peças transformadas (já estão no canvas 1500x1068)
                     // As peças já possuem as coordenadas corretas dentro do canvas, então desenhamos em (0,0)
@@ -1455,7 +1446,7 @@ namespace PicStoneFotoAPI.Services
                 // Adiciona a moldura por cima
                 using (var canvas = new SKCanvas(mosaicoEmBranco))
                 {
-                    using var paint = new SKPaint { FilterQuality = SKFilterQuality.High, IsAntialias = true };
+                    using var paint = new SKPaint { IsAntialias = true };
                     var moldura = CarregarRecurso("bancada5.webp");
                     if (moldura != null)
                     {

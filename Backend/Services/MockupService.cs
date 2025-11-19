@@ -136,10 +136,10 @@ namespace PicStoneFotoAPI.Services
             _logger.LogInformation("============================");
 
             // Redimensiona a chapa para largura da janela com altura proporcional
-            var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(larguraJanela, alturaCropRedim), SKFilterQuality.High);
+            var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(larguraJanela, alturaCropRedim), SKBitmapHelper.HighQuality);
 
             // Redimensiona a moldura para as dimensões do canvas (VB.NET usa Size)
-            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraCanvas, alturaCanvas), SKFilterQuality.High);
+            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraCanvas, alturaCanvas), SKBitmapHelper.HighQuality);
 
             // Cria canvas final
             using var surface = SKSurface.Create(new SKImageInfo(larguraCanvas, alturaCanvas));
@@ -208,7 +208,7 @@ namespace PicStoneFotoAPI.Services
             int alturaCanvas = (int)(1247 / propEntreProps);
 
             // Redimensiona a chapa para largura da janela com altura proporcional
-            var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(larguraJanela, alturaCropRedim), SKFilterQuality.High);
+            var chapaRedimensionada = chapaCropada.Resize(new SKImageInfo(larguraJanela, alturaCropRedim), SKBitmapHelper.HighQuality);
 
             // Cria espelho (bookmatch)
             var chapaEspelhada = new SKBitmap(chapaRedimensionada.Width, chapaRedimensionada.Height);
@@ -219,7 +219,7 @@ namespace PicStoneFotoAPI.Services
             }
 
             // Redimensiona a moldura para as dimensões do canvas (VB.NET usa Size)
-            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraCanvas, alturaCanvas), SKFilterQuality.High);
+            var molduraRedimensionada = molduraOriginal.Resize(new SKImageInfo(larguraCanvas, alturaCanvas), SKBitmapHelper.HighQuality);
 
             // Cria canvas final
             using var surface = SKSurface.Create(new SKImageInfo(larguraCanvas, alturaCanvas));

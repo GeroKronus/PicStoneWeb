@@ -1,5 +1,6 @@
 using SkiaSharp;
 using System;
+using PicStoneFotoAPI.Helpers;
 
 namespace PicStoneFotoAPI.Services
 {
@@ -84,7 +85,6 @@ namespace PicStoneFotoAPI.Services
 
             using var paint = new SKPaint
             {
-                FilterQuality = SKFilterQuality.High,
                 IsAntialias = true
             };
 
@@ -748,7 +748,7 @@ namespace PicStoneFotoAPI.Services
                                           int novaLargura, int novaAltura, int inclinacao)
         {
             // Redimensiona para o tamanho desejado
-            var bmpImage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
+            var bmpImage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKBitmapHelper.HighQuality);
 
             // Aplica skew com os parâmetros calculados
             float fatorDeDistortion = (float)ladoMaior / ladoMenor;
@@ -779,7 +779,6 @@ namespace PicStoneFotoAPI.Services
 
                 using var paint = new SKPaint
                 {
-                    FilterQuality = SKFilterQuality.High,
                     IsAntialias = true
                 };
 
@@ -846,7 +845,6 @@ namespace PicStoneFotoAPI.Services
 
                 using var paint = new SKPaint
                 {
-                    FilterQuality = SKFilterQuality.High,
                     IsAntialias = true
                 };
 
@@ -902,7 +900,6 @@ namespace PicStoneFotoAPI.Services
 
                 using var paint = new SKPaint
                 {
-                    FilterQuality = SKFilterQuality.High,
                     IsAntialias = true
                 };
 
@@ -963,7 +960,6 @@ namespace PicStoneFotoAPI.Services
 
                 using var paint = new SKPaint
                 {
-                    FilterQuality = SKFilterQuality.High,
                     IsAntialias = true
                 };
 
@@ -1113,7 +1109,7 @@ namespace PicStoneFotoAPI.Services
 
             // ✅ CORREÇÃO CRÍTICA: Implementar o algoritmo EXATO do VB.NET
             // 1. Primeiro redimensiona a imagem para NovaLargura x NovaAltura
-            var bmpimage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
+            var bmpimage = imagem.Resize(new SKImageInfo(novaLargura, novaAltura), SKBitmapHelper.HighQuality);
 
             // 2. Cria bitmap de resultado com mesmas dimensões
             var bmp2 = new SKBitmap(bmpimage.Width, bmpimage.Height);
@@ -1197,7 +1193,6 @@ namespace PicStoneFotoAPI.Services
 
                 using var paint = new SKPaint
                 {
-                    FilterQuality = SKFilterQuality.High,
                     IsAntialias = true
                 };
 

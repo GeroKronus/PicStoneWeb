@@ -1,4 +1,5 @@
 using SkiaSharp;
+using PicStoneFotoAPI.Helpers;
 
 namespace PicStoneFotoAPI.Services
 {
@@ -49,7 +50,7 @@ namespace PicStoneFotoAPI.Services
 
                 using var imagemRedimensionada = imagemCropada.Resize(
                     new SKImageInfo(tamanhoDoQuadro, novaAltura),
-                    SKFilterQuality.High);
+                    SKBitmapHelper.HighQuality);
 
                 _logger.LogInformation("Imagem redimensionada: {W}x{H}", tamanhoDoQuadro, novaAltura);
 
@@ -192,7 +193,7 @@ namespace PicStoneFotoAPI.Services
 
                 using var imagemRedimensionada = imagemCropada.Resize(
                     new SKImageInfo(tamanhoDoQuadro, novaAltura),
-                    SKFilterQuality.High);
+                    SKBitmapHelper.HighQuality);
 
                 _logger.LogInformation("Imagem redimensionada: {W}x{H}", tamanhoDoQuadro, novaAltura);
 
@@ -340,7 +341,7 @@ namespace PicStoneFotoAPI.Services
         {
             var flipped = new SKBitmap(source.Width, source.Height);
             using var canvas = new SKCanvas(flipped);
-            using var paint = new SKPaint { FilterQuality = SKFilterQuality.High };
+            using var paint = new SKPaint();
 
             // Aplica transformação de espelhamento horizontal
             canvas.Scale(-1, 1, source.Width / 2f, source.Height / 2f);
@@ -356,7 +357,7 @@ namespace PicStoneFotoAPI.Services
         {
             var flipped = new SKBitmap(source.Width, source.Height);
             using var canvas = new SKCanvas(flipped);
-            using var paint = new SKPaint { FilterQuality = SKFilterQuality.High };
+            using var paint = new SKPaint();
 
             // Aplica transformação de espelhamento vertical
             canvas.Scale(1, -1, source.Width / 2f, source.Height / 2f);
@@ -372,7 +373,7 @@ namespace PicStoneFotoAPI.Services
         {
             var rotated = new SKBitmap(source.Width, source.Height);
             using var canvas = new SKCanvas(rotated);
-            using var paint = new SKPaint { FilterQuality = SKFilterQuality.High };
+            using var paint = new SKPaint();
 
             // Rotaciona 180° ao redor do centro
             canvas.RotateDegrees(180, source.Width / 2f, source.Height / 2f);

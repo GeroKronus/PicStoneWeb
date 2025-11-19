@@ -7,6 +7,7 @@ using PicStoneFotoAPI.Services;
 using System.Drawing;
 using System.Linq;
 using PicStoneFotoAPI.Models;
+using PicStoneFotoAPI.Helpers;
 
 namespace PicStoneFotoAPI.Services
 {
@@ -38,7 +39,7 @@ namespace PicStoneFotoAPI.Services
             int novaAltura = (int)(imagemOriginal.Height / fatorDeAjuste);
             var imagemRedimensionada = imagemOriginal.Resize(
                 new SKImageInfo(LARGURA_ALVO, novaAltura),
-                SKFilterQuality.High);
+                SKBitmapHelper.HighQuality);
             _logger.LogInformation("Imagem redimensionada: {Width}x{Height}", LARGURA_ALVO, novaAltura);
 
             // PASSO 1.5: Rotacionar 180° se necessário
@@ -91,22 +92,22 @@ namespace PicStoneFotoAPI.Services
 
             // PASSO 5: Transformar ESPELHOS (apenas Resize + Rotate90) - Dimensões 50%
             _logger.LogInformation("Transformando espelhos...");
-            espelho1 = espelho1.Resize(new SKImageInfo(69, 810), SKFilterQuality.High);
+            espelho1 = espelho1.Resize(new SKImageInfo(69, 810), SKBitmapHelper.HighQuality);
             espelho1 = RotacionarImagem(espelho1, 90);
 
-            espelho2 = espelho2.Resize(new SKImageInfo(59, 653), SKFilterQuality.High);
+            espelho2 = espelho2.Resize(new SKImageInfo(59, 653), SKBitmapHelper.HighQuality);
             espelho2 = RotacionarImagem(espelho2, 90);
 
-            espelho3 = espelho3.Resize(new SKImageInfo(50, 546), SKFilterQuality.High);
+            espelho3 = espelho3.Resize(new SKImageInfo(50, 546), SKBitmapHelper.HighQuality);
             espelho3 = RotacionarImagem(espelho3, 90);
 
-            espelho4 = espelho4.Resize(new SKImageInfo(44, 465), SKFilterQuality.High);
+            espelho4 = espelho4.Resize(new SKImageInfo(44, 465), SKBitmapHelper.HighQuality);
             espelho4 = RotacionarImagem(espelho4, 90);
 
-            espelho5 = espelho5.Resize(new SKImageInfo(38, 404), SKFilterQuality.High);
+            espelho5 = espelho5.Resize(new SKImageInfo(38, 404), SKBitmapHelper.HighQuality);
             espelho5 = RotacionarImagem(espelho5, 90);
 
-            espelho6 = espelho6.Resize(new SKImageInfo(35, 359), SKFilterQuality.High);
+            espelho6 = espelho6.Resize(new SKImageInfo(35, 359), SKBitmapHelper.HighQuality);
             espelho6 = RotacionarImagem(espelho6, 90);
 
             // PASSO 6: Compor no canvas 1000x1450 (50% do original)
@@ -312,7 +313,7 @@ namespace PicStoneFotoAPI.Services
 
             var imagemRedimensionada = imagemOriginal.Resize(
                 new SKImageInfo(config.LarguraPadrao, novaAltura),
-                SKFilterQuality.High);
+                SKBitmapHelper.HighQuality);
 
             // PASSO 2: Rotacionar 180° se necessário
             if (rotacionado)
@@ -380,7 +381,7 @@ namespace PicStoneFotoAPI.Services
             // PASSO 7: Redimensionar para tamanho final
             var resultado = canvasRotacionado.Resize(
                 new SKImageInfo(config.LarguraFinal, config.AlturaFinal),
-                SKFilterQuality.High);
+                SKBitmapHelper.HighQuality);
             canvasRotacionado.Dispose();
 
             // PASSO 8: Adicionar overlay se disponível
@@ -416,7 +417,7 @@ namespace PicStoneFotoAPI.Services
                     case TipoTransformacao.Resize:
                         novo = atual.Resize(
                             new SKImageInfo((int)trans.Parametro1, (int)trans.Parametro2),
-                            SKFilterQuality.High);
+                            SKBitmapHelper.HighQuality);
                         break;
                     case TipoTransformacao.RotateImage3:
                         novo = RotateImage3(atual, trans.Parametro1, trans.Parametro2, trans.Parametro3);
@@ -504,7 +505,7 @@ namespace PicStoneFotoAPI.Services
             {
                 using var overlayResized = overlayImage.Resize(
                     new SKImageInfo(imagem.Width, imagem.Height),
-                    SKFilterQuality.High);
+                    SKBitmapHelper.HighQuality);
                 graphics.DrawBitmap(overlayResized, 0, 0);
             }
             else
@@ -523,7 +524,7 @@ namespace PicStoneFotoAPI.Services
             // PASSO 1: Redimensionar para 1400x600 (50% do tamanho original VB.NET)
             const int LARGURA = 1400;
             const int ALTURA = 600;
-            var imagemRedimensionada = imagemOriginal.Resize(new SKImageInfo(LARGURA, ALTURA), SKFilterQuality.High);
+            var imagemRedimensionada = imagemOriginal.Resize(new SKImageInfo(LARGURA, ALTURA), SKBitmapHelper.HighQuality);
             _logger.LogInformation("Imagem redimensionada: {Width}x{Height}", LARGURA, ALTURA);
 
             // PASSO 1.5: Rotacionar 180° se necessário
@@ -634,7 +635,7 @@ namespace PicStoneFotoAPI.Services
 
             // PASSO 6: COMPRESSÃO HORIZONTAL
             _logger.LogInformation("📐 Compressão 2100x2100 → 1500x2100...");
-            var canvasComprimido = canvasRotacionado.Resize(new SKImageInfo(1500, 2100), SKFilterQuality.High);
+            var canvasComprimido = canvasRotacionado.Resize(new SKImageInfo(1500, 2100), SKBitmapHelper.HighQuality);
 
             // PASSO 7: APLICAR 2 CAMADAS
             _logger.LogInformation("🎨 Efeito 2 camadas...");
@@ -736,7 +737,7 @@ namespace PicStoneFotoAPI.Services
             // PASSO 1: Redimensionar para 120 x AltDegrau (não 275x3000!)
             var espelhoRedimensionado = espelho.Resize(
                 new SKImageInfo(120, altDegrau),
-                SKFilterQuality.High);
+                SKBitmapHelper.HighQuality);
 
             // PASSO 2: Aplicar Skew(100)
             var skewed = _graphicsTransformService.Skew(espelhoRedimensionado, fatorSkew / 100f, 0);
@@ -861,7 +862,7 @@ namespace PicStoneFotoAPI.Services
             // PASSO 1: Redimensionar para 1400x600 (50% do tamanho original VB.NET)
             const int LARGURA = 1400;
             const int ALTURA = 600;
-            var imagemRedimensionada = imagemOriginal.Resize(new SKImageInfo(LARGURA, ALTURA), SKFilterQuality.High);
+            var imagemRedimensionada = imagemOriginal.Resize(new SKImageInfo(LARGURA, ALTURA), SKBitmapHelper.HighQuality);
             _logger.LogInformation("Imagem redimensionada: {Width}x{Height}", LARGURA, ALTURA);
 
             // DIVISÃO PROPORCIONAL: Mantém proporção entre degrau e espelho
@@ -1020,7 +1021,7 @@ namespace PicStoneFotoAPI.Services
             _logger.LogInformation("📐 Aplicando compressão horizontal (2100x2100 → 1500x2100)...");
             var canvasComprimido = canvasRotacionado.Resize(
                 new SKImageInfo(1500, 2100),
-                SKFilterQuality.High);
+                SKBitmapHelper.HighQuality);
 
             // DEBUG: Salvar canvas comprimido como "EscadaRedimensionada.png" (COMENTADO)
             // var escadaRedimensionadaPath = Path.Combine("wwwroot", "debug", "EscadaRedimensionada.png");
