@@ -12,12 +12,14 @@ namespace PicStoneFotoAPI.Services
         private readonly GraphicsTransformService _transformService;
         private readonly ILogger<LivingRoomService> _logger;
         private readonly ImageWatermarkService _watermark;
+        private readonly ImageManipulationService _imageManipulation;
 
-        public LivingRoomService(GraphicsTransformService transformService, ILogger<LivingRoomService> logger, ImageWatermarkService watermark)
+        public LivingRoomService(GraphicsTransformService transformService, ILogger<LivingRoomService> logger, ImageWatermarkService watermark, ImageManipulationService imageManipulation)
         {
             _transformService = transformService;
             _logger = logger;
             _watermark = watermark;
+            _imageManipulation = imageManipulation;
         }
 
         /// <summary>
@@ -56,9 +58,9 @@ namespace PicStoneFotoAPI.Services
 
                 // PASSO 2: Cria as 4 versões rotacionadas (BookMatch)
                 using var bitmap90E = CriarBitmapRotacionado(imagemRedimensionada, SKEncodedOrigin.LeftBottom); // 90° sem flip
-                using var bitmap90D = FlipHorizontal(bitmap90E); // 90° com flip
+                using var bitmap90D = _imageManipulation.FlipHorizontal(bitmap90E); // 90° com flip
                 using var bitmap270E = CriarBitmapRotacionado(imagemRedimensionada, SKEncodedOrigin.RightTop); // 270° sem flip
-                using var bitmap270D = FlipHorizontal(bitmap270E); // 270° com flip
+                using var bitmap270D = _imageManipulation.FlipHorizontal(bitmap270E); // 270° com flip
 
                 _logger.LogInformation("BookMatch criado: 90E={W}x{H}, 90D={W}x{H}, 270E={W}x{H}, 270D={W}x{H}",
                     bitmap90E.Width, bitmap90E.Height,
@@ -201,9 +203,9 @@ namespace PicStoneFotoAPI.Services
                 using var bitmapORI = new SKBitmap(imagemRedimensionada.Width, imagemRedimensionada.Height);
                 imagemRedimensionada.CopyTo(bitmapORI);
 
-                using var bitmapFV = FlipVertical(imagemRedimensionada);
-                using var bitmapFH = FlipHorizontal(imagemRedimensionada);
-                using var bitmap180 = Rotate180(imagemRedimensionada);
+                using var bitmapFV = _imageManipulation.FlipVertical(imagemRedimensionada);
+                using var bitmapFH = _imageManipulation.FlipHorizontal(imagemRedimensionada);
+                using var bitmap180 = _imageManipulation.Rotate180(imagemRedimensionada);
 
                 _logger.LogInformation("BookMatch criado: ORI={W}x{H}, FV={W}x{H}, FH={W}x{H}, 180={W}x{H}",
                     bitmapORI.Width, bitmapORI.Height,
@@ -334,52 +336,7 @@ namespace PicStoneFotoAPI.Services
             return rotated;
         }
 
-        /// <summary>
-        /// Faz flip horizontal (espelha) de um bitmap
-        /// </summary>
-        private SKBitmap FlipHorizontal(SKBitmap source)
-        {
-            var flipped = new SKBitmap(source.Width, source.Height);
-            using var canvas = new SKCanvas(flipped);
-            using var paint = new SKPaint();
-
-            // Aplica transformação de espelhamento horizontal
-            canvas.Scale(-1, 1, source.Width / 2f, source.Height / 2f);
-            canvas.DrawBitmap(source, 0, 0, paint);
-
-            return flipped;
-        }
-
-        /// <summary>
-        /// Faz flip vertical de um bitmap
-        /// </summary>
-        private SKBitmap FlipVertical(SKBitmap source)
-        {
-            var flipped = new SKBitmap(source.Width, source.Height);
-            using var canvas = new SKCanvas(flipped);
-            using var paint = new SKPaint();
-
-            // Aplica transformação de espelhamento vertical
-            canvas.Scale(1, -1, source.Width / 2f, source.Height / 2f);
-            canvas.DrawBitmap(source, 0, 0, paint);
-
-            return flipped;
-        }
-
-        /// <summary>
-        /// Rotaciona 180 graus
-        /// </summary>
-        private SKBitmap Rotate180(SKBitmap source)
-        {
-            var rotated = new SKBitmap(source.Width, source.Height);
-            using var canvas = new SKCanvas(rotated);
-            using var paint = new SKPaint();
-
-            // Rotaciona 180° ao redor do centro
-            canvas.RotateDegrees(180, source.Width / 2f, source.Height / 2f);
-            canvas.DrawBitmap(source, 0, 0, paint);
-
-            return rotated;
-        }
+        // 🗑️ REMOVIDO: Métodos duplicados substituídos por ImageManipulationService
+        // FlipHorizontal(), FlipVertical(), Rotate180() agora usam _imageManipulation
     }
 }
