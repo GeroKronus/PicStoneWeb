@@ -288,9 +288,11 @@ const elements = {
     changePasswordBtn: document.getElementById('changePasswordBtn'),
     manageUsersBtn: document.getElementById('manageUsersBtn'),
     pendingUsersBtn: document.getElementById('pendingUsersBtn'),
+    expiredUsersBtn: document.getElementById('expiredUsersBtn'),
     adminSection: document.getElementById('adminSection'),
     adminBadge: document.getElementById('adminBadge'),
     pendingUsersBadge: document.getElementById('pendingUsersBadge'),
+    expiredUsersBadge: document.getElementById('expiredUsersBadge'),
     changePasswordScreen: document.getElementById('changePasswordScreen'),
     changePasswordForm: document.getElementById('changePasswordForm'),
     changePasswordMessage: document.getElementById('changePasswordMessage'),
@@ -301,6 +303,9 @@ const elements = {
     pendingUsersScreen: document.getElementById('pendingUsersScreen'),
     pendingUsersList: document.getElementById('pendingUsersList'),
     backFromPendingBtn: document.getElementById('backFromPendingBtn'),
+    expiredUsersScreen: document.getElementById('expiredUsersScreen'),
+    expiredUsersList: document.getElementById('expiredUsersList'),
+    backFromExpiredBtn: document.getElementById('backFromExpiredBtn'),
     addUserBtn: document.getElementById('addUserBtn'),
     addUserScreen: document.getElementById('addUserScreen'),
     addUserForm: document.getElementById('addUserForm'),
@@ -725,9 +730,14 @@ function setupEventListeners() {
         elements.userMenuDropdown.classList.add('hidden');
         showPendingUsersScreen();
     });
+    elements.expiredUsersBtn.addEventListener('click', () => {
+        elements.userMenuDropdown.classList.add('hidden');
+        showExpiredUsersScreen();
+    });
     elements.backFromPasswordBtn.addEventListener('click', showMainScreen);
     elements.backFromUsersBtn.addEventListener('click', showMainScreen);
     elements.backFromPendingBtn.addEventListener('click', showMainScreen);
+    elements.backFromExpiredBtn.addEventListener('click', showMainScreen);
     elements.backFromAddUserBtn.addEventListener('click', showUsersScreen);
     elements.changePasswordForm.addEventListener('submit', handleChangePassword);
     elements.addUserBtn.addEventListener('click', showAddUserScreen);
@@ -937,8 +947,9 @@ async function showMainScreen() {
         // Salva no localStorage para uso no history.js
         localStorage.setItem('isAdmin', 'true');
 
-        // Atualiza badge de pendentes ao carregar
+        // Atualiza badges ao carregar
         atualizarBadgePendentes();
+        atualizarBadgeExpirados();
     } else {
         // Oculta seção de admin e badge ADMIN
         if (elements.adminSection) {
@@ -960,9 +971,10 @@ function toggleUserMenu(e) {
     e.stopPropagation();
     elements.userMenuDropdown.classList.toggle('hidden');
 
-    // Atualiza badge de pendentes ao abrir menu (se admin)
+    // Atualiza badges ao abrir menu (se admin)
     if (state.username === 'rogerio@picstone.com.br') {
         atualizarBadgePendentes();
+        atualizarBadgeExpirados();
     }
 }
 
@@ -993,6 +1005,33 @@ async function atualizarBadgePendentes() {
     }
 }
 
+/**
+ * Atualiza badge dinâmico de usuários expirados
+ */
+async function atualizarBadgeExpirados() {
+    try {
+        const response = await fetch(`${API_URL}/api/auth/expired-users`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+
+        if (response.ok) {
+            const usuarios = await response.json();
+            const count = usuarios.length;
+
+            if (elements.expiredUsersBadge) {
+                if (count > 0) {
+                    elements.expiredUsersBadge.textContent = count;
+                    elements.expiredUsersBadge.classList.remove('hidden');
+                } else {
+                    elements.expiredUsersBadge.classList.add('hidden');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar badge de expirados:', error);
+    }
+}
+
 async function showHistoryScreen() {
     showScreen(elements.historyScreen);
     await loadHistory();
@@ -1020,6 +1059,15 @@ async function showPendingUsersScreen() {
     }
     showScreen(elements.pendingUsersScreen);
     await loadPendingUsers();
+}
+
+async function showExpiredUsersScreen() {
+    if (state.username !== 'rogerio@picstone.com.br') {
+        alert('Acesso negado. Apenas admin pode gerenciar usuários.');
+        return;
+    }
+    showScreen(elements.expiredUsersScreen);
+    await loadExpiredUsers();
 }
 
 function showAddUserScreen() {
@@ -3693,6 +3741,79 @@ async function loadPendingUsers() {
     }
 }
 
+async function loadExpiredUsers() {
+    try {
+        const response = await fetch(`${API_URL}/api/auth/expired-users`, {
+            headers: { 'Authorization': `Bearer ${state.token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error('Erro ao carregar usuários expirados');
+        }
+
+        const usuarios = await response.json();
+
+        // Renderiza a lista de usuários expirados
+        elements.expiredUsersList.innerHTML = '';
+
+        if (usuarios.length === 0) {
+            elements.expiredUsersList.innerHTML = '<p class="no-data">Nenhum usuário expirado.</p>';
+            return;
+        }
+
+        usuarios.forEach(usuario => {
+            const userCard = document.createElement('div');
+            userCard.className = 'user-card';
+
+            const dataExpiracao = usuario.dataExpiracao
+                ? new Date(usuario.dataExpiracao).toLocaleDateString('pt-BR')
+                : 'Sem data';
+
+            userCard.innerHTML = `
+                <div class="user-info">
+                    <h3>${usuario.nomeCompleto}</h3>
+                    <p>${usuario.email}</p>
+                    <p class="user-status expired">⏰ Expirado em: ${dataExpiracao}</p>
+                    <p class="user-date">Cadastrado em: ${new Date(usuario.dataCriacao).toLocaleDateString('pt-BR')}</p>
+                </div>
+                <div class="user-actions">
+                    <button class="btn btn-primary" onclick="reactivateUserFromExpired('${usuario.id}', '${usuario.nomeCompleto}')">
+                        🔄 Reativar
+                    </button>
+                </div>
+            `;
+            elements.expiredUsersList.appendChild(userCard);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar usuários expirados:', error);
+        elements.expiredUsersList.innerHTML = '<p class="error">Erro ao carregar usuários expirados.</p>';
+    }
+}
+
+/**
+ * Reativa um usuário individual da lista de expirados
+ */
+window.reactivateUserFromExpired = async function(userId, nomeCompleto) {
+    // Abre o modal de reativação individual
+    const modal = document.getElementById('reactivateModal');
+    if (!modal) {
+        alert('Modal de reativação não encontrado.');
+        return;
+    }
+
+    // Define qual usuário está sendo reativado
+    window.currentReactivatingUserId = userId;
+
+    // Atualiza o nome no modal
+    const userNameElement = document.getElementById('reactivateUserName');
+    if (userNameElement) {
+        userNameElement.textContent = `Reativar acesso de: ${nomeCompleto}`;
+    }
+
+    // Abre o modal
+    modal.classList.remove('hidden');
+};
+
 /**
  * Renderiza usuários em cards
  */
@@ -4975,10 +5096,10 @@ if (document.getElementById('cancelApproveAllBtn')) {
 let expiredUsersCount = 0;
 
 /**
- * Event listener para o botão "Ativar Todos Expirados"
+ * Event listener para o botão "Ativar Todos Expirados" (da tela de expirados)
  */
-if (document.getElementById('reactivateAllExpiredBtn')) {
-    document.getElementById('reactivateAllExpiredBtn').addEventListener('click', async function() {
+if (document.getElementById('reactivateAllExpiredBtnFromScreen')) {
+    document.getElementById('reactivateAllExpiredBtnFromScreen').addEventListener('click', async function() {
         try {
             // Busca quantos usuários estão expirados
             const response = await fetch(`${API_URL}/api/auth/expired-users`, {
@@ -5052,15 +5173,19 @@ if (document.getElementById('confirmReactivateAllExpiredBtn')) {
             // Mostra mensagem de sucesso
             alert(result.mensagem);
 
-            // Recarrega a lista de usuários
-            if (typeof showUsersScreen === 'function') {
-                await showUsersScreen();
-            } else if (typeof loadUsers === 'function') {
-                await loadUsers();
+            // Recarrega a lista de usuários expirados
+            if (typeof showExpiredUsersScreen === 'function') {
+                await showExpiredUsersScreen();
+            } else if (typeof loadExpiredUsers === 'function') {
+                await loadExpiredUsers();
             } else {
                 // Fallback: recarrega a página
                 location.reload();
             }
+
+            // Atualiza badges
+            atualizarBadgeExpirados();
+            atualizarBadgePendentes();
         } catch (error) {
             console.error('Erro ao reativar usuários em lote:', error);
             alert(error.message || 'Erro ao reativar usuários. Tente novamente.');

@@ -185,6 +185,18 @@
                                     <span id="pendingUsersBadge" class="dropdown-badge hidden">0</span>
                                 </button>
 
+                                <button id="expiredUsersBtn" class="dropdown-item dropdown-item-nested dropdown-item-with-badge">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2v20M2 12h20"></path>
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                    </svg>
+                                    <div class="dropdown-item-content">
+                                        <span class="dropdown-item-title">Usuários Expirados</span>
+                                        <span class="dropdown-item-description">Reativar usuários expirados</span>
+                                    </div>
+                                    <span id="expiredUsersBadge" class="dropdown-badge hidden">0</span>
+                                </button>
+
                                 <button id="historyBtn" class="dropdown-item dropdown-item-nested">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M3 3v18h18"></path>
@@ -979,9 +991,6 @@
             </div>
 
             <button id="addUserBtn" class="btn btn-primary">+ Adicionar Usuário</button>
-            <button id="reactivateAllExpiredBtn" class="btn btn-success" style="margin-left: 10px;">
-                🔄 Ativar Todos Expirados
-            </button>
 
             <!-- Campo de Busca -->
             <div class="search-box">
@@ -1094,6 +1103,29 @@
             </button>
 
             <div id="pendingUsersList" class="users-list">
+                <p class="loading">Carregando...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Usuários Expirados (Apenas Admin) -->
+    <div id="expiredUsersScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <button id="backFromExpiredBtn" class="btn-icon">← Voltar</button>
+                <h1>Usuários Expirados</h1>
+            </div>
+
+            <div class="info-box">
+                <p><strong>⏰ Usuários com Acesso Expirado</strong></p>
+                <p>Usuários cujo período de acesso expirou e precisam ser reativados para voltar a usar a plataforma.</p>
+            </div>
+
+            <button id="reactivateAllExpiredBtnFromScreen" class="btn btn-success" style="margin-bottom: 20px;">
+                🔄 Ativar Todos Expirados
+            </button>
+
+            <div id="expiredUsersList" class="users-list">
                 <p class="loading">Carregando...</p>
             </div>
         </div>
