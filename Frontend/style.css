@@ -1587,6 +1587,12 @@ body {
     max-width: 1200px;
 }
 
+/* Tela de usuários ocupa largura total em desktop (apenas admin usa) */
+#usersScreen .container {
+    max-width: 100%;
+    padding: 0 20px;
+}
+
 /* Garante scroll suave em mobile */
 @media (max-width: 599px) {
     #countertopSelectionScreen .container {
