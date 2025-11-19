@@ -287,6 +287,7 @@ const elements = {
     cropInfoSize: document.getElementById('cropInfoSize'),
     changePasswordBtn: document.getElementById('changePasswordBtn'),
     manageUsersBtn: document.getElementById('manageUsersBtn'),
+    pendingUsersBtn: document.getElementById('pendingUsersBtn'),
     changePasswordScreen: document.getElementById('changePasswordScreen'),
     changePasswordForm: document.getElementById('changePasswordForm'),
     changePasswordMessage: document.getElementById('changePasswordMessage'),
