@@ -4134,9 +4134,11 @@ async function selectLivingRoomAndGenerate(type) {
     console.log('🔍 [DEBUG] state.sharedImageState:', state.sharedImageState);
     console.log('🔍 [DEBUG] state.currentPhotoFile:', state.currentPhotoFile);
 
-    // ✅ FIX CRÍTICO: Limpa countertopState para não contaminar bancadas depois
+    // ✅ FIX CRÍTICO: Limpa countertopState e stairsState para não contaminar navegação
     state.countertopState.selectedType = null;
-    console.log('✅ [LIVING ROOM] Limpou countertopState.selectedType');
+    state.countertopState.croppedImage = null;
+    state.stairsState.selectedType = null;
+    console.log('✅ [LIVING ROOM] Limpou countertopState e stairsState completos');
 
     // ✅ FIX: Verifica sharedImageState primeiro (mesma lógica que Countertops)
     if (!state.sharedImageState?.currentImage && !state.currentPhotoFile) {
