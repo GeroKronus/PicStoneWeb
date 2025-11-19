@@ -1,0 +1,26 @@
+{
+  "name": "picstone-web",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Sistema web responsivo para captura de fotos via celular com integração ao SQL Server.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint Backend/wwwroot/*.js",
+    "lint:fix": "eslint Backend/wwwroot/*.js --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GeroKronus/PicStoneWeb.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GeroKronus/PicStoneWeb/issues"
+  },
+  "homepage": "https://github.com/GeroKronus/PicStoneWeb#readme",
+  "devDependencies": {
+    "eslint": "^9.39.1"
+  }
+}

@@ -49,6 +49,10 @@ Thumbs.db
 *.snupkg
 packages/
 
+# Node.js
+node_modules/
+package-lock.json
+
 # Railway
 .railway/
 
