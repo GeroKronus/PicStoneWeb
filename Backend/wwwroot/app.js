@@ -4858,14 +4858,21 @@ if (document.getElementById('confirmApproveAllBtn')) {
             const dataExpiracaoInput = document.getElementById('dataExpiracaoLote').value;
             const dataExpiracao = dataExpiracaoInput ? new Date(dataExpiracaoInput).toISOString() : null;
 
+            // DEBUG: Log do que está sendo enviado
+            console.log('🔍 DEBUG approve-all-pending FRONTEND:');
+            console.log('  - Input value:', dataExpiracaoInput);
+            console.log('  - Data parsed:', dataExpiracao);
+            console.log('  - JSON sendo enviado (PascalCase):', JSON.stringify({ DataExpiracao: dataExpiracao }));
+
             // Chama o endpoint de aprovação em lote
+            // IMPORTANTE: Enviando com PascalCase para garantir binding correto no C#
             const response = await fetch(`${API_URL}/api/auth/approve-all-pending`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${state.token}`
                 },
-                body: JSON.stringify({ dataExpiracao })
+                body: JSON.stringify({ DataExpiracao: dataExpiracao })
             });
 
             const result = await response.json();

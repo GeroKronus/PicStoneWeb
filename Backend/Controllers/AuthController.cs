@@ -556,6 +556,9 @@ namespace PicStoneFotoAPI.Controllers
                     return Forbid();
                 }
 
+                // DEBUG: Log do que está chegando
+                _logger.LogInformation($"🔍 DEBUG approve-all-pending: request={request}, DataExpiracao={request?.DataExpiracao}");
+
                 var dataExpiracao = request?.DataExpiracao;
 
                 var (success, message, count) = await _authService.ApproveAllPendingUsersAsync(dataExpiracao, _emailService);
