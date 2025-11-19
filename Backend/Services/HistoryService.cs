@@ -179,6 +179,7 @@ namespace PicStoneFotoAPI.Services
                         UltimoAcesso = u.UltimoAcesso
                     }
                 })
+                .OrderByDescending(u => u.Stats.UltimoAcesso ?? DateTime.MinValue)
                 .ToListAsync();
 
             return result;
