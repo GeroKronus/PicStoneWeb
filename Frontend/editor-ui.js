@@ -103,6 +103,15 @@ class EditorUI {
                     if (firstSlider && firstSlider !== sliderGroup) {
                         container.insertBefore(sliderGroup, firstSlider);
                     }
+
+                    // Scroll suave para mostrar a imagem no topo
+                    setTimeout(() => {
+                        const imageSection = document.getElementById('editorSliderSection') ||
+                                           document.getElementById('editorPreviewSection');
+                        if (imageSection && !imageSection.classList.contains('hidden')) {
+                            imageSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 100);
                 }
             });
         });
