@@ -1233,11 +1233,20 @@ async function handleEditorFileSelect(e) {
         // Oculta preview (evita duplicação com canvas)
         elements.photoPreviewEditor.classList.add('hidden');
 
-        // Mostra seções de edição
+        // Mostra seções de edição - default: modo comparação (slider)
         elements.editorViewToggle.classList.remove('hidden');
-        elements.editorPreviewSection.classList.remove('hidden');
+        elements.editorSliderSection.classList.remove('hidden');
         elements.editorControls.classList.remove('hidden');
         elements.editorActions.classList.remove('hidden');
+
+        // Sincroniza canvas para o slider
+        window.ImageEditor.syncCanvasToSlider();
+
+        // Atualiza label do botão toggle
+        const viewModeLabel = document.getElementById('viewModeLabel');
+        if (viewModeLabel) {
+            viewModeLabel.textContent = 'Modo Lado-a-Lado';
+        }
 
     } catch (error) {
         console.error('Erro ao carregar imagem:', error);
@@ -1275,12 +1284,15 @@ function handleEditorDownload() {
 async function handleEditorShare() {
     try {
         const canvas = window.ImageEditor.canvasEdited;
+        // Usa nome original do arquivo + _StoneEditor
+        const originalName = window.ImageEditor.state.fileName || `stone-editor_${Date.now()}`;
+        const fileName = `${originalName}_StoneEditor.jpg`;
 
         canvas.toBlob(async (blob) => {
             try {
                 // Tenta usar Web Share API (funciona em mobile e alguns browsers desktop)
                 if (navigator.share) {
-                    const file = new File([blob], 'stone-editor.jpg', { type: 'image/jpeg' });
+                    const file = new File([blob], fileName, { type: 'image/jpeg' });
 
                     await navigator.share({
                         title: 'PicStone Mobile',

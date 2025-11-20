@@ -51,7 +51,7 @@ class ImageEditor {
 
         // Flag para indicar se já foi inicializado
         this.initialized = false;
-        this.viewMode = 'side-by-side'; // 'side-by-side' ou 'slider'
+        this.viewMode = 'slider'; // 'side-by-side' ou 'slider' - default: slider
     }
 
     /**
@@ -289,7 +289,9 @@ class ImageEditor {
      */
     downloadImage(format = 'jpeg', quality = 0.95) {
         const link = document.createElement('a');
-        const fileName = `stone-editor_${Date.now()}.${format}`;
+        // Usa nome original do arquivo + _StoneEditor
+        const originalName = this.state.fileName || `stone-editor_${Date.now()}`;
+        const fileName = `${originalName}_StoneEditor.${format}`;
 
         this.canvasEdited.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
