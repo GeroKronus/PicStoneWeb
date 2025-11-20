@@ -3006,9 +3006,64 @@ body {
 
 /* Slider Group */
 .slider-group {
-    margin-bottom: 24px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--card-bg);
 }
 
+/* Slider Header (Clicável) */
+.slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+}
+
+.slider-header:hover {
+    background-color: rgba(37, 99, 235, 0.05);
+}
+
+.slider-header:active {
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
+.slider-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+/* Collapse Icon */
+.collapse-icon {
+    margin-left: 12px;
+    transition: transform 0.3s ease;
+    color: var(--text-secondary);
+}
+
+.collapsible.expanded .collapse-icon {
+    transform: rotate(180deg);
+}
+
+/* Slider Content (Colapsável) */
+.slider-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    padding: 0 16px;
+}
+
+.collapsible.expanded .slider-content {
+    max-height: 100px;
+    padding: 0 16px 16px 16px;
+}
+
+/* Manter estilos antigos de label para retrocompatibilidade */
 .slider-group label {
     display: flex;
     justify-content: space-between;

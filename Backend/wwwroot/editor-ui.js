@@ -74,6 +74,15 @@ class EditorUI {
                 this.resetAll();
             });
         }
+
+        // Collapse/Expand sliders
+        const sliderHeaders = document.querySelectorAll('.slider-header');
+        sliderHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const sliderGroup = header.closest('.slider-group');
+                sliderGroup.classList.toggle('expanded');
+            });
+        });
     }
 
     /**
