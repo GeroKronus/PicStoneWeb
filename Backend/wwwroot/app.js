@@ -321,7 +321,27 @@ const elements = {
     usersCardViewBtn: document.getElementById('usersCardViewBtn'),
     usersTableViewBtn: document.getElementById('usersTableViewBtn'),
     usersTable: document.getElementById('usersTable'),
-    usersManagementTableBody: document.getElementById('usersManagementTableBody')
+    usersManagementTableBody: document.getElementById('usersManagementTableBody'),
+    // Editor de Imagens
+    editorCard: document.getElementById('editorCard'),
+    editorScreen: document.getElementById('editorScreen'),
+    backToMainFromEditorBtn: document.getElementById('backToMainFromEditorBtn'),
+    photoPreviewEditor: document.getElementById('photoPreviewEditor'),
+    previewImageEditor: document.getElementById('previewImageEditor'),
+    clearPhotoBtnEditor: document.getElementById('clearPhotoBtnEditor'),
+    captureSectionEditor: document.getElementById('captureSectionEditor'),
+    captureBtnEditor: document.getElementById('captureBtnEditor'),
+    fileInputEditor: document.getElementById('fileInputEditor'),
+    editorViewToggle: document.getElementById('editorViewToggle'),
+    toggleViewModeBtn: document.getElementById('toggleViewModeBtn'),
+    editorPreviewSection: document.getElementById('editorPreviewSection'),
+    editorSliderSection: document.getElementById('editorSliderSection'),
+    editorControls: document.getElementById('editorControls'),
+    editorActions: document.getElementById('editorActions'),
+    downloadImageBtn: document.getElementById('downloadImageBtn'),
+    shareImageBtn: document.getElementById('shareImageBtn'),
+    resetAllSlidersBtn: document.getElementById('resetAllSlidersBtn'),
+    editorMessage: document.getElementById('editorMessage')
 };
 
 // ========== AUTO-RENOVAÇÃO DE TOKEN ==========
@@ -530,8 +550,10 @@ function setupEventListeners() {
     // Navegação principal
     elements.integracaoCard.addEventListener('click', showIntegracaoScreen);
     elements.ambientesCard.addEventListener('click', showAmbientesScreen);
+    elements.editorCard.addEventListener('click', showEditorScreen);
     elements.backToMainFromIntegracaoBtn.addEventListener('click', showMainScreen);
     elements.backToMainFromAmbientesBtn.addEventListener('click', showMainScreen);
+    elements.backToMainFromEditorBtn.addEventListener('click', showMainScreen);
 
     // Integração - Captura de foto
     elements.captureBtnIntegracao.addEventListener('click', () => elements.fileInputIntegracao.click());
@@ -561,6 +583,14 @@ function setupEventListeners() {
         elements.cropOverlayAmbientes.addEventListener('mousedown', iniciarSelecaoCrop);
         elements.cropOverlayAmbientes.addEventListener('touchstart', iniciarSelecaoCropTouch, { passive: false });
     }
+
+    // Editor de Imagens - Event Listeners
+    elements.captureBtnEditor.addEventListener('click', () => elements.fileInputEditor.click());
+    elements.fileInputEditor.addEventListener('change', handleEditorFileSelect);
+    elements.clearPhotoBtnEditor.addEventListener('click', clearEditorPhoto);
+    elements.downloadImageBtn.addEventListener('click', handleEditorDownload);
+    elements.shareImageBtn.addEventListener('click', handleEditorShare);
+    elements.toggleViewModeBtn.addEventListener('click', () => window.ImageEditor.toggleViewMode());
 
     // Formulário de upload (só na Integração)
     elements.uploadForm.addEventListener('submit', handleUpload);
@@ -1142,6 +1172,144 @@ function showAmbientesScreen() {
     } else {
         clearPhotoAmbientes();
     }
+}
+
+// ========== EDITOR DE IMAGENS ==========
+
+function showEditorScreen() {
+    showScreen(elements.editorScreen);
+
+    // Reseta o editor para estado inicial
+    elements.photoPreviewEditor.classList.add('hidden');
+    elements.captureSectionEditor.classList.remove('hidden');
+    elements.editorViewToggle.classList.add('hidden');
+    elements.editorPreviewSection.classList.add('hidden');
+    elements.editorSliderSection.classList.add('hidden');
+    elements.editorControls.classList.add('hidden');
+    elements.editorActions.classList.add('hidden');
+
+    // Limpa input de arquivo
+    elements.fileInputEditor.value = '';
+}
+
+async function handleEditorFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        // Mostra preview da imagem
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            elements.previewImageEditor.src = event.target.result;
+            elements.photoPreviewEditor.classList.remove('hidden');
+            elements.captureSectionEditor.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+
+        // Carrega imagem no editor
+        await window.ImageEditor.loadImage(file);
+
+        // Inicializa UI se ainda não foi
+        if (!window.editorUIInstance) {
+            window.editorUIInstance = new EditorUI(window.ImageEditor);
+        }
+
+        // Oculta preview (evita duplicação com canvas)
+        elements.photoPreviewEditor.classList.add('hidden');
+
+        // Mostra seções de edição
+        elements.editorViewToggle.classList.remove('hidden');
+        elements.editorPreviewSection.classList.remove('hidden');
+        elements.editorControls.classList.remove('hidden');
+        elements.editorActions.classList.remove('hidden');
+
+    } catch (error) {
+        console.error('Erro ao carregar imagem:', error);
+        alert('Erro ao carregar imagem. Tente outro arquivo.');
+    }
+}
+
+function clearEditorPhoto() {
+    // Limpa preview
+    elements.previewImageEditor.src = '';
+    elements.photoPreviewEditor.classList.add('hidden');
+    elements.captureSectionEditor.classList.remove('hidden');
+
+    // Oculta seções de edição
+    elements.editorViewToggle.classList.add('hidden');
+    elements.editorPreviewSection.classList.add('hidden');
+    elements.editorSliderSection.classList.add('hidden');
+    elements.editorControls.classList.add('hidden');
+    elements.editorActions.classList.add('hidden');
+
+    // Limpa input de arquivo
+    elements.fileInputEditor.value = '';
+
+    // Reseta editor
+    if (window.ImageEditor) {
+        window.ImageEditor.state.originalImage = null;
+        window.ImageEditor.state.currentImage = null;
+    }
+}
+
+function handleEditorDownload() {
+    window.ImageEditor.downloadImage('jpeg', 0.95);
+}
+
+async function handleEditorShare() {
+    try {
+        const canvas = window.ImageEditor.canvasEdited;
+
+        canvas.toBlob(async (blob) => {
+            try {
+                // Tenta usar Web Share API (funciona em mobile e alguns browsers desktop)
+                if (navigator.share) {
+                    const file = new File([blob], 'stone-editor.jpg', { type: 'image/jpeg' });
+
+                    await navigator.share({
+                        title: 'PicStone Mobile',
+                        text: 'Make with PicStone® mobile',
+                        files: [file]
+                    });
+
+                    showEditorMessage('Compartilhado com sucesso!', 'success');
+                } else {
+                    // Fallback: Compartilhar via WhatsApp Web
+                    const texto = encodeURIComponent('Make with PicStone® mobile');
+                    const whatsappUrl = `https://wa.me/?text=${texto}`;
+                    window.open(whatsappUrl, '_blank');
+                    showEditorMessage('Abrindo WhatsApp...', 'success');
+                }
+            } catch (error) {
+                // Se usuário cancelar ou der erro
+                if (error.name !== 'AbortError') {
+                    console.error('Erro ao compartilhar:', error);
+
+                    // Último fallback: copiar imagem para clipboard
+                    try {
+                        const item = new ClipboardItem({ 'image/jpeg': blob });
+                        await navigator.clipboard.write([item]);
+                        showEditorMessage('Imagem copiada! Cole no WhatsApp', 'success');
+                    } catch (clipError) {
+                        showEditorMessage('Erro ao compartilhar', 'error');
+                    }
+                }
+            }
+        }, 'image/jpeg', 0.95);
+    } catch (error) {
+        console.error('Erro ao preparar compartilhamento:', error);
+        showEditorMessage('Erro ao compartilhar', 'error');
+    }
+}
+
+function showEditorMessage(message, type) {
+    elements.editorMessage.textContent = message;
+    elements.editorMessage.className = `message ${type}`;
+    elements.editorMessage.classList.remove('hidden');
+
+    setTimeout(() => {
+        elements.editorMessage.classList.add('hidden');
+    }, 5000);
 }
 
 /**

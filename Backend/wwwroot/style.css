@@ -2909,3 +2909,481 @@ body {
         width: 100%;
     }
 }
+
+/* ========== EDITOR DE IMAGENS ========== */
+
+/* Card do Editor - Ícone laranja */
+#editorCard .option-icon svg {
+    color: #f97316;
+    transition: all 0.3s ease;
+}
+
+#editorCard:hover .option-icon svg {
+    color: #ea580c;
+    transform: rotate(15deg) scale(1.1);
+}
+
+/* Container do editor */
+.editor-container {
+    max-width: 1200px;
+}
+
+/* Preview Lado-a-Lado */
+.editor-preview-section {
+    margin: 24px 0;
+    background: var(--card-background);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.editor-preview-section.hidden {
+    display: none;
+}
+
+.preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.preview-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.preview-column h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    text-align: center;
+}
+
+.preview-image-container {
+    background: #000000;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    position: relative;
+}
+
+.preview-image-container canvas {
+    max-width: 100%;
+    max-height: 500px;
+    width: auto;
+    height: auto;
+    display: block;
+    object-fit: contain;
+}
+
+/* Controles de Ajuste */
+.editor-controls {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    margin: 24px 0;
+    box-shadow: var(--shadow);
+}
+
+.editor-controls.hidden {
+    display: none;
+}
+
+.editor-controls h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 24px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+/* Slider Group */
+.slider-group {
+    margin-bottom: 24px;
+}
+
+.slider-group label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.slider-value {
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 40px;
+    text-align: right;
+}
+
+.slider-group input[type="range"] {
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--border-color);
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Track (Firefox) */
+.slider-group input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+/* Thumb (Chrome/Safari) */
+.slider-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+    transition: all 0.2s ease;
+}
+
+.slider-group input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.6);
+}
+
+/* Thumb (Firefox) */
+.slider-group input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+    transition: all 0.2s ease;
+}
+
+.slider-group input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.6);
+}
+
+/* Botão Zerar Todos */
+.btn-reset-all {
+    width: 100%;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.btn-reset-all svg {
+    flex-shrink: 0;
+}
+
+/* Actions (Botões Baixar e Compartilhar) */
+.editor-actions {
+    margin: 24px 0;
+    display: flex;
+    gap: 12px;
+}
+
+.editor-actions.hidden {
+    display: none;
+}
+
+.editor-actions .btn {
+    flex: 1;
+    padding: 16px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.editor-actions .btn svg {
+    flex-shrink: 0;
+}
+
+/* Botão Toggle de Visualização */
+.editor-view-toggle {
+    margin: 20px 0;
+    display: flex;
+    justify-content: center;
+}
+
+.editor-view-toggle.hidden {
+    display: none;
+}
+
+.btn-toggle-view {
+    background: var(--card-background);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 12px 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-toggle-view:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-toggle-view svg {
+    transition: transform 0.3s ease;
+}
+
+.btn-toggle-view:hover svg {
+    transform: rotate(90deg);
+}
+
+/* Slider Comparativo (Before/After) */
+.editor-slider-section {
+    margin: 24px 0;
+    background: var(--card-background);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+}
+
+.editor-slider-section.hidden {
+    display: none;
+}
+
+.comparison-slider {
+    width: 100%;
+    max-width: 100%;
+}
+
+.comparison-container {
+    position: relative;
+    width: 100%;
+    min-height: 400px;
+    background: #000000;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+
+/* Imagem Editada (fundo) */
+.comparison-after {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.comparison-after canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Wrapper da Imagem Original (com clip) */
+.comparison-before-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+    transition: clip-path 0.1s ease-out;
+    will-change: clip-path;
+}
+
+.comparison-before {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.comparison-before canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Divisor Arrastável */
+.comparison-divider {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 4px;
+    height: 100%;
+    background: transparent;
+    transform: translateX(-50%);
+    cursor: ew-resize;
+    z-index: 10;
+    transition: left 0.1s ease-out;
+    will-change: left;
+}
+
+.divider-line {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 100%;
+    background: white;
+    transform: translateX(-50%);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.divider-handle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+}
+
+.divider-handle svg {
+    color: #1e293b;
+    transition: transform 0.2s ease;
+}
+
+.comparison-divider:hover .divider-handle {
+    transform: translate(-50%, -50%) scale(1.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.comparison-divider:hover .divider-line {
+    width: 3px;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+}
+
+.comparison-divider:active .divider-handle {
+    transform: translate(-50%, -50%) scale(1.05);
+}
+
+/* Labels Original/Editado */
+.comparison-label {
+    position: absolute;
+    top: 20px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 5;
+    backdrop-filter: blur(4px);
+}
+
+.comparison-label-before {
+    left: 20px;
+}
+
+.comparison-label-after {
+    right: 20px;
+}
+
+/* Responsividade Mobile */
+@media (max-width: 768px) {
+    .editor-container {
+        max-width: 100%;
+        padding: 0 16px;
+    }
+
+    .preview-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .preview-image-container {
+        min-height: 300px;
+    }
+
+    .editor-controls {
+        padding: 20px;
+    }
+
+    .slider-group {
+        margin-bottom: 20px;
+    }
+
+    .slider-group label {
+        font-size: 13px;
+    }
+
+    .slider-value {
+        font-size: 13px;
+        min-width: 35px;
+    }
+
+    .comparison-container {
+        min-height: 300px;
+    }
+
+    .comparison-label {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+
+    .divider-handle {
+        width: 40px;
+        height: 40px;
+    }
+}
+
+@media (max-width: 480px) {
+    .preview-column h3 {
+        font-size: 14px;
+    }
+
+    .preview-image-container {
+        min-height: 250px;
+    }
+
+    .editor-actions {
+        flex-direction: column;
+    }
+
+    .editor-actions .btn {
+        width: 100%;
+    }
+}
