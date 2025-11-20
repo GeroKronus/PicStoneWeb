@@ -10,6 +10,7 @@ class EditorUI {
         this.editor = editorInstance;
         this.sliders = {};
         this.values = {};
+        this.touchTimers = {}; // ✨ NOVO: Timers para long press em mobile
 
         // Debounce para evitar processamento excessivo
         this.debouncedApply = this.debounce(
@@ -55,10 +56,48 @@ class EditorUI {
                     this.handleSliderChange(config.id, parseFloat(e.target.value));
                 });
 
-                // Double-click para resetar individual
+                // Double-click para resetar individual (desktop)
                 slider.addEventListener('dblclick', () => {
                     this.resetSlider(config.id, config.default);
                 });
+
+                // ✨ NOVO: Long press para resetar individual (mobile/touch)
+                slider.addEventListener('touchstart', (e) => {
+                    // Inicia timer de 1 segundo
+                    this.touchTimers[config.id] = setTimeout(() => {
+                        // Long press detectado - reseta slider
+                        this.resetSlider(config.id, config.default);
+
+                        // Feedback visual: pequena vibração se disponível
+                        if (navigator.vibrate) {
+                            navigator.vibrate(50);
+                        }
+
+                        // Feedback visual: flash no valor
+                        if (this.values[config.id]) {
+                            this.values[config.id].style.color = '#10b981'; // verde
+                            setTimeout(() => {
+                                this.values[config.id].style.color = '';
+                            }, 300);
+                        }
+                    }, 1000); // 1 segundo
+                }, { passive: true });
+
+                // Cancela timer se soltar antes de 1 segundo
+                slider.addEventListener('touchend', () => {
+                    if (this.touchTimers[config.id]) {
+                        clearTimeout(this.touchTimers[config.id]);
+                        delete this.touchTimers[config.id];
+                    }
+                }, { passive: true });
+
+                // Cancela timer se mover o dedo (está arrastando, não segurando)
+                slider.addEventListener('touchmove', () => {
+                    if (this.touchTimers[config.id]) {
+                        clearTimeout(this.touchTimers[config.id]);
+                        delete this.touchTimers[config.id];
+                    }
+                }, { passive: true });
             }
         });
     }
