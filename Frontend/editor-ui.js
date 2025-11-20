@@ -75,11 +75,12 @@ class EditorUI {
             });
         }
 
-        // Collapse/Expand sliders (accordion exclusivo)
+        // Collapse/Expand sliders (accordion exclusivo com reordenação)
         const sliderHeaders = document.querySelectorAll('.slider-header');
         sliderHeaders.forEach(header => {
             header.addEventListener('click', () => {
                 const sliderGroup = header.closest('.slider-group');
+                const container = sliderGroup.parentElement;
                 const isExpanded = sliderGroup.classList.contains('expanded');
 
                 // Colapsa todos os outros primeiro
@@ -91,9 +92,22 @@ class EditorUI {
 
                 // Toggle no clicado
                 if (isExpanded) {
+                    // Se estava expandido, apenas colapsa (não move)
                     sliderGroup.classList.remove('expanded');
                 } else {
+                    // Se vai expandir, move para o topo e expande
                     sliderGroup.classList.add('expanded');
+
+                    // Move para o primeiro da lista (logo após o h3)
+                    const firstSlider = container.querySelector('.slider-group');
+                    if (firstSlider && firstSlider !== sliderGroup) {
+                        container.insertBefore(sliderGroup, firstSlider);
+
+                        // Scroll suave para o topo dos controles
+                        setTimeout(() => {
+                            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 50);
+                    }
                 }
             });
         });
