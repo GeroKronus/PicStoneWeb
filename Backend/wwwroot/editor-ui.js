@@ -98,15 +98,10 @@ class EditorUI {
                     // Se vai expandir, move para o topo e expande
                     sliderGroup.classList.add('expanded');
 
-                    // Move para o primeiro da lista (logo após o h3)
+                    // Move para o primeiro da lista
                     const firstSlider = container.querySelector('.slider-group');
                     if (firstSlider && firstSlider !== sliderGroup) {
                         container.insertBefore(sliderGroup, firstSlider);
-
-                        // Scroll suave para o topo dos controles
-                        setTimeout(() => {
-                            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 50);
                     }
                 }
             });
