@@ -112,9 +112,11 @@ class EditorUI {
 
                         let imageSection = null;
                         if (sliderSection && !sliderSection.classList.contains('hidden')) {
+                            // Modo comparação: scrolla para o container do slider
                             imageSection = sliderSection;
                         } else if (previewSection && !previewSection.classList.contains('hidden')) {
-                            imageSection = previewSection;
+                            // Modo lado a lado: scrolla para a imagem EDITADA (não para o container)
+                            imageSection = document.getElementById('editedImageColumn');
                         }
 
                         if (imageSection) {
