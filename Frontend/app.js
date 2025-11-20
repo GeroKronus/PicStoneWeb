@@ -550,7 +550,23 @@ function setupEventListeners() {
     // Navegação principal
     elements.integracaoCard.addEventListener('click', showIntegracaoScreen);
     elements.ambientesCard.addEventListener('click', showAmbientesScreen);
-    elements.editorCard.addEventListener('click', showEditorScreen);
+
+    // Editor card - com tratamento especial para mobile
+    if (elements.editorCard) {
+        elements.editorCard.addEventListener('click', (e) => {
+            console.log('Editor card clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            showEditorScreen();
+        });
+
+        // Touch support para mobile
+        elements.editorCard.addEventListener('touchend', (e) => {
+            console.log('Editor card touched');
+            e.preventDefault();
+            showEditorScreen();
+        }, { passive: false });
+    }
     elements.backToMainFromIntegracaoBtn.addEventListener('click', showMainScreen);
     elements.backToMainFromAmbientesBtn.addEventListener('click', showMainScreen);
     elements.backToMainFromEditorBtn.addEventListener('click', showMainScreen);
