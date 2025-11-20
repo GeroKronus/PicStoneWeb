@@ -2983,25 +2983,13 @@ body {
 
 /* Controles de Ajuste */
 .editor-controls {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 24px;
-    margin: 24px 0;
-    box-shadow: var(--shadow);
+    margin: 12px 0 24px 0;
+    padding: 0;
+    background: transparent;
 }
 
 .editor-controls.hidden {
     display: none;
-}
-
-.editor-controls h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 24px 0;
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--border-color);
 }
 
 /* Slider Group */
