@@ -569,7 +569,7 @@ function setupEventListeners() {
     }
     elements.backToMainFromIntegracaoBtn.addEventListener('click', showMainScreen);
     elements.backToMainFromAmbientesBtn.addEventListener('click', showMainScreen);
-    elements.backToMainFromEditorBtn.addEventListener('click', showMainScreen);
+    elements.backToMainFromEditorBtn.addEventListener('click', handleBackFromEditor);
 
     // Integração - Captura de foto
     elements.captureBtnIntegracao.addEventListener('click', () => elements.fileInputIntegracao.click());
@@ -1192,6 +1192,17 @@ function showAmbientesScreen() {
 
 // ========== EDITOR DE IMAGENS ==========
 
+function handleBackFromEditor() {
+    // Verifica se há imagem carregada (está editando)
+    if (window.ImageEditor && window.ImageEditor.state.originalImage) {
+        // Volta para tela de seleção de imagem (limpa edição)
+        clearEditorPhoto();
+    } else {
+        // Não há imagem, volta para tela principal
+        showMainScreen();
+    }
+}
+
 function showEditorScreen() {
     showScreen(elements.editorScreen);
 
@@ -1238,6 +1249,14 @@ async function handleEditorFileSelect(e) {
         elements.editorSliderSection.classList.remove('hidden');
         elements.editorControls.classList.remove('hidden');
         elements.editorActions.classList.remove('hidden');
+
+        // Zera todos os filtros (se estava editando outra imagem antes)
+        window.ImageEditor.resetFilters();
+
+        // Reseta os sliders da UI
+        if (window.editorUIInstance) {
+            window.editorUIInstance.resetAll();
+        }
 
         // Sincroniza canvas para o slider
         window.ImageEditor.syncCanvasToSlider();
