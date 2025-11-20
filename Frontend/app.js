@@ -1297,6 +1297,7 @@ async function showEditorScreen() {
         elements.editorSliderSection.classList.remove('hidden');
         elements.editorControls.classList.remove('hidden');
         elements.editorActions.classList.remove('hidden');
+        elements.clearPhotoBtnEditor.classList.remove('hidden'); // ✨ Mostra botão limpar
         elements.captureSectionEditor.classList.add('hidden');
 
         console.log('✅ Edição anterior restaurada com filtros');
@@ -1346,6 +1347,7 @@ async function handleEditorFileSelect(e) {
         elements.editorSliderSection.classList.remove('hidden');
         elements.editorControls.classList.remove('hidden');
         elements.editorActions.classList.remove('hidden');
+        elements.clearPhotoBtnEditor.classList.remove('hidden'); // ✨ Mostra botão limpar
 
         // Zera todos os filtros (se estava editando outra imagem antes)
         window.ImageEditor.resetFilters();
@@ -1382,6 +1384,7 @@ function clearEditorPhoto() {
     elements.editorSliderSection.classList.add('hidden');
     elements.editorControls.classList.add('hidden');
     elements.editorActions.classList.add('hidden');
+    elements.clearPhotoBtnEditor.classList.add('hidden'); // ✨ Esconde botão limpar
 
     // Limpa input de arquivo
     elements.fileInputEditor.value = '';

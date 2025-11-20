@@ -137,10 +137,36 @@ class EditorUI {
                     // Se vai expandir, move para o topo e expande
                     sliderGroup.classList.add('expanded');
 
-                    // Move para o primeiro da lista
+                    // ✨ Animação suave ao mover para o topo (técnica FLIP)
                     const firstSlider = container.querySelector('.slider-group');
                     if (firstSlider && firstSlider !== sliderGroup) {
+                        // 1. First: Captura posição inicial
+                        const initialRect = sliderGroup.getBoundingClientRect();
+
+                        // 2. Last: Move no DOM
                         container.insertBefore(sliderGroup, firstSlider);
+
+                        // 3. Invert: Captura nova posição e calcula diferença
+                        const finalRect = sliderGroup.getBoundingClientRect();
+                        const deltaY = initialRect.top - finalRect.top;
+
+                        // 4. Play: Aplica transform inicial e anima para posição final
+                        if (deltaY !== 0) {
+                            sliderGroup.style.transform = `translateY(${deltaY}px)`;
+                            sliderGroup.style.transition = 'none';
+
+                            // No próximo frame, remove transform com transition
+                            requestAnimationFrame(() => {
+                                sliderGroup.style.transition = 'transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1)';
+                                sliderGroup.style.transform = 'translateY(0)';
+
+                                // Limpa estilos após animação
+                                setTimeout(() => {
+                                    sliderGroup.style.transition = '';
+                                    sliderGroup.style.transform = '';
+                                }, 400);
+                            });
+                        }
                     }
 
                     // Scroll suave para mostrar a imagem no topo
