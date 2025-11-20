@@ -340,7 +340,6 @@ const elements = {
     editorActions: document.getElementById('editorActions'),
     downloadImageBtn: document.getElementById('downloadImageBtn'),
     shareImageBtn: document.getElementById('shareImageBtn'),
-    shareImageHDBtn: document.getElementById('shareImageHDBtn'),
     resetAllSlidersBtn: document.getElementById('resetAllSlidersBtn'),
     editorMessage: document.getElementById('editorMessage')
 };
@@ -607,7 +606,6 @@ function setupEventListeners() {
     elements.clearPhotoBtnEditor.addEventListener('click', clearEditorPhoto);
     elements.downloadImageBtn.addEventListener('click', handleEditorDownload);
     elements.shareImageBtn.addEventListener('click', () => handleEditorShare(0.95));
-    elements.shareImageHDBtn.addEventListener('click', () => handleEditorShare(1.0));
     elements.toggleViewModeBtn.addEventListener('click', () => window.ImageEditor.toggleViewMode());
 
     // Formulário de upload (só na Integração)
