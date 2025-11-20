@@ -75,12 +75,26 @@ class EditorUI {
             });
         }
 
-        // Collapse/Expand sliders
+        // Collapse/Expand sliders (accordion exclusivo)
         const sliderHeaders = document.querySelectorAll('.slider-header');
         sliderHeaders.forEach(header => {
             header.addEventListener('click', () => {
                 const sliderGroup = header.closest('.slider-group');
-                sliderGroup.classList.toggle('expanded');
+                const isExpanded = sliderGroup.classList.contains('expanded');
+
+                // Colapsa todos os outros primeiro
+                document.querySelectorAll('.slider-group.expanded').forEach(group => {
+                    if (group !== sliderGroup) {
+                        group.classList.remove('expanded');
+                    }
+                });
+
+                // Toggle no clicado
+                if (isExpanded) {
+                    sliderGroup.classList.remove('expanded');
+                } else {
+                    sliderGroup.classList.add('expanded');
+                }
             });
         });
     }
