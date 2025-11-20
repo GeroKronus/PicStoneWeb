@@ -1277,8 +1277,47 @@ function clearEditorPhoto() {
     }
 }
 
-function handleEditorDownload() {
-    window.ImageEditor.downloadImage('jpeg', 0.95);
+async function handleEditorDownload() {
+    try {
+        const canvas = window.ImageEditor.canvasEdited;
+        const originalName = window.ImageEditor.state.fileName || `stone-editor_${Date.now()}`;
+        const fileName = `${originalName}_StoneEditor.jpeg`;
+
+        // Converte canvas para blob
+        canvas.toBlob(async (blob) => {
+            try {
+                // Tenta usar Web Share API para salvar direto na fototeca (funciona em mobile)
+                if (navigator.share && navigator.canShare) {
+                    const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+                    // Verifica se pode compartilhar arquivos
+                    if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            files: [file],
+                            title: 'Stone Editor',
+                            text: 'Salvar imagem editada'
+                        });
+                        showEditorMessage('Imagem salva com sucesso!', 'success');
+                        return;
+                    }
+                }
+
+                // Fallback: Download tradicional (desktop ou browsers sem suporte)
+                window.ImageEditor.downloadImage('jpeg', 0.95);
+
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Erro ao salvar:', error);
+                    // Fallback em caso de erro
+                    window.ImageEditor.downloadImage('jpeg', 0.95);
+                }
+            }
+        }, 'image/jpeg', 0.95);
+
+    } catch (error) {
+        console.error('Erro ao preparar download:', error);
+        showEditorMessage('Erro ao salvar imagem', 'error');
+    }
 }
 
 async function handleEditorShare() {
