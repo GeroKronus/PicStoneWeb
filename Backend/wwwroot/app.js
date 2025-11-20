@@ -340,6 +340,7 @@ const elements = {
     editorActions: document.getElementById('editorActions'),
     downloadImageBtn: document.getElementById('downloadImageBtn'),
     shareImageBtn: document.getElementById('shareImageBtn'),
+    shareImageHDBtn: document.getElementById('shareImageHDBtn'),
     resetAllSlidersBtn: document.getElementById('resetAllSlidersBtn'),
     editorMessage: document.getElementById('editorMessage')
 };
@@ -605,7 +606,8 @@ function setupEventListeners() {
     elements.fileInputEditor.addEventListener('change', handleEditorFileSelect);
     elements.clearPhotoBtnEditor.addEventListener('click', clearEditorPhoto);
     elements.downloadImageBtn.addEventListener('click', handleEditorDownload);
-    elements.shareImageBtn.addEventListener('click', handleEditorShare);
+    elements.shareImageBtn.addEventListener('click', () => handleEditorShare(0.95));
+    elements.shareImageHDBtn.addEventListener('click', () => handleEditorShare(1.0));
     elements.toggleViewModeBtn.addEventListener('click', () => window.ImageEditor.toggleViewMode());
 
     // Formulário de upload (só na Integração)
@@ -1320,12 +1322,14 @@ async function handleEditorDownload() {
     }
 }
 
-async function handleEditorShare() {
+async function handleEditorShare(quality = 0.95) {
     try {
         const canvas = window.ImageEditor.canvasEdited;
-        // Usa nome original do arquivo + _StoneEditor
+        // Usa nome original do arquivo + _StoneEditor + _HD (se qualidade máxima)
         const originalName = window.ImageEditor.state.fileName || `stone-editor_${Date.now()}`;
-        const fileName = `${originalName}_StoneEditor.jpg`;
+        const hdSuffix = quality >= 1.0 ? '_HD' : '';
+        const fileName = `${originalName}_StoneEditor${hdSuffix}.jpg`;
+        const qualityText = quality >= 1.0 ? ' HD' : '';
 
         canvas.toBlob(async (blob) => {
             try {
@@ -1339,7 +1343,7 @@ async function handleEditorShare() {
                         files: [file]
                     });
 
-                    showEditorMessage('Compartilhado com sucesso!', 'success');
+                    showEditorMessage(`Compartilhado${qualityText} com sucesso!`, 'success');
                 } else {
                     // Fallback: Compartilhar via WhatsApp Web
                     const texto = encodeURIComponent('Make with PicStone® mobile');
@@ -1362,7 +1366,7 @@ async function handleEditorShare() {
                     }
                 }
             }
-        }, 'image/jpeg', 0.95);
+        }, 'image/jpeg', quality);
     } catch (error) {
         console.error('Erro ao preparar compartilhamento:', error);
         showEditorMessage('Erro ao compartilhar', 'error');
