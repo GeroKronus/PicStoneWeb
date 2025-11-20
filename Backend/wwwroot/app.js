@@ -186,7 +186,8 @@ const state = {
         fileName: null,           // Nome do arquivo
         file: null,               // File object
         lastUpdated: null,        // Timestamp
-        source: null              // 'integracao', 'ambientes', ou 'bookmatch'
+        source: null,             // 'integracao', 'ambientes', 'bookmatch', ou 'editor'
+        editorFilters: null       // Filtros do editor (se source='editor')
     }
 };
 
@@ -1122,7 +1123,7 @@ function showAddUserScreen() {
     elements.addUserMessage.classList.add('hidden');
 }
 
-function showIntegracaoScreen() {
+async function showIntegracaoScreen() {
     showScreen(elements.integracaoScreen);
 
     // Carrega automaticamente imagem compartilhada se existir
@@ -1131,7 +1132,20 @@ function showIntegracaoScreen() {
         if (sharedImage) {
             state.originalPhoto = new Image();
             state.originalPhoto.src = sharedImage.originalImage;
-            state.currentPhotoFile = sharedImage.file;
+
+            // ✨ NOVO: Se veio do editor (file é null), converte base64 para File e faz upload
+            if (!sharedImage.file && sharedImage.currentImage) {
+                console.log('📤 Imagem veio do Editor - convertendo e fazendo upload...');
+                const imageBlob = base64ToBlob(sharedImage.currentImage, 'image/jpeg');
+                const imageFile = new File([imageBlob], sharedImage.fileName || 'edited-image.jpg', { type: 'image/jpeg' });
+                state.currentPhotoFile = imageFile;
+
+                // Upload automático (fluxo idêntico ao normal)
+                await uploadImageToServer(imageFile);
+            } else {
+                state.currentPhotoFile = sharedImage.file;
+            }
+
             elements.previewImageIntegracao.src = sharedImage.currentImage;
             elements.photoPreviewIntegracao.classList.remove('hidden');
             elements.submitBtn.disabled = false;
@@ -1141,7 +1155,7 @@ function showIntegracaoScreen() {
     }
 }
 
-function showAmbientesScreen() {
+async function showAmbientesScreen() {
     showScreen(elements.ambientesScreen);
 
     // Carrega automaticamente imagem compartilhada se existir
@@ -1150,7 +1164,19 @@ function showAmbientesScreen() {
         if (sharedImage) {
             state.originalPhoto = new Image();
             state.originalPhoto.src = sharedImage.originalImage;
-            state.currentPhotoFile = sharedImage.file;
+
+            // ✨ NOVO: Se veio do editor (file é null), converte base64 para File e faz upload
+            if (!sharedImage.file && sharedImage.currentImage) {
+                console.log('📤 Imagem veio do Editor - convertendo e fazendo upload...');
+                const imageBlob = base64ToBlob(sharedImage.currentImage, 'image/jpeg');
+                const imageFile = new File([imageBlob], sharedImage.fileName || 'edited-image.jpg', { type: 'image/jpeg' });
+                state.currentPhotoFile = imageFile;
+
+                // Upload automático (fluxo idêntico ao normal)
+                await uploadImageToServer(imageFile);
+            } else {
+                state.currentPhotoFile = sharedImage.file;
+            }
 
             // ✅ FIX: Só setar originalImageSrc se há crop ativo (state.cropCoordinates existe)
             // Sem crop: originalImageSrc = null → mostra botão crop
@@ -1195,18 +1221,89 @@ function showAmbientesScreen() {
 function handleBackFromEditor() {
     // Verifica se há imagem carregada (está editando)
     if (window.ImageEditor && window.ImageEditor.state.originalImage) {
-        // Volta para tela de seleção de imagem (limpa edição)
-        clearEditorPhoto();
+        // Salva a imagem EDITADA e FILTROS no sharedImageState
+        const canvas = window.ImageEditor.canvasEdited || window.ImageEditor.canvasSliderAfter;
+
+        if (canvas) {
+            // Converte canvas editado para base64
+            const editedImageBase64 = canvas.toDataURL('image/jpeg', 0.95);
+            const originalImageBase64 = window.ImageEditor.state.originalImage;
+            const fileName = window.ImageEditor.state.fileName || `stone-editor_${Date.now()}`;
+
+            // Salva no sharedImageState para usar em Mockup, BookMatch e Integração
+            saveSharedImage(
+                originalImageBase64,
+                editedImageBase64,  // Imagem COM filtros aplicados
+                fileName,
+                null,  // file object (não temos mais)
+                'editor'  // source
+            );
+
+            // ✨ NOVO: Salva os filtros para preservar estado ao voltar
+            state.sharedImageState.editorFilters = { ...window.ImageEditor.state.filters };
+
+            // ✨ FIX: Limpa cropCoordinates (imagem editada é nova, sem crop)
+            state.cropCoordinates = null;
+
+            console.log('✅ Imagem editada e filtros salvos no sharedImageState');
+        }
+
+        // NÃO limpa o editor - preserva estado
+        // clearEditorPhoto(); <- REMOVIDO
+        showMainScreen();
     } else {
         // Não há imagem, volta para tela principal
         showMainScreen();
     }
 }
 
-function showEditorScreen() {
+async function showEditorScreen() {
     showScreen(elements.editorScreen);
 
-    // Reseta o editor para estado inicial
+    // ✨ NOVO: Verifica se há imagem do editor salva (continuação de edição)
+    if (state.sharedImageState && state.sharedImageState.source === 'editor' && state.sharedImageState.originalImage) {
+        console.log('📸 Continuando edição anterior...');
+
+        // Carrega imagem original no editor
+        const originalBlob = await fetch(state.sharedImageState.originalImage).then(r => r.blob());
+        const file = new File([originalBlob], state.sharedImageState.fileName || 'image.jpg', { type: 'image/jpeg' });
+
+        await window.ImageEditor.loadImage(file);
+
+        // Inicializa UI se ainda não foi
+        if (!window.editorUIInstance) {
+            window.editorUIInstance = new EditorUI(window.ImageEditor);
+        }
+
+        // ✨ Restaura os filtros salvos
+        if (state.sharedImageState.editorFilters) {
+            Object.keys(state.sharedImageState.editorFilters).forEach(filterName => {
+                const value = state.sharedImageState.editorFilters[filterName];
+                window.ImageEditor.updateFilter(filterName, value);
+
+                // Atualiza UI dos sliders
+                if (window.editorUIInstance && window.editorUIInstance.sliders[filterName]) {
+                    window.editorUIInstance.sliders[filterName].value = value;
+                    window.editorUIInstance.values[filterName].textContent = value;
+                }
+            });
+        }
+
+        // Oculta preview (evita duplicação com canvas)
+        elements.photoPreviewEditor.classList.add('hidden');
+
+        // Mostra seções de edição
+        elements.editorViewToggle.classList.remove('hidden');
+        elements.editorSliderSection.classList.remove('hidden');
+        elements.editorControls.classList.remove('hidden');
+        elements.editorActions.classList.remove('hidden');
+        elements.captureSectionEditor.classList.add('hidden');
+
+        console.log('✅ Edição anterior restaurada com filtros');
+        return;
+    }
+
+    // Estado inicial (sem imagem anterior)
     elements.photoPreviewEditor.classList.add('hidden');
     elements.captureSectionEditor.classList.remove('hidden');
     elements.editorViewToggle.classList.add('hidden');
@@ -1293,6 +1390,20 @@ function clearEditorPhoto() {
     if (window.ImageEditor) {
         window.ImageEditor.state.originalImage = null;
         window.ImageEditor.state.currentImage = null;
+    }
+
+    // ✨ NOVO: Limpa sharedImageState se veio do editor
+    if (state.sharedImageState && state.sharedImageState.source === 'editor') {
+        state.sharedImageState = {
+            originalImage: null,
+            currentImage: null,
+            fileName: null,
+            file: null,
+            lastUpdated: null,
+            source: null,
+            editorFilters: null
+        };
+        console.log('🗑️ Estado do editor limpo - pronto para nova imagem');
     }
 }
 
