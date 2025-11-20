@@ -160,6 +160,32 @@ class EditorUI {
     }
 
     /**
+     * Restaura ordem original dos sliders
+     */
+    resetSliderOrder() {
+        const container = document.getElementById('editorControls');
+        if (!container) return;
+
+        // Ordem original dos sliders
+        const originalOrder = [
+            'brightness', 'contrast', 'gamma', 'saturation', 'hue',
+            'red', 'green', 'blue', 'temperature', 'shadows'
+        ];
+
+        // Reordena os sliders de trás para frente
+        originalOrder.reverse().forEach(filterName => {
+            const slider = this.sliders[filterName];
+            if (slider) {
+                const sliderGroup = slider.closest('.slider-group');
+                if (sliderGroup) {
+                    // Move para o início (primeiro filho)
+                    container.insertBefore(sliderGroup, container.firstChild);
+                }
+            }
+        });
+    }
+
+    /**
      * Utilitário: Capitaliza primeira letra
      */
     capitalize(str) {
