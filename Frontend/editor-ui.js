@@ -106,9 +106,18 @@ class EditorUI {
 
                     // Scroll suave para mostrar a imagem no topo
                     setTimeout(() => {
-                        const imageSection = document.getElementById('editorSliderSection') ||
-                                           document.getElementById('editorPreviewSection');
-                        if (imageSection && !imageSection.classList.contains('hidden')) {
+                        // Verifica qual modo está ativo (slider ou lado a lado)
+                        const sliderSection = document.getElementById('editorSliderSection');
+                        const previewSection = document.getElementById('editorPreviewSection');
+
+                        let imageSection = null;
+                        if (sliderSection && !sliderSection.classList.contains('hidden')) {
+                            imageSection = sliderSection;
+                        } else if (previewSection && !previewSection.classList.contains('hidden')) {
+                            imageSection = previewSection;
+                        }
+
+                        if (imageSection) {
                             imageSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }
                     }, 100);
