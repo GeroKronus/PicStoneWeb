@@ -3053,13 +3053,17 @@ body {
 /* Slider Content (Colapsável) */
 .slider-content {
     max-height: 0;
+    height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease, padding 0.3s ease;
+    opacity: 0;
+    transition: all 0.3s ease;
     padding: 0 16px;
 }
 
 .collapsible.expanded .slider-content {
     max-height: 100px;
+    height: auto;
+    opacity: 1;
     padding: 0 16px 16px 16px;
 }
 
