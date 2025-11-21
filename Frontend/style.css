@@ -154,6 +154,7 @@ body {
     display: none;
     min-height: 100vh;
     padding: 20px;
+    position: relative;
 }
 
 .screen.active {
@@ -622,6 +623,7 @@ body {
     align-items: center;
     justify-content: center;
     transition: all 0.3s;
+    z-index: 1000;
 }
 
 .btn-clear:hover {
