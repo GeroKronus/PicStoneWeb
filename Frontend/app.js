@@ -557,18 +557,35 @@ function setupEventListeners() {
 
     // Editor card - com tratamento especial para mobile
     if (elements.editorCard) {
+        let editorTouchStartY = 0;
+        let editorTouchStartX = 0;
+        let editorTouchStartTime = 0;
+
         elements.editorCard.addEventListener('click', (e) => {
             console.log('Editor card clicked');
-            e.preventDefault();
-            e.stopPropagation();
             showEditorScreen();
         });
 
-        // Touch support para mobile
+        // Touch support para mobile - detecta se é tap ou scroll
+        elements.editorCard.addEventListener('touchstart', (e) => {
+            editorTouchStartY = e.touches[0].clientY;
+            editorTouchStartX = e.touches[0].clientX;
+            editorTouchStartTime = Date.now();
+        }, { passive: true });
+
         elements.editorCard.addEventListener('touchend', (e) => {
-            console.log('Editor card touched');
-            e.preventDefault();
-            showEditorScreen();
+            const touchEndY = e.changedTouches[0].clientY;
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchDuration = Date.now() - editorTouchStartTime;
+            const deltaY = Math.abs(touchEndY - editorTouchStartY);
+            const deltaX = Math.abs(touchEndX - editorTouchStartX);
+
+            // Só considera tap se movimento < 10px e duração < 300ms
+            if (deltaY < 10 && deltaX < 10 && touchDuration < 300) {
+                console.log('Editor card tapped');
+                e.preventDefault();
+                showEditorScreen();
+            }
         }, { passive: false });
     }
     elements.backToMainFromIntegracaoBtn.addEventListener('click', showMainScreen);
