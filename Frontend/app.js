@@ -272,6 +272,9 @@ const elements = {
     stairsBtn: document.getElementById('stairsBtn'),
     stairsSelectionScreen: document.getElementById('stairsSelectionScreen'),
     cancelStairsSelectionBtn: document.getElementById('cancelStairsSelectionBtn'),
+    testesBtn: document.getElementById('testesBtn'),
+    testesSelectionScreen: document.getElementById('testesSelectionScreen'),
+    cancelTestesSelectionBtn: document.getElementById('cancelTestesSelectionBtn'),
     livingRoomTestSelectionScreen: document.getElementById('livingRoomTestSelectionScreen'),
     cancelLivingRoomTestSelectionBtn: document.getElementById('cancelLivingRoomTestSelectionBtn'),
     livingRoomsTestBtn: document.getElementById('livingRoomsTestBtn'),
@@ -643,6 +646,9 @@ function setupEventListeners() {
     if (elements.stairsBtn) {
         elements.stairsBtn.addEventListener('click', startStairsFlow);
     }
+    if (elements.testesBtn) {
+        elements.testesBtn.addEventListener('click', startTestesFlow);
+    }
     if (elements.livingRoomsTestBtn) {
         elements.livingRoomsTestBtn.addEventListener('click', startLivingRoomTestFlow);
     }
@@ -654,6 +660,9 @@ function setupEventListeners() {
     }
     if (elements.cancelStairsSelectionBtn) {
         elements.cancelStairsSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
+    }
+    if (elements.cancelTestesSelectionBtn) {
+        elements.cancelTestesSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
     }
     if (elements.cancelLivingRoomTestSelectionBtn) {
         elements.cancelLivingRoomTestSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
@@ -750,6 +759,23 @@ function setupEventListeners() {
                     return; // Ignora clique em cards desabilitados
                 }
                 selectStairsAndGenerate(type);
+            }
+        }
+    });
+
+    // Event delegation para seleção de testes via click no thumb
+    document.addEventListener('click', (e) => {
+        const preview = e.target.closest('.countertop-preview');
+        if (preview && preview.dataset.type) {
+            const type = preview.dataset.type;
+            // Verifica se é um teste (teste1, teste2, etc)
+            if (type.startsWith('teste')) {
+                // Verifica se o card pai está desabilitado
+                const card = preview.closest('.countertop-card');
+                if (card && card.classList.contains('disabled')) {
+                    return; // Ignora clique em cards desabilitados
+                }
+                selectTesteAndGenerate(type);
             }
         }
     });
@@ -4971,6 +4997,89 @@ async function generateStairsProgressive(numero) {
         stateKey: 'stairsState',
         selectionScreen: elements.stairsSelectionScreen,
         buttonText: '🔄 Tentar Outro Stairs (Mesmo Crop)'
+    });
+}
+
+/**
+ * Inicia fluxo de Testes
+ */
+async function startTestesFlow() {
+    // Reseta flag
+    state.isGeneratingMockup = false;
+
+    // Limpa estados
+    state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null;
+    state.bathroomState.selectedType = null;
+    state.livingRoomState.selectedType = null;
+    state.stairsState.selectedType = null;
+
+    // Inicializa estado de testes se não existir
+    if (!state.testesState) {
+        state.testesState = { selectedType: null };
+    }
+    state.testesState.selectedType = null;
+
+    if (!state.currentPhotoFile) {
+        showMessage('Por favor, selecione uma foto primeiro', 'error');
+        return;
+    }
+
+    // Mostra tela de seleção de testes
+    showScreen(elements.testesSelectionScreen);
+}
+
+/**
+ * Seleciona teste e inicia geração
+ */
+async function selectTesteAndGenerate(type) {
+    console.log('🎯 [TESTES] selectTesteAndGenerate chamado com type:', type);
+
+    if (!state.currentPhotoFile) {
+        showMessage('Por favor, selecione uma foto primeiro', 'error');
+        return;
+    }
+
+    if (state.isGeneratingMockup) {
+        console.log('⚠️ [TESTES] Geração já em andamento, ignorando nova solicitação');
+        return;
+    }
+
+    // Salva tipo selecionado
+    state.testesState.selectedType = type;
+
+    // Prepara FormData
+    const formData = new FormData();
+
+    // 1. Envia imagem
+    if (state.currentPhotoFile) {
+        formData.append('foto', state.currentPhotoFile);
+    } else {
+        showMessage('Erro: arquivo de foto não encontrado', 'error');
+        return;
+    }
+
+    // 2. Envia crop (se houver)
+    if (state.cropCoordinates) {
+        formData.append('cropX', state.cropCoordinates.x);
+        formData.append('cropY', state.cropCoordinates.y);
+        formData.append('cropWidth', state.cropCoordinates.width);
+        formData.append('cropHeight', state.cropCoordinates.height);
+    }
+
+    // Extrai número do tipo (teste1 -> 1)
+    const numero = type.replace('teste', '');
+
+    // Gera mockup progressivo
+    await generateProgressiveMockup({
+        endpoint: `${API_URL}/api/mockup/teste${numero}/progressive`,
+        formData: formData,
+        tipoMockup: 'Teste',
+        numero: numero,
+        totalItems: 1, // Testes geram 1 versão por padrão
+        stateKey: 'testesState',
+        selectionScreen: elements.testesSelectionScreen,
+        buttonText: '🔄 Tentar Outro Teste (Mesmo Crop)'
     });
 }
 

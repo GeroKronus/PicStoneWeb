@@ -78,6 +78,15 @@ namespace PicStoneFotoAPI.Helpers
         }
 
         /// <summary>
+        /// Gera nome para Kitchen (sem opção de fundo)
+        /// </summary>
+        public static string GenerateKitchenFileName(int kitchenNumber, string variation, string background, int userId)
+        {
+            // Kitchen não tem opção de fundo - ignora o parâmetro background
+            return GenerateMockupFileName($"kitchen{kitchenNumber}", variation, userId);
+        }
+
+        /// <summary>
         /// Gera nome para Cavalete Simples
         /// </summary>
         public static string GenerateCavaleteSimpleFileName(string background, int userId)

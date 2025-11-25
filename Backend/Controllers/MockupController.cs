@@ -21,11 +21,12 @@ namespace PicStoneFotoAPI.Controllers
         private readonly GraphicsTransformService _graphicsTransformService;
         private readonly LivingRoomService _livingRoomService;
         private readonly StairsService _stairsService;
+        private readonly KitchenService _kitchenService;
         private readonly ImageWatermarkService _watermark;
         private readonly ILogger<MockupController> _logger;
         private readonly string _uploadsPath;
 
-        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, HistoryService historyService, GraphicsTransformService graphicsTransformService, LivingRoomService livingRoomService, StairsService stairsService, ImageWatermarkService watermark, ILogger<MockupController> logger)
+        public MockupController(MockupService mockupService, NichoService nichoService, BancadaService bancadaService, HistoryService historyService, GraphicsTransformService graphicsTransformService, LivingRoomService livingRoomService, StairsService stairsService, KitchenService kitchenService, ImageWatermarkService watermark, ILogger<MockupController> logger)
         {
             _mockupService = mockupService;
             _nichoService = nichoService;
@@ -34,6 +35,7 @@ namespace PicStoneFotoAPI.Controllers
             _graphicsTransformService = graphicsTransformService;
             _livingRoomService = livingRoomService;
             _stairsService = stairsService;
+            _kitchenService = kitchenService;
             _watermark = watermark;
             _logger = logger;
             _uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "mockups");
@@ -2455,6 +2457,138 @@ namespace PicStoneFotoAPI.Controllers
 
         // ==================== FIM STAIRS ====================
 
+        // ==================== KITCHEN PROGRESSIVE ====================
+
+        [HttpPost("kitchen1/progressive")]
+        public async Task GerarKitchen1Progressive(
+            [FromForm] string imageId,
+            [FromForm] string fundo = "claro",
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
+        {
+            Response.ContentType = "text/event-stream";
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Kitchen #1 Progressive ===");
+
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                await EnviarEventoSSE("inicio", new { mensagem = "Gerando Kitchen #1..." });
+
+                // Carrega imagem do servidor usando imageId
+                var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+                var caminhoImagemOriginal = Path.Combine(imagePath, imageId);
+
+                if (!System.IO.File.Exists(caminhoImagemOriginal))
+                {
+                    _logger.LogError("Imagem não encontrada: {ImageId}", imageId);
+                    await EnviarEventoSSE("erro", new { mensagem = $"Imagem não encontrada: {imageId}" });
+                    return;
+                }
+
+                using var bitmapOriginal = SKBitmap.Decode(caminhoImagemOriginal);
+                if (bitmapOriginal == null)
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Erro ao decodificar imagem original" });
+                    return;
+                }
+
+                _logger.LogInformation("Imagem original carregada: {W}x{H}", bitmapOriginal.Width, bitmapOriginal.Height);
+
+                // Aplica crop se coordenadas foram fornecidas
+                SKBitmap bitmapCropado;
+                if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                {
+                    _logger.LogInformation("Aplicando crop: ({X},{Y}) {W}x{H}", cropX.Value, cropY.Value, cropWidth.Value, cropHeight.Value);
+
+                    var info = new SKImageInfo(cropWidth.Value, cropHeight.Value);
+                    bitmapCropado = new SKBitmap(info);
+
+                    using var canvas = new SKCanvas(bitmapCropado);
+                    var srcRect = new SKRect(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    var destRect = new SKRect(0, 0, cropWidth.Value, cropHeight.Value);
+                    canvas.DrawBitmap(bitmapOriginal, srcRect, destRect);
+
+                    _logger.LogInformation("Crop aplicado: {W}x{H}", bitmapCropado.Width, bitmapCropado.Height);
+                }
+                else
+                {
+                    _logger.LogWarning("Nenhuma coordenada de crop - usando imagem original");
+                    bitmapCropado = bitmapOriginal.Copy();
+                }
+
+                await EnviarEventoSSE("progresso", new { etapa = "Processando transformações...", porcentagem = 10 });
+
+                // Gera as 2 versões usando KitchenService
+                var mockupsBitmaps = _kitchenService.GerarKitchen1(bitmapCropado);
+
+                if (mockupsBitmaps == null || mockupsBitmaps.Count == 0)
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Erro ao gerar Kitchen #1" });
+                    return;
+                }
+
+                _logger.LogInformation("Kitchen #1 gerado: {Count} versões", mockupsBitmaps.Count);
+
+                var caminhos = new List<string>();
+
+                // Salva e envia cada versão progressivamente
+                for (int i = 0; i < mockupsBitmaps.Count; i++)
+                {
+                    int versao = i + 1;
+
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Salvando versão {versao}/{mockupsBitmaps.Count}",
+                        porcentagem = 10 + (versao * 40)
+                    });
+
+                    var sufixo = versao == 1 ? "normal" : "rotate";
+                    var nomeArquivo = FileNamingHelper.GenerateKitchenFileName(1, sufixo, fundo, usuarioId);
+
+                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockupsBitmaps[i], nomeArquivo);
+                    caminhos.Add(caminhoComTimestamp);
+                    _logger.LogInformation("Versão {V} salva: {Path}", versao, nomeArquivo);
+                }
+
+                // Limpa bitmaps
+                foreach (var bitmap in mockupsBitmaps)
+                {
+                    bitmap.Dispose();
+                }
+                mockupsBitmaps.Clear();
+                bitmapCropado.Dispose();
+
+                // Registra no histórico
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Kitchen1",
+                    detalhes: $"{{\"fundo\":\"{fundo}\"}}",
+                    quantidadeImagens: caminhos.Count
+                );
+
+                await EnviarEventoSSE("sucesso", new
+                {
+                    mensagem = "Kitchen #1 gerado com sucesso!",
+                    caminhos = caminhos
+                });
+
+                _logger.LogInformation("=== FIM Kitchen #1 Progressive ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Kitchen #1");
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
+            }
+        }
+
+        // ==================== FIM KITCHEN ====================
+
         /// <summary>
         /// Método auxiliar para enviar eventos SSE
         /// </summary>
@@ -2532,6 +2666,612 @@ namespace PicStoneFotoAPI.Controllers
             {
                 _logger.LogError(ex, "Erro no teste degrau1+espelho1");
                 return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
+        [HttpPost("teste1/progressive")]
+        public async Task GerarTeste1Progressive(
+            [FromForm] string? imageId,
+            [FromForm] IFormFile? imagem,
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
+        {
+            Response.Headers.Add("Content-Type", "text/event-stream");
+            Response.Headers.Add("Cache-Control", "no-cache");
+            Response.Headers.Add("Connection", "keep-alive");
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Teste #1 Progressive ===");
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Carregando imagem...",
+                    porcentagem = 5
+                });
+
+                // Carrega imagem
+                SKBitmap imagemOriginal;
+                if (!string.IsNullOrEmpty(imageId))
+                {
+                    var caminhoImagem = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", imageId);
+                    using var stream = System.IO.File.OpenRead(caminhoImagem);
+                    imagemOriginal = SKBitmap.Decode(stream);
+                }
+                else if (imagem != null)
+                {
+                    using var stream = imagem.OpenReadStream();
+                    imagemOriginal = SKBitmap.Decode(stream);
+                }
+                else
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Nenhuma imagem fornecida" });
+                    return;
+                }
+
+                // Crop se necessário
+                SKBitmap imagemFinal;
+                if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                {
+                    var rectCrop = new SKRectI(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    imagemFinal = new SKBitmap(cropWidth.Value, cropHeight.Value);
+                    imagemOriginal.ExtractSubset(imagemFinal, rectCrop);
+                    imagemOriginal.Dispose();
+                }
+                else
+                {
+                    imagemFinal = imagemOriginal;
+                }
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Recortando porções da imagem...",
+                    porcentagem = 20
+                });
+
+                // === PORÇÃO 1: 66% largura x 45% altura (do TOPO) ===
+                int largura66 = (int)(imagemFinal.Width * 0.66f);
+                int altura45 = (int)(imagemFinal.Height * 0.45f);
+                int altura5 = (int)(imagemFinal.Height * 0.05f);
+
+                var porcao1 = new SKBitmap(largura66, altura45);
+                using (var canvas = new SKCanvas(porcao1))
+                {
+                    var srcRect = new SKRectI(0, 0, largura66, altura45);
+                    canvas.DrawBitmap(imagemFinal, srcRect, new SKRect(0, 0, largura66, altura45));
+                }
+                _logger.LogInformation("Porção 1 (66%x45%): {Width}x{Height}", porcao1.Width, porcao1.Height);
+
+                // === PORÇÃO 2: 66% largura x 5% altura (de 45% a 50%) ===
+                var porcao2 = new SKBitmap(largura66, altura5);
+                using (var canvas = new SKCanvas(porcao2))
+                {
+                    var srcRect = new SKRectI(0, altura45, largura66, altura45 + altura5);
+                    canvas.DrawBitmap(imagemFinal, srcRect, new SKRect(0, 0, largura66, altura5));
+                }
+                _logger.LogInformation("Porção 2 (66%x5%): {Width}x{Height}", porcao2.Width, porcao2.Height);
+
+                // === PORÇÃO 3: 5% largura x 50% altura (de Y=50% até Y=100%) - COLUNA ===
+                int largura5 = (int)(imagemFinal.Width * 0.05f);
+                int altura50 = (int)(imagemFinal.Height * 0.50f);
+                int yInicio50 = (int)(imagemFinal.Height * 0.50f);
+
+                var porcao3 = new SKBitmap(largura5, altura50);
+                using (var canvas = new SKCanvas(porcao3))
+                {
+                    var srcRect = new SKRectI(0, yInicio50, largura5, yInicio50 + altura50);
+                    canvas.DrawBitmap(imagemFinal, srcRect, new SKRect(0, 0, largura5, altura50));
+                }
+                _logger.LogInformation("Porção 3 (coluna 5%x50%): {Width}x{Height}", porcao3.Width, porcao3.Height);
+
+                // === PORÇÃO 4: 30% largura (X=5% a 35%) x 50% altura (Y=50% a 100%) - COLUNA COM PARALELOGRAMO ===
+                int xInicio5percent = (int)(imagemFinal.Width * 0.05f);
+                int largura30 = (int)(imagemFinal.Width * 0.30f);
+
+                var porcao4 = new SKBitmap(largura30, altura50);
+                using (var canvas = new SKCanvas(porcao4))
+                {
+                    var srcRect = new SKRectI(xInicio5percent, yInicio50, xInicio5percent + largura30, yInicio50 + altura50);
+                    canvas.DrawBitmap(imagemFinal, srcRect, new SKRect(0, 0, largura30, altura50));
+                }
+                _logger.LogInformation("Porção 4 (30%x50%): {Width}x{Height}", porcao4.Width, porcao4.Height);
+
+                // === PORÇÃO 5: X=45% até 100%, Y=45% até 100% (55% largura x 55% altura) ===
+                int xInicio45percent = (int)(imagemFinal.Width * 0.45f);
+                int yInicio45percent = (int)(imagemFinal.Height * 0.45f);
+                int largura55 = imagemFinal.Width - xInicio45percent;
+                int altura55 = imagemFinal.Height - yInicio45percent;
+
+                var porcao5 = new SKBitmap(largura55, altura55);
+                using (var canvas = new SKCanvas(porcao5))
+                {
+                    var srcRect = new SKRectI(xInicio45percent, yInicio45percent, imagemFinal.Width, imagemFinal.Height);
+                    canvas.DrawBitmap(imagemFinal, srcRect, new SKRect(0, 0, largura55, altura55));
+                }
+                _logger.LogInformation("Porção 5 (55%x55%): {Width}x{Height}", porcao5.Width, porcao5.Height);
+
+                // === PORÇÃO 6: 55% largura x 50% altura (do TOPO) ===
+                int largura55p = (int)(imagemFinal.Width * 0.55f);
+                int altura50p = (int)(imagemFinal.Height * 0.50f);
+
+                var porcao6 = new SKBitmap(largura55p, altura50p);
+                using (var canvas = new SKCanvas(porcao6))
+                {
+                    var srcRect = new SKRectI(0, 0, largura55p, altura50p);
+                    canvas.DrawBitmap(imagemFinal, srcRect, new SKRect(0, 0, largura55p, altura50p));
+                }
+                _logger.LogInformation("Porção 6 (55%x50% topo): {Width}x{Height}", porcao6.Width, porcao6.Height);
+
+                // === PORÇÃO 7: 55% largura x 50% altura (do TOPO) - será flip horizontal ===
+                var porcao7 = new SKBitmap(largura55p, altura50p);
+                using (var canvas = new SKCanvas(porcao7))
+                {
+                    var srcRect = new SKRectI(0, 0, largura55p, altura50p);
+                    canvas.DrawBitmap(imagemFinal, srcRect, new SKRect(0, 0, largura55p, altura50p));
+                }
+                _logger.LogInformation("Porção 7 (55%x50% topo): {Width}x{Height}", porcao7.Width, porcao7.Height);
+
+                imagemFinal.Dispose();
+
+                // DEBUG: Salva porção 1 antes da transformação
+                var debugPath1 = Path.Combine(_uploadsPath, "debug_porcao1_antes_transform.png");
+                using (var imgDebug = SKImage.FromBitmap(porcao1))
+                using (var dataDebug = imgDebug.Encode(SKEncodedImageFormat.Png, 100))
+                using (var streamDebug = System.IO.File.OpenWrite(debugPath1))
+                {
+                    dataDebug.SaveTo(streamDebug);
+                }
+                _logger.LogInformation("DEBUG: Porção 1 salva em {Path}", debugPath1);
+
+                // DEBUG: Salva porção 2
+                var debugPath2 = Path.Combine(_uploadsPath, "debug_porcao2.png");
+                using (var imgDebug = SKImage.FromBitmap(porcao2))
+                using (var dataDebug = imgDebug.Encode(SKEncodedImageFormat.Png, 100))
+                using (var streamDebug = System.IO.File.OpenWrite(debugPath2))
+                {
+                    dataDebug.SaveTo(streamDebug);
+                }
+                _logger.LogInformation("DEBUG: Porção 2 salva em {Path}", debugPath2);
+
+                // DEBUG: Salva porção 3
+                var debugPath3 = Path.Combine(_uploadsPath, "debug_porcao3.png");
+                using (var imgDebug = SKImage.FromBitmap(porcao3))
+                using (var dataDebug = imgDebug.Encode(SKEncodedImageFormat.Png, 100))
+                using (var streamDebug = System.IO.File.OpenWrite(debugPath3))
+                {
+                    dataDebug.SaveTo(streamDebug);
+                }
+                _logger.LogInformation("DEBUG: Porção 3 salva em {Path}", debugPath3);
+
+                // DEBUG: Salva porção 4
+                var debugPath4 = Path.Combine(_uploadsPath, "debug_porcao4.png");
+                using (var imgDebug = SKImage.FromBitmap(porcao4))
+                using (var dataDebug = imgDebug.Encode(SKEncodedImageFormat.Png, 100))
+                using (var streamDebug = System.IO.File.OpenWrite(debugPath4))
+                {
+                    dataDebug.SaveTo(streamDebug);
+                }
+                _logger.LogInformation("DEBUG: Porção 4 salva em {Path}", debugPath4);
+
+                // DEBUG: Salva porção 5
+                var debugPath5 = Path.Combine(_uploadsPath, "debug_porcao5.png");
+                using (var imgDebug = SKImage.FromBitmap(porcao5))
+                using (var dataDebug = imgDebug.Encode(SKEncodedImageFormat.Png, 100))
+                using (var streamDebug = System.IO.File.OpenWrite(debugPath5))
+                {
+                    dataDebug.SaveTo(streamDebug);
+                }
+                _logger.LogInformation("DEBUG: Porção 5 salva em {Path}", debugPath5);
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Processando Porção 1 (trapézio)...",
+                    porcentagem = 35
+                });
+
+                // === PORÇÃO 1: Redimensionar e transformar em trapézio ===
+                const int LARGURA_BASE = 943;
+                const int ALTURA_TRAPEZIO = 36;
+                const int INCLINACAO = 92;
+
+                var porcao1Redim = porcao1.Resize(
+                    new SKImageInfo(LARGURA_BASE, ALTURA_TRAPEZIO),
+                    SKFilterQuality.High);
+                porcao1.Dispose();
+
+                var porcao1Transformada = _graphicsTransformService.TransformPerspective(
+                    input: porcao1Redim,
+                    canvasWidth: LARGURA_BASE,
+                    canvasHeight: ALTURA_TRAPEZIO,
+                    topLeft: new SKPoint(INCLINACAO, 0),
+                    topRight: new SKPoint(LARGURA_BASE - INCLINACAO, 0),
+                    bottomLeft: new SKPoint(0, ALTURA_TRAPEZIO),
+                    bottomRight: new SKPoint(LARGURA_BASE, ALTURA_TRAPEZIO)
+                );
+                porcao1Redim.Dispose();
+                _logger.LogInformation("Porção 1 transformada: {Width}x{Height}", porcao1Transformada.Width, porcao1Transformada.Height);
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Processando Porção 2 (retângulo)...",
+                    porcentagem = 50
+                });
+
+                // === PORÇÃO 2: Redimensionar para 943x21 (sem transformação) ===
+                const int LARGURA_PORCAO2 = 943;
+                const int ALTURA_PORCAO2 = 21;
+
+                var porcao2Redim = porcao2.Resize(
+                    new SKImageInfo(LARGURA_PORCAO2, ALTURA_PORCAO2),
+                    SKFilterQuality.High);
+                porcao2.Dispose();
+                _logger.LogInformation("Porção 2 redimensionada: {Width}x{Height}", porcao2Redim.Width, porcao2Redim.Height);
+
+                // === PORÇÃO 3: Redimensionar para 17x315 (sem transformação) ===
+                const int LARGURA_PORCAO3 = 17;
+                const int ALTURA_PORCAO3 = 315;
+
+                var porcao3Redim = porcao3.Resize(
+                    new SKImageInfo(LARGURA_PORCAO3, ALTURA_PORCAO3),
+                    SKFilterQuality.High);
+                porcao3.Dispose();
+                _logger.LogInformation("Porção 3 redimensionada: {Width}x{Height}", porcao3Redim.Width, porcao3Redim.Height);
+
+                // === PORÇÃO 4: Redimensionar para 35x315 e aplicar skew (direita sobe 37px) ===
+                const int LARGURA_PORCAO4 = 35;
+                const int ALTURA_PORCAO4 = 315;
+                const int SKEW_PORCAO4 = 37; // Lateral direita sobe 37px
+
+                var porcao4Redim = porcao4.Resize(
+                    new SKImageInfo(LARGURA_PORCAO4, ALTURA_PORCAO4),
+                    SKFilterQuality.High);
+                porcao4.Dispose();
+                _logger.LogInformation("Porção 4 redimensionada: {Width}x{Height}", porcao4Redim.Width, porcao4Redim.Height);
+
+                // Aplicar skew: lateral direita sobe 37px
+                // Canvas maior para acomodar o skew (altura + skew)
+                int alturaCanvas = ALTURA_PORCAO4 + SKEW_PORCAO4;
+                var porcao4Transformada = _graphicsTransformService.TransformPerspective(
+                    input: porcao4Redim,
+                    canvasWidth: LARGURA_PORCAO4,
+                    canvasHeight: alturaCanvas,
+                    topLeft: new SKPoint(0, SKEW_PORCAO4),            // (0, 37) - esquerda desce
+                    topRight: new SKPoint(LARGURA_PORCAO4, 0),        // (35, 0) - direita no topo
+                    bottomLeft: new SKPoint(0, alturaCanvas),         // (0, 352) - esquerda embaixo
+                    bottomRight: new SKPoint(LARGURA_PORCAO4, ALTURA_PORCAO4)  // (35, 315) - direita sobe
+                );
+                porcao4Redim.Dispose();
+                _logger.LogInformation("Porção 4 com skew: {Width}x{Height}", porcao4Transformada.Width, porcao4Transformada.Height);
+
+                // === PORÇÃO 5: Redimensionar para 580x238 (sem transformação) ===
+                const int LARGURA_PORCAO5 = 580;
+                const int ALTURA_PORCAO5 = 238;
+
+                var porcao5Redim = porcao5.Resize(
+                    new SKImageInfo(LARGURA_PORCAO5, ALTURA_PORCAO5),
+                    SKFilterQuality.High);
+                porcao5.Dispose();
+                _logger.LogInformation("Porção 5 redimensionada: {Width}x{Height}", porcao5Redim.Width, porcao5Redim.Height);
+
+                // === PORÇÃO 6: Redimensionar para 550x166 (sem transformação) ===
+                const int LARGURA_PORCAO6 = 550;
+                const int ALTURA_PORCAO6 = 166;
+
+                var porcao6Redim = porcao6.Resize(
+                    new SKImageInfo(LARGURA_PORCAO6, ALTURA_PORCAO6),
+                    SKFilterQuality.High);
+                porcao6.Dispose();
+                _logger.LogInformation("Porção 6 redimensionada: {Width}x{Height}", porcao6Redim.Width, porcao6Redim.Height);
+
+                // === PORÇÃO 7: Flip horizontal e redimensionar para 550x83 ===
+                var porcao7Flip = FlipHorizontal(porcao7);
+                porcao7.Dispose();
+
+                var porcao7Redim = porcao7Flip.Resize(
+                    new SKImageInfo(LARGURA_PORCAO6, ALTURA_PORCAO6),
+                    SKFilterQuality.High);
+                porcao7Flip.Dispose();
+                _logger.LogInformation("Porção 7 (flip + redim): {Width}x{Height}", porcao7Redim.Width, porcao7Redim.Height);
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Montando canvas com fundo transparente...",
+                    porcentagem = 70
+                });
+
+                // === CANVAS: 1536x1024 transparente ===
+                var mockup = new SKBitmap(1536, 1024, SKColorType.Rgba8888, SKAlphaType.Premul);
+                using (var canvas = new SKCanvas(mockup))
+                {
+                    canvas.Clear(SKColors.Transparent);
+
+                    // Porção 4 (paralelogramo/skew) em (311, 644) - CAMADA 1 (embaixo de todas)
+                    canvas.DrawBitmap(porcao4Transformada, 311, 644);
+                    _logger.LogInformation("Porção 4 plotada em (311, 644) - CAMADA 1");
+
+                    // Porção 5 (retângulo grande) em (346, 681) - CAMADA 2
+                    canvas.DrawBitmap(porcao5Redim, 346, 681);
+                    _logger.LogInformation("Porção 5 plotada em (346, 681) - CAMADA 2");
+
+                    // Porção 1 (trapézio) em (294, 624) - CAMADA 3
+                    canvas.DrawBitmap(porcao1Transformada, 294, 624);
+                    _logger.LogInformation("Porção 1 plotada em (294, 624) - CAMADA 3");
+
+                    // Porção 2 (retângulo) em (294, 660) - CAMADA 4
+                    canvas.DrawBitmap(porcao2Redim, 294, 660);
+                    _logger.LogInformation("Porção 2 plotada em (294, 660) - CAMADA 4");
+
+                    // Porção 3 (coluna) em (294, 681) - CAMADA 5
+                    canvas.DrawBitmap(porcao3Redim, 294, 681);
+                    _logger.LogInformation("Porção 3 plotada em (294, 681) - CAMADA 5");
+
+                    // Porção 6 em (204, 431) - CAMADA 6
+                    canvas.DrawBitmap(porcao6Redim, 204, 431);
+                    _logger.LogInformation("Porção 6 plotada em (204, 431) - CAMADA 6");
+
+                    // Porção 7 (flip) em (754, 431) - CAMADA 7
+                    canvas.DrawBitmap(porcao7Redim, 754, 431);
+                    _logger.LogInformation("Porção 7 plotada em (754, 431) - CAMADA 7");
+
+                    // === OVERLAY: cozinha1.webp - ÚLTIMA CAMADA (por cima de tudo) ===
+                    var overlayPath = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Cozinhas", "cozinha1.webp");
+                    if (System.IO.File.Exists(overlayPath))
+                    {
+                        using var overlayData = System.IO.File.OpenRead(overlayPath);
+                        using var overlayBitmap = SKBitmap.Decode(overlayData);
+
+                        // Redimensiona o overlay para o tamanho do canvas se necessário
+                        if (overlayBitmap.Width != 1536 || overlayBitmap.Height != 1024)
+                        {
+                            using var overlayResized = overlayBitmap.Resize(new SKImageInfo(1536, 1024), SKFilterQuality.High);
+                            canvas.DrawBitmap(overlayResized, 0, 0);
+                        }
+                        else
+                        {
+                            canvas.DrawBitmap(overlayBitmap, 0, 0);
+                        }
+                        _logger.LogInformation("Overlay cozinha1.webp plotado - CAMADA FINAL");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Overlay não encontrado: {Path}", overlayPath);
+                    }
+                }
+
+                porcao1Transformada.Dispose();
+                porcao2Redim.Dispose();
+                porcao3Redim.Dispose();
+                porcao4Transformada.Dispose();
+                porcao5Redim.Dispose();
+                porcao6Redim.Dispose();
+                porcao7Redim.Dispose();
+
+                // === SALVA VERSÃO 1 (NORMAL) ===
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Salvando versão 1 (normal)...",
+                    porcentagem = 80
+                });
+
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                var caminhos = new List<string>();
+
+                // Versão 1 - Normal
+                var nomeArquivo1 = $"testeX_normal_User{usuarioId}.png";
+                var caminhoCompleto1 = Path.Combine(_uploadsPath, nomeArquivo1);
+                if (System.IO.File.Exists(caminhoCompleto1)) System.IO.File.Delete(caminhoCompleto1);
+
+                using (var image1 = SKImage.FromBitmap(mockup))
+                using (var data1 = image1.Encode(SKEncodedImageFormat.Png, 100))
+                using (var outputStream1 = System.IO.File.OpenWrite(caminhoCompleto1))
+                {
+                    data1.SaveTo(outputStream1);
+                }
+                var timestamp1 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                caminhos.Add($"{nomeArquivo1}?v={timestamp1}");
+                _logger.LogInformation("Versão 1 (normal) salva: {Path}", nomeArquivo1);
+
+                mockup.Dispose();
+
+                // === VERSÃO 2: Rotaciona imagem original 180° e gera novamente ===
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Gerando versão 2 (180°)...",
+                    porcentagem = 85
+                });
+
+                // Recarrega a imagem original para a versão 2
+                SKBitmap imagemParaRotacao;
+                if (!string.IsNullOrEmpty(imageId))
+                {
+                    var caminhoImagem2 = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", imageId);
+                    using var stream2 = System.IO.File.OpenRead(caminhoImagem2);
+                    var imgOriginal2 = SKBitmap.Decode(stream2);
+
+                    if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                    {
+                        var rectCrop2 = new SKRectI(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                        imagemParaRotacao = new SKBitmap(cropWidth.Value, cropHeight.Value);
+                        imgOriginal2.ExtractSubset(imagemParaRotacao, rectCrop2);
+                        imgOriginal2.Dispose();
+                    }
+                    else
+                    {
+                        imagemParaRotacao = imgOriginal2;
+                    }
+                }
+                else
+                {
+                    // Fallback - não deveria acontecer
+                    _logger.LogWarning("imageId não disponível para versão 2");
+                    await EnviarEventoSSE("sucesso", new
+                    {
+                        mensagem = "Mockup de teste gerado com sucesso! (apenas versão 1)",
+                        caminhos = caminhos.ToArray()
+                    });
+                    return;
+                }
+
+                // Rotaciona a imagem 180°
+                var imagemRotacionada = new SKBitmap(imagemParaRotacao.Width, imagemParaRotacao.Height);
+                using (var canvasRot = new SKCanvas(imagemRotacionada))
+                {
+                    canvasRot.RotateDegrees(180, imagemParaRotacao.Width / 2f, imagemParaRotacao.Height / 2f);
+                    canvasRot.DrawBitmap(imagemParaRotacao, 0, 0);
+                }
+                imagemParaRotacao.Dispose();
+
+                // Recorta as porções da imagem rotacionada
+                var largura66_v2 = (int)(imagemRotacionada.Width * 0.66f);
+                var altura45_v2 = (int)(imagemRotacionada.Height * 0.45f);
+                var altura5_v2 = (int)(imagemRotacionada.Height * 0.05f);
+                var largura5_v2 = (int)(imagemRotacionada.Width * 0.05f);
+                var altura50_v2 = (int)(imagemRotacionada.Height * 0.50f);
+                var yInicio50_v2 = (int)(imagemRotacionada.Height * 0.50f);
+                var xInicio5percent_v2 = (int)(imagemRotacionada.Width * 0.05f);
+                var largura30_v2 = (int)(imagemRotacionada.Width * 0.30f);
+                var xInicio45percent_v2 = (int)(imagemRotacionada.Width * 0.45f);
+                var yInicio45percent_v2 = (int)(imagemRotacionada.Height * 0.45f);
+                var largura55_v2 = imagemRotacionada.Width - xInicio45percent_v2;
+                var altura55_v2 = imagemRotacionada.Height - yInicio45percent_v2;
+                var largura55p_v2 = (int)(imagemRotacionada.Width * 0.55f);
+                var altura50p_v2 = (int)(imagemRotacionada.Height * 0.50f);
+
+                // Porção 1 v2
+                var porcao1_v2 = new SKBitmap(largura66_v2, altura45_v2);
+                using (var c = new SKCanvas(porcao1_v2)) c.DrawBitmap(imagemRotacionada, new SKRectI(0, 0, largura66_v2, altura45_v2), new SKRect(0, 0, largura66_v2, altura45_v2));
+
+                // Porção 2 v2
+                var porcao2_v2 = new SKBitmap(largura66_v2, altura5_v2);
+                using (var c = new SKCanvas(porcao2_v2)) c.DrawBitmap(imagemRotacionada, new SKRectI(0, altura45_v2, largura66_v2, altura45_v2 + altura5_v2), new SKRect(0, 0, largura66_v2, altura5_v2));
+
+                // Porção 3 v2
+                var porcao3_v2 = new SKBitmap(largura5_v2, altura50_v2);
+                using (var c = new SKCanvas(porcao3_v2)) c.DrawBitmap(imagemRotacionada, new SKRectI(0, yInicio50_v2, largura5_v2, yInicio50_v2 + altura50_v2), new SKRect(0, 0, largura5_v2, altura50_v2));
+
+                // Porção 4 v2
+                var porcao4_v2 = new SKBitmap(largura30_v2, altura50_v2);
+                using (var c = new SKCanvas(porcao4_v2)) c.DrawBitmap(imagemRotacionada, new SKRectI(xInicio5percent_v2, yInicio50_v2, xInicio5percent_v2 + largura30_v2, yInicio50_v2 + altura50_v2), new SKRect(0, 0, largura30_v2, altura50_v2));
+
+                // Porção 5 v2
+                var porcao5_v2 = new SKBitmap(largura55_v2, altura55_v2);
+                using (var c = new SKCanvas(porcao5_v2)) c.DrawBitmap(imagemRotacionada, new SKRectI(xInicio45percent_v2, yInicio45percent_v2, imagemRotacionada.Width, imagemRotacionada.Height), new SKRect(0, 0, largura55_v2, altura55_v2));
+
+                // Porção 6 v2
+                var porcao6_v2 = new SKBitmap(largura55p_v2, altura50p_v2);
+                using (var c = new SKCanvas(porcao6_v2)) c.DrawBitmap(imagemRotacionada, new SKRectI(0, 0, largura55p_v2, altura50p_v2), new SKRect(0, 0, largura55p_v2, altura50p_v2));
+
+                // Porção 7 v2
+                var porcao7_v2 = new SKBitmap(largura55p_v2, altura50p_v2);
+                using (var c = new SKCanvas(porcao7_v2)) c.DrawBitmap(imagemRotacionada, new SKRectI(0, 0, largura55p_v2, altura50p_v2), new SKRect(0, 0, largura55p_v2, altura50p_v2));
+
+                imagemRotacionada.Dispose();
+
+                // Transforma porções v2
+                var p1Redim_v2 = porcao1_v2.Resize(new SKImageInfo(LARGURA_BASE, ALTURA_TRAPEZIO), SKFilterQuality.High);
+                porcao1_v2.Dispose();
+                var p1Trans_v2 = _graphicsTransformService.TransformPerspective(p1Redim_v2, LARGURA_BASE, ALTURA_TRAPEZIO,
+                    new SKPoint(INCLINACAO, 0), new SKPoint(LARGURA_BASE - INCLINACAO, 0), new SKPoint(0, ALTURA_TRAPEZIO), new SKPoint(LARGURA_BASE, ALTURA_TRAPEZIO));
+                p1Redim_v2.Dispose();
+
+                var p2Redim_v2 = porcao2_v2.Resize(new SKImageInfo(LARGURA_PORCAO2, ALTURA_PORCAO2), SKFilterQuality.High);
+                porcao2_v2.Dispose();
+
+                var p3Redim_v2 = porcao3_v2.Resize(new SKImageInfo(LARGURA_PORCAO3, ALTURA_PORCAO3), SKFilterQuality.High);
+                porcao3_v2.Dispose();
+
+                var p4Redim_v2 = porcao4_v2.Resize(new SKImageInfo(LARGURA_PORCAO4, ALTURA_PORCAO4), SKFilterQuality.High);
+                porcao4_v2.Dispose();
+                var p4Trans_v2 = _graphicsTransformService.TransformPerspective(p4Redim_v2, LARGURA_PORCAO4, alturaCanvas,
+                    new SKPoint(0, SKEW_PORCAO4), new SKPoint(LARGURA_PORCAO4, 0), new SKPoint(0, alturaCanvas), new SKPoint(LARGURA_PORCAO4, ALTURA_PORCAO4));
+                p4Redim_v2.Dispose();
+
+                var p5Redim_v2 = porcao5_v2.Resize(new SKImageInfo(LARGURA_PORCAO5, ALTURA_PORCAO5), SKFilterQuality.High);
+                porcao5_v2.Dispose();
+
+                var p6Redim_v2 = porcao6_v2.Resize(new SKImageInfo(LARGURA_PORCAO6, ALTURA_PORCAO6), SKFilterQuality.High);
+                porcao6_v2.Dispose();
+
+                var p7Flip_v2 = FlipHorizontal(porcao7_v2);
+                porcao7_v2.Dispose();
+                var p7Redim_v2 = p7Flip_v2.Resize(new SKImageInfo(LARGURA_PORCAO6, ALTURA_PORCAO6), SKFilterQuality.High);
+                p7Flip_v2.Dispose();
+
+                // Monta canvas v2
+                var mockup2 = new SKBitmap(1536, 1024, SKColorType.Rgba8888, SKAlphaType.Premul);
+                using (var canvas2 = new SKCanvas(mockup2))
+                {
+                    canvas2.Clear(SKColors.Transparent);
+                    canvas2.DrawBitmap(p4Trans_v2, 311, 644);
+                    canvas2.DrawBitmap(p5Redim_v2, 346, 681);
+                    canvas2.DrawBitmap(p1Trans_v2, 294, 624);
+                    canvas2.DrawBitmap(p2Redim_v2, 294, 660);
+                    canvas2.DrawBitmap(p3Redim_v2, 294, 681);
+                    canvas2.DrawBitmap(p6Redim_v2, 204, 431);
+                    canvas2.DrawBitmap(p7Redim_v2, 754, 431);
+
+                    var overlayPath2 = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Cozinhas", "cozinha1.webp");
+                    if (System.IO.File.Exists(overlayPath2))
+                    {
+                        using var overlayData2 = System.IO.File.OpenRead(overlayPath2);
+                        using var overlayBitmap2 = SKBitmap.Decode(overlayData2);
+                        if (overlayBitmap2.Width != 1536 || overlayBitmap2.Height != 1024)
+                        {
+                            using var overlayResized2 = overlayBitmap2.Resize(new SKImageInfo(1536, 1024), SKFilterQuality.High);
+                            canvas2.DrawBitmap(overlayResized2, 0, 0);
+                        }
+                        else
+                        {
+                            canvas2.DrawBitmap(overlayBitmap2, 0, 0);
+                        }
+                    }
+                }
+
+                p1Trans_v2.Dispose();
+                p2Redim_v2.Dispose();
+                p3Redim_v2.Dispose();
+                p4Trans_v2.Dispose();
+                p5Redim_v2.Dispose();
+                p6Redim_v2.Dispose();
+                p7Redim_v2.Dispose();
+
+                await EnviarEventoSSE("progresso", new
+                {
+                    etapa = "Salvando versão 2 (180°)...",
+                    porcentagem = 95
+                });
+
+                // Salva versão 2
+                var nomeArquivo2 = $"testeX_rotate_User{usuarioId}.png";
+                var caminhoCompleto2 = Path.Combine(_uploadsPath, nomeArquivo2);
+                if (System.IO.File.Exists(caminhoCompleto2)) System.IO.File.Delete(caminhoCompleto2);
+
+                using (var image2 = SKImage.FromBitmap(mockup2))
+                using (var data2 = image2.Encode(SKEncodedImageFormat.Png, 100))
+                using (var outputStream2 = System.IO.File.OpenWrite(caminhoCompleto2))
+                {
+                    data2.SaveTo(outputStream2);
+                }
+                var timestamp2 = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                caminhos.Add($"{nomeArquivo2}?v={timestamp2}");
+                _logger.LogInformation("Versão 2 (180°) salva: {Path}", nomeArquivo2);
+
+                mockup2.Dispose();
+
+                await EnviarEventoSSE("sucesso", new
+                {
+                    mensagem = "Mockup de teste gerado com sucesso!",
+                    caminhos = caminhos.ToArray()
+                });
+
+                _logger.LogInformation("=== FIM Teste #1 Progressive - 2 versões geradas ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Teste #1");
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
             }
         }
 

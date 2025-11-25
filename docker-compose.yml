@@ -50,6 +50,7 @@ services:
       - ./Backend/wwwroot:/app/wwwroot
       - ./Backend/uploads:/app/uploads
       - ./Backend/debug:/app/debug
+      - ./WebP:/app/WebP
     networks:
       - picstone-network
 
