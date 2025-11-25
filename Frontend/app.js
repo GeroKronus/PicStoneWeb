@@ -154,6 +154,10 @@ const state = {
     stairsState: {
         selectedType: null      // 'stairs1'
     },
+    // Estado específico para cozinhas (kitchen) - DRY com stairsState
+    kitchenState: {
+        selectedType: null      // 'kitchen1'
+    },
     // Estado para crop overlay na Integração
     cropOverlayState: (() => {
         let _isActive = false;
@@ -272,6 +276,9 @@ const elements = {
     stairsBtn: document.getElementById('stairsBtn'),
     stairsSelectionScreen: document.getElementById('stairsSelectionScreen'),
     cancelStairsSelectionBtn: document.getElementById('cancelStairsSelectionBtn'),
+    kitchensBtn: document.getElementById('kitchensBtn'),
+    kitchenSelectionScreen: document.getElementById('kitchenSelectionScreen'),
+    cancelKitchenSelectionBtn: document.getElementById('cancelKitchenSelectionBtn'),
     testesBtn: document.getElementById('testesBtn'),
     testesSelectionScreen: document.getElementById('testesSelectionScreen'),
     cancelTestesSelectionBtn: document.getElementById('cancelTestesSelectionBtn'),
@@ -663,6 +670,9 @@ function setupEventListeners() {
     if (elements.stairsBtn) {
         elements.stairsBtn.addEventListener('click', startStairsFlow);
     }
+    if (elements.kitchensBtn) {
+        elements.kitchensBtn.addEventListener('click', startKitchensFlow);
+    }
     if (elements.testesBtn) {
         elements.testesBtn.addEventListener('click', startTestesFlow);
     }
@@ -677,6 +687,9 @@ function setupEventListeners() {
     }
     if (elements.cancelStairsSelectionBtn) {
         elements.cancelStairsSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
+    }
+    if (elements.cancelKitchenSelectionBtn) {
+        elements.cancelKitchenSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
     }
     if (elements.cancelTestesSelectionBtn) {
         elements.cancelTestesSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
@@ -776,6 +789,15 @@ function setupEventListeners() {
                     return; // Ignora clique em cards desabilitados
                 }
                 selectStairsAndGenerate(type);
+            }
+            // Verifica se é um kitchen (kitchen1, kitchen2, etc)
+            if (type.startsWith('kitchen')) {
+                // Verifica se o card pai está desabilitado
+                const card = preview.closest('.countertop-card');
+                if (card && card.classList.contains('disabled')) {
+                    return; // Ignora clique em cards desabilitados
+                }
+                selectKitchenAndGenerate(type);
             }
         }
     });
@@ -5014,6 +5036,141 @@ async function generateStairsProgressive(numero) {
         stateKey: 'stairsState',
         selectionScreen: elements.stairsSelectionScreen,
         buttonText: '🔄 Tentar Outro Stairs (Mesmo Crop)'
+    });
+}
+
+// ========== KITCHEN MOCKUP FLOW ==========
+
+/**
+ * Inicia o flow de Kitchens - DRY com Stairs
+ */
+async function startKitchensFlow() {
+    // 🔧 EMERGENCY FIX: Reseta flag travada se usuário voltar ao menu principal
+    state.isGeneratingMockup = false;
+
+    // 🔧 FIX: Limpa estados para evitar interferência entre flows
+    state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null;
+    state.bathroomState.selectedType = null;
+    state.livingRoomState.selectedType = null;
+    state.stairsState.selectedType = null;
+    state.kitchenState.selectedType = null;
+
+    if (!state.currentPhotoFile) {
+        showMessage('Por favor, selecione uma foto primeiro', 'error');
+        return;
+    }
+
+    // Mostra tela de seleção de kitchens
+    showScreen(elements.kitchenSelectionScreen);
+}
+
+/**
+ * Seleciona kitchen e inicia geração - DRY com Stairs
+ */
+async function selectKitchenAndGenerate(type) {
+    console.log('🎯 [KITCHEN] selectKitchenAndGenerate chamado com type:', type);
+    console.log('🔍 [DEBUG] state.uploadedImageId:', state.uploadedImageId);
+    console.log('🔍 [DEBUG] state.cropCoordinates:', state.cropCoordinates);
+    console.log('🔍 [DEBUG] state.sharedImageState:', state.sharedImageState);
+    console.log('🔍 [DEBUG] state.currentPhotoFile:', state.currentPhotoFile);
+
+    // ✅ FIX CRÍTICO: Limpa countertopState COMPLETO para não contaminar navegação
+    state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null;
+    console.log('✅ [KITCHEN] Limpou countertopState completo');
+
+    // ✅ FIX: Verifica sharedImageState primeiro (mesma lógica que Countertops)
+    if (!state.sharedImageState?.currentImage && !state.currentPhotoFile) {
+        showMessage('Erro: Imagem não encontrada', 'error');
+        console.error('❌ [KITCHEN] Nem sharedImageState nem currentPhotoFile disponíveis');
+        return;
+    }
+
+    // ✅ FIX: Restaura currentPhotoFile se foi perdido (usando sharedImageState)
+    if (!state.currentPhotoFile && state.sharedImageState?.currentImage) {
+        console.log('⚠️ [KITCHEN] currentPhotoFile foi perdido, restaurando de sharedImageState...');
+        state.currentPhotoFile = base64ToBlob(state.sharedImageState.currentImage);
+        console.log('✅ [KITCHEN] Restaurado com sucesso');
+    }
+
+    // ✨ FIX: Marca que está gerando mockup
+    state.isGeneratingMockup = true;
+
+    try {
+        // Prepara para receber os mockups
+        state.ambienteUrls = [];
+        state.ambienteMode = true;
+
+        // Mostra loading overlay (IGUAL BANCADAS)
+        elements.loadingOverlay.classList.remove('hidden');
+        elements.loadingMessage.textContent = 'Gerando Kitchen...';
+        elements.loadingSubmessage.textContent = 'Você verá cada versão assim que ficar pronta';
+        elements.progressContainer.classList.remove('hidden');
+        elements.progressBar.style.width = '0%';
+        elements.progressText.textContent = 'Preparando...';
+
+        // Extrai número do tipo (kitchen1 → 1)
+        const kitchenNumber = parseInt(type.replace('kitchen', ''));
+
+        // Salva tipo selecionado no estado (para navegação do botão Voltar)
+        state.kitchenState.selectedType = type;
+        console.log('✅ [KITCHEN] selectedType salvo no estado:', state.kitchenState.selectedType);
+
+        // Chama geração do kitchen (usa mesmo padrão progressive)
+        await generateKitchenProgressive(kitchenNumber);
+
+        // ✨ FIX: Reseta flag após geração bem-sucedida
+        state.isGeneratingMockup = false;
+
+    } catch (error) {
+        console.error('Erro ao gerar Kitchen:', error);
+        state.isGeneratingMockup = false;
+        elements.ambientesGallery.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+        showMessage('Erro ao gerar Kitchen: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Gera mockup de kitchen usando progressive rendering - ✅ USA FUNÇÃO GENÉRICA (DRY)
+ */
+async function generateKitchenProgressive(numero) {
+    console.log('🎯 [KITCHEN PROGRESSIVE] Iniciando geração kitchen', numero);
+
+    // Prepara FormData com imagem (IGUAL Stairs)
+    const formData = new FormData();
+
+    // 1. Envia imagem usando sharedImageState
+    if (state.sharedImageState?.currentImage) {
+        const imageBlob = base64ToBlob(state.sharedImageState.currentImage);
+        formData.append('image', imageBlob, 'pedra.png');
+        console.log('📤 [KITCHEN] Enviando imagem de sharedImageState (BASE64)');
+    } else if (state.currentPhotoFile) {
+        formData.append('image', state.currentPhotoFile, 'pedra.png');
+        console.log('📤 [KITCHEN] Enviando currentPhotoFile');
+    } else {
+        throw new Error('Nenhuma imagem disponível para enviar');
+    }
+
+    // 2. Envia cropCoordinates se existir
+    if (state.cropCoordinates) {
+        console.log('📐 [KITCHEN] cropCoordinates encontrado:', state.cropCoordinates);
+        formData.append('cropX', state.cropCoordinates.x.toString());
+        formData.append('cropY', state.cropCoordinates.y.toString());
+        formData.append('cropWidth', state.cropCoordinates.width.toString());
+        formData.append('cropHeight', state.cropCoordinates.height.toString());
+    }
+
+    // ✅ DRY: Usa função genérica
+    await generateProgressiveMockup({
+        endpoint: `${API_URL}/api/mockup/kitchen${numero}/progressive`,
+        formData: formData,
+        tipoMockup: 'Kitchen',
+        numero: numero,
+        totalItems: 2, // Kitchen gera 2 versões (normal + rotacionado)
+        stateKey: 'kitchenState',
+        selectionScreen: elements.kitchenSelectionScreen,
+        buttonText: '🔄 Tentar Outro Kitchen (Mesmo Crop)'
     });
 }
 
