@@ -5137,28 +5137,31 @@ async function selectKitchenAndGenerate(type) {
 async function generateKitchenProgressive(numero) {
     console.log('🎯 [KITCHEN PROGRESSIVE] Iniciando geração kitchen', numero);
 
-    // Prepara FormData com imagem (IGUAL Stairs)
     const formData = new FormData();
 
-    // 1. Envia imagem usando sharedImageState
-    if (state.sharedImageState?.currentImage) {
-        const imageBlob = base64ToBlob(state.sharedImageState.currentImage);
-        formData.append('image', imageBlob, 'pedra.png');
-        console.log('📤 [KITCHEN] Enviando imagem de sharedImageState (BASE64)');
-    } else if (state.currentPhotoFile) {
-        formData.append('image', state.currentPhotoFile, 'pedra.png');
-        console.log('📤 [KITCHEN] Enviando currentPhotoFile');
-    } else {
-        throw new Error('Nenhuma imagem disponível para enviar');
+    // Restaura uploadedImageId se foi perdido (IGUAL Stairs)
+    if (!state.uploadedImageId && state.sharedImageState?.uploadedImageId) {
+        console.warn('⚠️ [KITCHEN] uploadedImageId foi perdido, restaurando de sharedImageState...');
+        state.uploadedImageId = state.sharedImageState.uploadedImageId;
+        console.log(`✅ [KITCHEN] uploadedImageId restaurado: ${state.uploadedImageId}`);
     }
 
-    // 2. Envia cropCoordinates se existir
+    if (!state.uploadedImageId) {
+        console.error('❌ [CRITICAL] state.uploadedImageId está vazio/null!');
+        showMessage('Erro: ID da imagem não encontrado. Faça upload da imagem novamente.', 'error');
+        return;
+    }
+
+    formData.append('imageId', state.uploadedImageId);
+    formData.append('fundo', 'claro');
+
+    // Adiciona coordenadas de crop se existirem
     if (state.cropCoordinates) {
-        console.log('📐 [KITCHEN] cropCoordinates encontrado:', state.cropCoordinates);
-        formData.append('cropX', state.cropCoordinates.x.toString());
-        formData.append('cropY', state.cropCoordinates.y.toString());
-        formData.append('cropWidth', state.cropCoordinates.width.toString());
-        formData.append('cropHeight', state.cropCoordinates.height.toString());
+        console.log('✂️ [KITCHEN] Enviando coordenadas de crop:', state.cropCoordinates);
+        formData.append('cropX', state.cropCoordinates.x);
+        formData.append('cropY', state.cropCoordinates.y);
+        formData.append('cropWidth', state.cropCoordinates.width);
+        formData.append('cropHeight', state.cropCoordinates.height);
     }
 
     // ✅ DRY: Usa função genérica
