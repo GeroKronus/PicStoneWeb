@@ -2461,7 +2461,8 @@ namespace PicStoneFotoAPI.Controllers
 
         [HttpPost("kitchen1/progressive")]
         public async Task GerarKitchen1Progressive(
-            [FromForm] string imageId,
+            [FromForm] string? imageId,
+            [FromForm] IFormFile? image,
             [FromForm] string fundo = "claro",
             [FromForm] int? cropX = null,
             [FromForm] int? cropY = null,
@@ -2480,18 +2481,33 @@ namespace PicStoneFotoAPI.Controllers
 
                 await EnviarEventoSSE("inicio", new { mensagem = "Gerando Kitchen #1..." });
 
-                // Carrega imagem do servidor usando imageId
-                var imagePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
-                var caminhoImagemOriginal = Path.Combine(imagePath, imageId);
-
-                if (!System.IO.File.Exists(caminhoImagemOriginal))
+                // Carrega imagem (igual Stairs - aceita imageId OU IFormFile)
+                SKBitmap bitmapOriginal;
+                if (!string.IsNullOrEmpty(imageId))
                 {
-                    _logger.LogError("Imagem não encontrada: {ImageId}", imageId);
-                    await EnviarEventoSSE("erro", new { mensagem = $"Imagem não encontrada: {imageId}" });
+                    var caminhoImagem = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", imageId);
+                    if (!System.IO.File.Exists(caminhoImagem))
+                    {
+                        _logger.LogError("Imagem não encontrada: {ImageId}", imageId);
+                        await EnviarEventoSSE("erro", new { mensagem = $"Imagem não encontrada: {imageId}" });
+                        return;
+                    }
+                    using var stream = System.IO.File.OpenRead(caminhoImagem);
+                    bitmapOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem carregada do servidor: {ImageId}", imageId);
+                }
+                else if (image != null)
+                {
+                    using var stream = image.OpenReadStream();
+                    bitmapOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem recebida do upload: {FileName}", image.FileName);
+                }
+                else
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Nenhuma imagem fornecida" });
                     return;
                 }
 
-                using var bitmapOriginal = SKBitmap.Decode(caminhoImagemOriginal);
                 if (bitmapOriginal == null)
                 {
                     await EnviarEventoSSE("erro", new { mensagem = "Erro ao decodificar imagem original" });
@@ -2506,20 +2522,17 @@ namespace PicStoneFotoAPI.Controllers
                 {
                     _logger.LogInformation("Aplicando crop: ({X},{Y}) {W}x{H}", cropX.Value, cropY.Value, cropWidth.Value, cropHeight.Value);
 
-                    var info = new SKImageInfo(cropWidth.Value, cropHeight.Value);
-                    bitmapCropado = new SKBitmap(info);
-
-                    using var canvas = new SKCanvas(bitmapCropado);
-                    var srcRect = new SKRect(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
-                    var destRect = new SKRect(0, 0, cropWidth.Value, cropHeight.Value);
-                    canvas.DrawBitmap(bitmapOriginal, srcRect, destRect);
+                    var rectCrop = new SKRectI(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    bitmapCropado = new SKBitmap(cropWidth.Value, cropHeight.Value);
+                    bitmapOriginal.ExtractSubset(bitmapCropado, rectCrop);
+                    bitmapOriginal.Dispose();
 
                     _logger.LogInformation("Crop aplicado: {W}x{H}", bitmapCropado.Width, bitmapCropado.Height);
                 }
                 else
                 {
                     _logger.LogWarning("Nenhuma coordenada de crop - usando imagem original");
-                    bitmapCropado = bitmapOriginal.Copy();
+                    bitmapCropado = bitmapOriginal;
                 }
 
                 await EnviarEventoSSE("progresso", new { etapa = "Processando transformações...", porcentagem = 10 });
