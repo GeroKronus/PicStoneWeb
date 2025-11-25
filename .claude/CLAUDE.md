@@ -1,5 +1,26 @@
 # Sistema de Notificação Telegram
 
+## 🔴 IMPERATIVO: SINCRONIZAÇÃO BACKEND/FRONTEND 🔴
+
+**ANTES DE QUALQUER COMMIT, VOCÊ DEVE VERIFICAR AMBOS OS DIRETÓRIOS:**
+- `Backend/wwwroot/`
+- `Frontend/`
+
+**Este projeto tem código duplicado em duas pastas. TODA alteração deve ser feita em AMBAS:**
+- HTML: `Backend/wwwroot/index.html` **E** `Frontend/index.html`
+- CSS: `Backend/wwwroot/style.css` **E** `Frontend/style.css`
+- JavaScript: `Backend/wwwroot/app.js` **E** `Frontend/app.js`
+- Imagens: `Backend/wwwroot/images/` **E** `Frontend/images/`
+
+**SEM EXCEÇÕES!** Nunca faça commit de funcionalidade nova sem verificar que ambas as pastas estão sincronizadas.
+
+**CHECKLIST OBRIGATÓRIO ANTES DO COMMIT:**
+- [ ] Alterações feitas em Backend/wwwroot/ foram replicadas em Frontend/
+- [ ] Alterações feitas em Frontend/ foram replicadas em Backend/wwwroot/
+- [ ] Funcionalidade testada localmente (se possível)
+
+---
+
 ## 🔴 IMPERATIVO: VERSÃO DA APLICAÇÃO 🔴
 
 **A CADA COMMIT DE CÓDIGO, VOCÊ DEVE INCREMENTAR A VERSÃO EM:**
@@ -13,6 +34,7 @@
 **QUANDO:** ANTES de fazer o commit, edite ambos os arquivos version.json
 
 **COMO LEMBRAR:** Adicione ao seu TODO ao iniciar qualquer tarefa de código:
+- [ ] Sincronizar Backend/wwwroot e Frontend
 - [ ] Incrementar versão antes do commit
 
 ---
