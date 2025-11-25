@@ -23,7 +23,8 @@
 
 ## 🔴 IMPERATIVO: VERSÃO DA APLICAÇÃO 🔴
 
-**A CADA COMMIT DE CÓDIGO, VOCÊ DEVE INCREMENTAR A VERSÃO EM:**
+**A CADA COMMIT DE CÓDIGO, VOCÊ DEVE INCREMENTAR A VERSÃO EM TODOS OS 3 ARQUIVOS:**
+- `Backend/version.json` ← **API usa este arquivo!**
 - `Backend/wwwroot/version.json`
 - `Frontend/version.json`
 
@@ -31,7 +32,7 @@
 
 **SEM EXCEÇÕES!** Não importa quão pequena seja a mudança.
 
-**QUANDO:** ANTES de fazer o commit, edite ambos os arquivos version.json
+**QUANDO:** ANTES de fazer o commit, edite os TRÊS arquivos version.json
 
 **COMO LEMBRAR:** Adicione ao seu TODO ao iniciar qualquer tarefa de código:
 - [ ] Sincronizar Backend/wwwroot e Frontend
