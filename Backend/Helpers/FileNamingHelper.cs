@@ -16,7 +16,7 @@ namespace PicStoneFotoAPI.Helpers
             string mockupType,      // Ex: "bancada1", "cavalete_simples", "bathroom1"
             string variation,       // Ex: "normal", "rotacionado", "quadrant1"
             int userId,
-            string additionalInfo = null,  // Ex: "claro", "escuro"
+            string? additionalInfo = null,  // Ex: "claro", "escuro"
             string extension = "jpg")
         {
             // Monta o nome base
