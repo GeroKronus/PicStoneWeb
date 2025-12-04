@@ -569,28 +569,20 @@ namespace PicStoneFotoAPI.Services
 
         /// <summary>
         /// Cria uma fila para Floor #3 com padrão: img1, img2, img1, img2
-        /// Inclui espaçamento de 1px entre quadros (efeito rejunte)
         /// </summary>
         private SKBitmap CriarFilaFloor3(SKBitmap img1, SKBitmap img2, int novaAltura, int tamanhoDoQuadro)
         {
-            // Espaçamento entre quadros (efeito rejunte)
-            const int espacamento = 1;
-
-            // Largura total inclui espaçamentos: 4 quadros + 3 espaços
-            int filaLargura = (novaAltura * 4) + (espacamento * 3);
+            int filaLargura = novaAltura * 4;
             int filaAltura = tamanhoDoQuadro;
 
             var fila = new SKBitmap(filaLargura, filaAltura);
             using var canvas = new SKCanvas(fila);
+            canvas.Clear(SKColors.White);
 
-            // Fundo cinza claro para simular rejunte
-            canvas.Clear(new SKColor(220, 220, 220)); // Cinza claro
-
-            // Posiciona cada quadro com espaçamento
             canvas.DrawBitmap(img1, 0, 0);
-            canvas.DrawBitmap(img2, novaAltura + espacamento, 0);
-            canvas.DrawBitmap(img1, (novaAltura * 2) + (espacamento * 2), 0);
-            canvas.DrawBitmap(img2, (novaAltura * 3) + (espacamento * 3), 0);
+            canvas.DrawBitmap(img2, novaAltura, 0);
+            canvas.DrawBitmap(img1, novaAltura * 2, 0);
+            canvas.DrawBitmap(img2, novaAltura * 3, 0);
 
             return fila;
         }

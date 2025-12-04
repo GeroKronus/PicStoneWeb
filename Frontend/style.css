@@ -1737,8 +1737,15 @@ body {
 
 /* Garante scroll suave em mobile */
 @media (max-width: 599px) {
-    #countertopSelectionScreen .container {
+    #countertopSelectionScreen .container,
+    #floorSelectionScreen .container {
         padding-bottom: 40px;
+    }
+
+    /* Floor selection cards em mobile: 1 coluna */
+    #floorSelectionScreen .countertop-options {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
     }
 }
 
