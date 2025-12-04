@@ -1671,6 +1671,14 @@ body {
     background-color: #f5f5f5; /* fundo suave para preencher espaços vazios */
 }
 
+.countertop-preview.no-thumb {
+    background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+}
+
+.thumb-placeholder {
+    font-size: 48px;
+}
+
 .countertop-card h4 {
     margin: 12px 0 8px 0;
     font-size: 18px;
