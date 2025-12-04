@@ -1011,10 +1011,14 @@ body {
         font-size: 15px;
     }
 
-    /* Garantir que botões Cavalete, Bancadas e Bathrooms tenham tamanho idêntico no mobile/tablet */
+    /* Garantir que botões Cavalete, Bancadas, Bathrooms e Floors tenham tamanho idêntico no mobile/tablet */
     .btn-ambiente,
     .btn-countertops,
-    .btn-bathrooms {
+    .btn-bathrooms,
+    .btn-livingrooms,
+    .btn-stairs,
+    .btn-kitchens,
+    .btn-floors {
         font-size: 16px !important;
         padding: 14px !important;
         width: 100% !important;
@@ -1026,6 +1030,14 @@ body {
         min-height: 52px !important;
         box-sizing: border-box !important;
         white-space: nowrap !important;
+    }
+
+    /* Garantir cores específicas do botão Floors no mobile */
+    .btn.btn-floors {
+        background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%) !important;
+        color: white !important;
+        -webkit-appearance: none;
+        appearance: none;
     }
 
     .option-card {
