@@ -249,7 +249,8 @@ namespace PicStoneFotoAPI.Services
                     imagemCropada.Width, imagemCropada.Height, tamanhoDoQuadro, novaAltura);
 
                 using var imagemRedimensionada = imagemCropada.Resize(
-                    new SKImageInfo(tamanhoDoQuadro, novaAltura), SKFilterQuality.High);
+                    new SKImageInfo(tamanhoDoQuadro, novaAltura),
+                    SKBitmapHelper.HighQuality);
 
                 // Cria cópia para acumular transformações
                 var imagemBase = imagemRedimensionada.Copy();
@@ -263,34 +264,32 @@ namespace PicStoneFotoAPI.Services
                     if (contaProcesso == 2)
                     {
                         // Rotate180FlipNone
-                        var temp = _transformService.Rotate180(imagemBase);
-                        imagemBase.Dispose();
-                        imagemBase = temp;
+                        imagemBase = _imageManipulation.Rotate180(imagemBase);
+                        _logger.LogInformation("Processo 2: Aplicado Rotate180");
                     }
                     else if (contaProcesso == 3)
                     {
                         // Rotate180FlipX = FlipVertical
-                        var temp = _transformService.FlipVertical(imagemBase);
-                        imagemBase.Dispose();
-                        imagemBase = temp;
+                        imagemBase = _imageManipulation.FlipVertical(imagemBase);
+                        _logger.LogInformation("Processo 3: Aplicado FlipVertical");
                     }
                     else if (contaProcesso == 4)
                     {
                         // Rotate180FlipNone
-                        var temp = _transformService.Rotate180(imagemBase);
-                        imagemBase.Dispose();
-                        imagemBase = temp;
+                        imagemBase = _imageManipulation.Rotate180(imagemBase);
+                        _logger.LogInformation("Processo 4: Aplicado Rotate180");
                     }
 
                     // Redimensiona para o tamanho do quadro
                     using var imagem = imagemBase.Resize(
-                        new SKImageInfo(tamanhoDoQuadro, novaAltura), SKFilterQuality.High);
+                        new SKImageInfo(tamanhoDoQuadro, novaAltura),
+                        SKBitmapHelper.HighQuality);
 
                     // PASSO 2: Cria as 4 versões do BookMatch
                     using var bitmapORI = imagem.Copy();
-                    using var bitmapFLH = _transformService.FlipHorizontal(imagem);
-                    using var bitmap180 = _transformService.FlipVertical(imagem);
-                    using var bitmapFLV = _transformService.Rotate180(imagem);
+                    using var bitmapFLH = _imageManipulation.FlipHorizontal(imagem);
+                    using var bitmap180 = _imageManipulation.FlipVertical(imagem);
+                    using var bitmapFLV = _imageManipulation.Rotate180(imagem);
 
                     // PASSO 3: Monta o mosaico 4x4 (mesmo padrão do Floor #1)
                     int mosaicoLargura = tamanhoDoQuadro * 4;
