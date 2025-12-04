@@ -178,8 +178,21 @@ namespace PicStoneFotoAPI.Services
                     canvas.DrawBitmap(mosaicoRotado2, coordPlotX, coordPlotY);
                     _logger.LogInformation("Mosaico plotado em ({X}, {Y})", coordPlotX, coordPlotY);
 
-                    // PASSO 8: Overlay desativado temporariamente (sem Piso1.webp)
-                    // TODO: Adicionar overlay quando disponível
+                    // PASSO 8: Aplica overlay (moldura do piso)
+                    var caminhoOverlay = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Pisos", "Piso1.webp");
+                    if (File.Exists(caminhoOverlay))
+                    {
+                        using var overlayBitmap = SKBitmap.Decode(caminhoOverlay);
+                        if (overlayBitmap != null)
+                        {
+                            canvas.DrawBitmap(overlayBitmap, 0, 0);
+                            _logger.LogInformation("Overlay Piso1.webp aplicado");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Overlay não encontrado: {Path}", caminhoOverlay);
+                    }
 
                     // PASSO 9: Adiciona marca d'água
                     _watermark.AddWatermark(canvas, canvasFinal.Width, canvasFinal.Height);
