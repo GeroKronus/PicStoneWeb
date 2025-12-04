@@ -216,6 +216,176 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Gera mockup Floor #2 - Mosaico 4x4 com perspectiva diferente
+        /// Baseado no VB.NET Sub Piso2()
+        /// </summary>
+        public List<SKBitmap> GerarFloor2(SKBitmap imagemCropada)
+        {
+            _logger.LogInformation("=== INICIANDO FLOOR #2 ===");
+            var resultados = new List<SKBitmap>();
+
+            try
+            {
+                // Parâmetros do VB.NET - Floor #2 (diferentes do Floor #1)
+                const int tamanhoMaxQuadro = 1000;
+                const int larguraMolduraVirtual = 1980;
+                const int alturaMolduraVirtual = 1200;
+                const int coordPlotX = -1767;
+                const int coordPlotY = 335;
+
+                // Parâmetros DistortionInclina para Floor #2
+                const int ladoMaior = 5900;
+                const int ladoMenor = 1468;
+                const int novaLarguraDistorcao = 1060;
+                const int novaAlturaDistorcao = 5900;
+                const int fatorInclinacao = 2350;
+
+                // PASSO 1: Redimensiona mantendo proporção (max 1000px largura)
+                int tamanhoDoQuadro = Math.Min(imagemCropada.Width, tamanhoMaxQuadro);
+                float fatorAjuste = (float)imagemCropada.Width / tamanhoDoQuadro;
+                int novaAltura = (int)(imagemCropada.Height / fatorAjuste);
+
+                _logger.LogInformation("Redimensionando: {W}x{H} -> {NW}x{NH}",
+                    imagemCropada.Width, imagemCropada.Height, tamanhoDoQuadro, novaAltura);
+
+                using var imagemRedimensionada = imagemCropada.Resize(
+                    new SKImageInfo(tamanhoDoQuadro, novaAltura), SKFilterQuality.High);
+
+                // Cria cópia para acumular transformações
+                var imagemBase = imagemRedimensionada.Copy();
+
+                // Gera 4 versões (ContaProcesso = 1 a 4)
+                for (int contaProcesso = 1; contaProcesso <= 4; contaProcesso++)
+                {
+                    _logger.LogInformation("--- Processando versão {P} ---", contaProcesso);
+
+                    // Aplica transformação acumulativa na imagemBase
+                    if (contaProcesso == 2)
+                    {
+                        // Rotate180FlipNone
+                        var temp = _transformService.Rotate180(imagemBase);
+                        imagemBase.Dispose();
+                        imagemBase = temp;
+                    }
+                    else if (contaProcesso == 3)
+                    {
+                        // Rotate180FlipX = FlipVertical
+                        var temp = _transformService.FlipVertical(imagemBase);
+                        imagemBase.Dispose();
+                        imagemBase = temp;
+                    }
+                    else if (contaProcesso == 4)
+                    {
+                        // Rotate180FlipNone
+                        var temp = _transformService.Rotate180(imagemBase);
+                        imagemBase.Dispose();
+                        imagemBase = temp;
+                    }
+
+                    // Redimensiona para o tamanho do quadro
+                    using var imagem = imagemBase.Resize(
+                        new SKImageInfo(tamanhoDoQuadro, novaAltura), SKFilterQuality.High);
+
+                    // PASSO 2: Cria as 4 versões do BookMatch
+                    using var bitmapORI = imagem.Copy();
+                    using var bitmapFLH = _transformService.FlipHorizontal(imagem);
+                    using var bitmap180 = _transformService.FlipVertical(imagem);
+                    using var bitmapFLV = _transformService.Rotate180(imagem);
+
+                    // PASSO 3: Monta o mosaico 4x4 (mesmo padrão do Floor #1)
+                    int mosaicoLargura = tamanhoDoQuadro * 4;
+                    int mosaicoAltura = novaAltura * 4;
+
+                    using var mosaico = new SKBitmap(mosaicoLargura, mosaicoAltura);
+                    using var canvasMosaico = new SKCanvas(mosaico);
+                    canvasMosaico.Clear(SKColors.White);
+
+                    // Linha 0: ORI, FLH, ORI, FLH
+                    canvasMosaico.DrawBitmap(bitmapORI, 0, 0);
+                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro, 0);
+                    canvasMosaico.DrawBitmap(bitmapORI, tamanhoDoQuadro * 2, 0);
+                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro * 3, 0);
+
+                    // Linha 1: 180, FLV, 180, FLV
+                    canvasMosaico.DrawBitmap(bitmap180, 0, novaAltura);
+                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro, novaAltura);
+                    canvasMosaico.DrawBitmap(bitmap180, tamanhoDoQuadro * 2, novaAltura);
+                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro * 3, novaAltura);
+
+                    // Linha 2: ORI, FLH, ORI, FLH
+                    canvasMosaico.DrawBitmap(bitmapORI, 0, novaAltura * 2);
+                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro, novaAltura * 2);
+                    canvasMosaico.DrawBitmap(bitmapORI, tamanhoDoQuadro * 2, novaAltura * 2);
+                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro * 3, novaAltura * 2);
+
+                    // Linha 3: 180, FLV, 180, FLV
+                    canvasMosaico.DrawBitmap(bitmap180, 0, novaAltura * 3);
+                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro, novaAltura * 3);
+                    canvasMosaico.DrawBitmap(bitmap180, tamanhoDoQuadro * 2, novaAltura * 3);
+                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro * 3, novaAltura * 3);
+
+                    _logger.LogInformation("Mosaico 4x4 criado: {W}x{H}", mosaico.Width, mosaico.Height);
+
+                    // PASSO 4: Rotaciona 90° (Rotate90FlipNone)
+                    using var mosaicoRotado1 = RotateBitmap90Clockwise(mosaico);
+                    _logger.LogInformation("Mosaico rotacionado 90° (1): {W}x{H}", mosaicoRotado1.Width, mosaicoRotado1.Height);
+
+                    // PASSO 5: Aplica DistortionInclina com parâmetros do Floor #2
+                    using var mosaicoDistorcido = _transformService.DistortionInclina(
+                        mosaicoRotado1, ladoMaior, ladoMenor, novaLarguraDistorcao, novaAlturaDistorcao, fatorInclinacao);
+                    _logger.LogInformation("Distorção aplicada: {W}x{H}", mosaicoDistorcido.Width, mosaicoDistorcido.Height);
+
+                    // PASSO 6: Rotaciona 90° novamente
+                    using var mosaicoRotado2 = RotateBitmap90Clockwise(mosaicoDistorcido);
+                    _logger.LogInformation("Mosaico rotacionado 90° (2): {W}x{H}", mosaicoRotado2.Width, mosaicoRotado2.Height);
+
+                    // PASSO 7: Cria canvas final e plota o mosaico transformado
+                    var canvasFinal = new SKBitmap(larguraMolduraVirtual, alturaMolduraVirtual);
+                    using var canvas = new SKCanvas(canvasFinal);
+                    canvas.Clear(SKColors.White);
+
+                    // Plota na posição (-1767, 335)
+                    canvas.DrawBitmap(mosaicoRotado2, coordPlotX, coordPlotY);
+                    _logger.LogInformation("Mosaico plotado em ({X}, {Y})", coordPlotX, coordPlotY);
+
+                    // PASSO 8: Aplica overlay (moldura do piso)
+                    var caminhoOverlay = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Pisos", "Piso2.webp");
+                    if (File.Exists(caminhoOverlay))
+                    {
+                        using var overlayBitmap = SKBitmap.Decode(caminhoOverlay);
+                        if (overlayBitmap != null)
+                        {
+                            canvas.DrawBitmap(overlayBitmap, 0, 0);
+                            _logger.LogInformation("Overlay Piso2.webp aplicado");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Overlay não encontrado: {Path}", caminhoOverlay);
+                    }
+
+                    // PASSO 9: Adiciona marca d'água
+                    _watermark.AddWatermark(canvas, canvasFinal.Width, canvasFinal.Height);
+                    _logger.LogInformation("Marca d'água adicionada ao processo {P}", contaProcesso);
+
+                    resultados.Add(canvasFinal);
+                    _logger.LogInformation("Processo {P} concluído!", contaProcesso);
+                }
+
+                // Limpa a imagem base
+                imagemBase.Dispose();
+
+                _logger.LogInformation("=== FLOOR #2 CONCLUÍDO: {Count} versões ===", resultados.Count);
+                return resultados;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Floor #2");
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Rotaciona bitmap 90° no sentido horário (Rotate90FlipNone)
         /// </summary>
         private SKBitmap RotateBitmap90Clockwise(SKBitmap source)
