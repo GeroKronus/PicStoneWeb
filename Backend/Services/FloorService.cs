@@ -385,6 +385,209 @@ namespace PicStoneFotoAPI.Services
         }
 
         /// <summary>
+        /// Gera mockup Floor #3 - Corredor com 6 filas em perspectiva
+        /// Baseado no VB.NET Sub Piso3()
+        /// </summary>
+        public List<SKBitmap> GerarFloor3(SKBitmap imagemCropada)
+        {
+            _logger.LogInformation("=== INICIANDO FLOOR #3 ===");
+            var resultados = new List<SKBitmap>();
+
+            try
+            {
+                // Parâmetros do VB.NET - Floor #3
+                const int tamanhoMaxQuadro = 1000;
+                const int larguraMolduraVirtual = 1200;
+                const int alturaMolduraVirtual = 1200;
+
+                // PASSO 1: Redimensiona mantendo proporção (max 1000px largura)
+                int tamanhoDoQuadro = Math.Min(imagemCropada.Width, tamanhoMaxQuadro);
+                float fatorAjuste = (float)imagemCropada.Width / tamanhoDoQuadro;
+                int novaAltura = (int)(imagemCropada.Height / fatorAjuste);
+
+                _logger.LogInformation("Redimensionando: {W}x{H} -> {NW}x{NH}",
+                    imagemCropada.Width, imagemCropada.Height, tamanhoDoQuadro, novaAltura);
+
+                using var imagemRedimensionada = imagemCropada.Resize(
+                    new SKImageInfo(tamanhoDoQuadro, novaAltura),
+                    SKBitmapHelper.HighQuality);
+
+                // Cria cópia para acumular transformações
+                var imagemBase = imagemRedimensionada.Copy();
+
+                // Gera 4 versões (ContaProcesso = 1 a 4)
+                for (int contaProcesso = 1; contaProcesso <= 4; contaProcesso++)
+                {
+                    _logger.LogInformation("--- Processando versão {P} ---", contaProcesso);
+
+                    // Aplica transformação acumulativa na imagemBase
+                    if (contaProcesso == 2)
+                    {
+                        imagemBase = _imageManipulation.Rotate180(imagemBase);
+                        _logger.LogInformation("Processo 2: Aplicado Rotate180");
+                    }
+                    else if (contaProcesso == 3)
+                    {
+                        imagemBase = _imageManipulation.FlipVertical(imagemBase);
+                        _logger.LogInformation("Processo 3: Aplicado FlipVertical");
+                    }
+                    else if (contaProcesso == 4)
+                    {
+                        imagemBase = _imageManipulation.Rotate180(imagemBase);
+                        _logger.LogInformation("Processo 4: Aplicado Rotate180");
+                    }
+
+                    // Redimensiona para o tamanho do quadro
+                    using var imagem = imagemBase.Resize(
+                        new SKImageInfo(tamanhoDoQuadro, novaAltura),
+                        SKBitmapHelper.HighQuality);
+
+                    // PASSO 2: Cria as 4 versões com rotações específicas do Floor #3
+                    // bitmapORI: Rotate90FlipNone
+                    // bitmapFLH: Rotate90FlipX
+                    // bitmap180: Rotate270FlipX
+                    // bitmapFLV: Rotate270FlipNone
+                    using var bitmapORI = RotateBitmap90Clockwise(imagem);
+                    using var bitmapFLH = RotateBitmap90ClockwiseFlipX(imagem);
+                    using var bitmap180 = RotateBitmap270ClockwiseFlipX(imagem);
+                    using var bitmapFLV = RotateBitmap270Clockwise(imagem);
+
+                    _logger.LogInformation("BookMatch Floor3 criado: ORI(90), FLH(90X), 180(270X), FLV(270)");
+
+                    // PASSO 3: Cria as 6 filas
+                    int filaLargura = novaAltura * 4;
+                    int filaAltura = tamanhoDoQuadro;
+
+                    // Fila 1 e 3 e 5: ORI, FLH, ORI, FLH
+                    using var fila1 = CriarFilaFloor3(bitmapORI, bitmapFLH, novaAltura, tamanhoDoQuadro);
+                    using var fila3 = fila1.Copy();
+                    using var fila5 = fila1.Copy();
+
+                    // Fila 2 e 4 e 6: 180, FLV, 180, FLV
+                    using var fila2 = CriarFilaFloor3(bitmap180, bitmapFLV, novaAltura, tamanhoDoQuadro);
+                    using var fila4 = fila2.Copy();
+                    using var fila6 = fila2.Copy();
+
+                    _logger.LogInformation("6 filas criadas: {W}x{H}", filaLargura, filaAltura);
+
+                    // PASSO 4: Aplica transformações em cada fila (DistortionInclina + Skew2)
+                    // Fila1: DistortionInclina(2200, 1017, 350, 2200, 0) + Skew2(0, 562)
+                    using var fila1Rot = RotateBitmap270Clockwise(fila1);
+                    using var fila1Dist = _transformService.DistortionInclina(fila1Rot, 2200, 1017, 350, 2200, 0);
+                    using var fila1Skew = _transformService.Skew2(fila1Dist, 0, 562);
+                    using var fila1Final = RotateBitmap90ClockwiseFlipX(fila1Skew);
+
+                    // Fila2: DistortionInclina(1017, 662, 104, 1017, 0) + Skew2(0, 168)
+                    using var fila2Rot = RotateBitmap270Clockwise(fila2);
+                    using var fila2Dist = _transformService.DistortionInclina(fila2Rot, 1017, 662, 104, 1017, 0);
+                    using var fila2Skew = _transformService.Skew2(fila2Dist, 0, 168);
+                    using var fila2Final = RotateBitmap90ClockwiseFlipX(fila2Skew);
+
+                    // Fila3: DistortionInclina(662, 494, 50, 662, 0) + Skew2(0, 79)
+                    using var fila3Rot = RotateBitmap270Clockwise(fila3);
+                    using var fila3Dist = _transformService.DistortionInclina(fila3Rot, 662, 494, 50, 662, 0);
+                    using var fila3Skew = _transformService.Skew2(fila3Dist, 0, 79);
+                    using var fila3Final = RotateBitmap90ClockwiseFlipX(fila3Skew);
+
+                    // Fila4: DistortionInclina(488, 390, 25, 488, 0) + Skew2(0, 47)
+                    using var fila4Rot = RotateBitmap270Clockwise(fila4);
+                    using var fila4Dist = _transformService.DistortionInclina(fila4Rot, 488, 390, 25, 488, 0);
+                    using var fila4Skew = _transformService.Skew2(fila4Dist, 0, 47);
+                    using var fila4Final = RotateBitmap90ClockwiseFlipX(fila4Skew);
+
+                    // Fila5: DistortionInclina(387, 324, 20, 387, 0) + Skew2(0, 29)
+                    using var fila5Rot = RotateBitmap270Clockwise(fila5);
+                    using var fila5Dist = _transformService.DistortionInclina(fila5Rot, 387, 324, 20, 387, 0);
+                    using var fila5Skew = _transformService.Skew2(fila5Dist, 0, 29);
+                    using var fila5Final = RotateBitmap90ClockwiseFlipX(fila5Skew);
+
+                    // Fila6: DistortionInclina(324, 279, 14, 324, 0) + Skew2(0, 20)
+                    using var fila6Rot = RotateBitmap270Clockwise(fila6);
+                    using var fila6Dist = _transformService.DistortionInclina(fila6Rot, 324, 279, 14, 324, 0);
+                    using var fila6Skew = _transformService.Skew2(fila6Dist, 0, 20);
+                    using var fila6Final = RotateBitmap90ClockwiseFlipX(fila6Skew);
+
+                    _logger.LogInformation("Filas transformadas com perspectiva");
+
+                    // PASSO 5: Cria canvas final e plota as filas nas posições
+                    var canvasFinal = new SKBitmap(larguraMolduraVirtual, alturaMolduraVirtual);
+                    using var canvas = new SKCanvas(canvasFinal);
+                    canvas.Clear(SKColors.White);
+
+                    // Posições do VB.NET:
+                    // Fila1: (-475, 850)
+                    // Fila2: (87, 747)
+                    // Fila3: (256, 698)
+                    // Fila4: (338, 674)
+                    // Fila5: (386, 655)
+                    // Fila6: (416, 641)
+                    canvas.DrawBitmap(fila1Final, -475, 850);
+                    canvas.DrawBitmap(fila2Final, 87, 747);
+                    canvas.DrawBitmap(fila3Final, 256, 698);
+                    canvas.DrawBitmap(fila4Final, 338, 674);
+                    canvas.DrawBitmap(fila5Final, 386, 655);
+                    canvas.DrawBitmap(fila6Final, 416, 641);
+
+                    _logger.LogInformation("Filas plotadas no canvas");
+
+                    // PASSO 6: Aplica overlay
+                    var caminhoOverlay = Path.Combine(Directory.GetCurrentDirectory(), "MockupResources", "Pisos", "Piso3.webp");
+                    if (File.Exists(caminhoOverlay))
+                    {
+                        using var overlayBitmap = SKBitmap.Decode(caminhoOverlay);
+                        if (overlayBitmap != null)
+                        {
+                            canvas.DrawBitmap(overlayBitmap, 0, 0);
+                            _logger.LogInformation("Overlay Piso3.webp aplicado");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Overlay não encontrado: {Path}", caminhoOverlay);
+                    }
+
+                    // PASSO 7: Adiciona marca d'água
+                    _watermark.AddWatermark(canvas, canvasFinal.Width, canvasFinal.Height);
+                    _logger.LogInformation("Marca d'água adicionada ao processo {P}", contaProcesso);
+
+                    resultados.Add(canvasFinal);
+                    _logger.LogInformation("Processo {P} concluído!", contaProcesso);
+                }
+
+                // Limpa a imagem base
+                imagemBase.Dispose();
+
+                _logger.LogInformation("=== FLOOR #3 CONCLUÍDO: {Count} versões ===", resultados.Count);
+                return resultados;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Floor #3");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Cria uma fila para Floor #3 com padrão: img1, img2, img1, img2
+        /// </summary>
+        private SKBitmap CriarFilaFloor3(SKBitmap img1, SKBitmap img2, int novaAltura, int tamanhoDoQuadro)
+        {
+            int filaLargura = novaAltura * 4;
+            int filaAltura = tamanhoDoQuadro;
+
+            var fila = new SKBitmap(filaLargura, filaAltura);
+            using var canvas = new SKCanvas(fila);
+            canvas.Clear(SKColors.White);
+
+            canvas.DrawBitmap(img1, 0, 0);
+            canvas.DrawBitmap(img2, novaAltura, 0);
+            canvas.DrawBitmap(img1, novaAltura * 2, 0);
+            canvas.DrawBitmap(img2, novaAltura * 3, 0);
+
+            return fila;
+        }
+
+        /// <summary>
         /// Rotaciona bitmap 90° no sentido horário (Rotate90FlipNone)
         /// </summary>
         private SKBitmap RotateBitmap90Clockwise(SKBitmap source)
@@ -399,6 +602,44 @@ namespace PicStoneFotoAPI.Services
             canvas.DrawBitmap(source, 0, 0);
 
             return rotated;
+        }
+
+        /// <summary>
+        /// Rotaciona bitmap 90° horário + FlipX (Rotate90FlipX)
+        /// </summary>
+        private SKBitmap RotateBitmap90ClockwiseFlipX(SKBitmap source)
+        {
+            var rotated = RotateBitmap90Clockwise(source);
+            var flipped = _imageManipulation.FlipHorizontal(rotated);
+            rotated.Dispose();
+            return flipped;
+        }
+
+        /// <summary>
+        /// Rotaciona bitmap 270° horário (Rotate270FlipNone) = 90° anti-horário
+        /// </summary>
+        private SKBitmap RotateBitmap270Clockwise(SKBitmap source)
+        {
+            var rotated = new SKBitmap(source.Height, source.Width);
+            using var canvas = new SKCanvas(rotated);
+
+            // Rotação 270° horário = 90° anti-horário
+            canvas.Translate(0, source.Width);
+            canvas.RotateDegrees(-90);
+            canvas.DrawBitmap(source, 0, 0);
+
+            return rotated;
+        }
+
+        /// <summary>
+        /// Rotaciona bitmap 270° horário + FlipX (Rotate270FlipX)
+        /// </summary>
+        private SKBitmap RotateBitmap270ClockwiseFlipX(SKBitmap source)
+        {
+            var rotated = RotateBitmap270Clockwise(source);
+            var flipped = _imageManipulation.FlipHorizontal(rotated);
+            rotated.Dispose();
+            return flipped;
         }
     }
 }

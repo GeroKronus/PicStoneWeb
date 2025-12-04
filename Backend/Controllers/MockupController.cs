@@ -2884,6 +2884,145 @@ namespace PicStoneFotoAPI.Controllers
             }
         }
 
+        [HttpPost("floor3/progressive")]
+        public async Task GerarFloor3Progressive(
+            [FromForm] string? imageId,
+            [FromForm] IFormFile? image,
+            [FromForm] int? cropX = null,
+            [FromForm] int? cropY = null,
+            [FromForm] int? cropWidth = null,
+            [FromForm] int? cropHeight = null)
+        {
+            Response.ContentType = "text/event-stream";
+            Response.Headers["Cache-Control"] = "no-cache";
+            Response.Headers["Connection"] = "keep-alive";
+
+            try
+            {
+                _logger.LogInformation("=== INÍCIO Floor #3 Progressive ===");
+
+                var usuarioId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+                await EnviarEventoSSE("inicio", new { mensagem = "Gerando Floor #3..." });
+
+                // Carrega imagem
+                SKBitmap bitmapOriginal;
+                if (!string.IsNullOrEmpty(imageId))
+                {
+                    var caminhoImagem = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", imageId);
+                    if (!System.IO.File.Exists(caminhoImagem))
+                    {
+                        _logger.LogError("Imagem não encontrada: {ImageId}", imageId);
+                        await EnviarEventoSSE("erro", new { mensagem = $"Imagem não encontrada: {imageId}" });
+                        return;
+                    }
+                    using var stream = System.IO.File.OpenRead(caminhoImagem);
+                    bitmapOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem carregada do servidor: {ImageId}", imageId);
+                }
+                else if (image != null)
+                {
+                    using var stream = image.OpenReadStream();
+                    bitmapOriginal = SKBitmap.Decode(stream);
+                    _logger.LogInformation("Imagem recebida do upload: {FileName}", image.FileName);
+                }
+                else
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Nenhuma imagem fornecida" });
+                    return;
+                }
+
+                if (bitmapOriginal == null)
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Erro ao decodificar imagem original" });
+                    return;
+                }
+
+                _logger.LogInformation("Imagem original carregada: {W}x{H}", bitmapOriginal.Width, bitmapOriginal.Height);
+
+                // Aplica crop se coordenadas foram fornecidas
+                SKBitmap bitmapCropado;
+                if (cropX.HasValue && cropY.HasValue && cropWidth.HasValue && cropHeight.HasValue)
+                {
+                    _logger.LogInformation("Aplicando crop: ({X},{Y}) {W}x{H}", cropX.Value, cropY.Value, cropWidth.Value, cropHeight.Value);
+
+                    var rectCrop = new SKRectI(cropX.Value, cropY.Value, cropX.Value + cropWidth.Value, cropY.Value + cropHeight.Value);
+                    bitmapCropado = new SKBitmap(cropWidth.Value, cropHeight.Value);
+                    bitmapOriginal.ExtractSubset(bitmapCropado, rectCrop);
+                    bitmapOriginal.Dispose();
+
+                    _logger.LogInformation("Crop aplicado: {W}x{H}", bitmapCropado.Width, bitmapCropado.Height);
+                }
+                else
+                {
+                    _logger.LogWarning("Nenhuma coordenada de crop - usando imagem original");
+                    bitmapCropado = bitmapOriginal;
+                }
+
+                await EnviarEventoSSE("progresso", new { etapa = "Processando transformações...", porcentagem = 10 });
+
+                // Gera as 4 versões usando FloorService
+                var mockupsBitmaps = _floorService.GerarFloor3(bitmapCropado);
+
+                if (mockupsBitmaps == null || mockupsBitmaps.Count == 0)
+                {
+                    await EnviarEventoSSE("erro", new { mensagem = "Erro ao gerar Floor #3" });
+                    return;
+                }
+
+                _logger.LogInformation("Floor #3 gerado: {Count} versões", mockupsBitmaps.Count);
+
+                var caminhos = new List<string>();
+
+                // Salva e envia cada versão progressivamente
+                for (int i = 0; i < mockupsBitmaps.Count; i++)
+                {
+                    int versao = i + 1;
+
+                    await EnviarEventoSSE("progresso", new
+                    {
+                        etapa = $"Salvando versão {versao}/{mockupsBitmaps.Count}",
+                        porcentagem = 10 + (versao * 20)
+                    });
+
+                    var nomeArquivo = FileNamingHelper.GenerateFloorFileName(3, versao, usuarioId);
+
+                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockupsBitmaps[i], nomeArquivo);
+                    caminhos.Add(caminhoComTimestamp);
+                    _logger.LogInformation("Versão {V} salva: {Path}", versao, nomeArquivo);
+                }
+
+                // Limpa bitmaps
+                foreach (var bitmap in mockupsBitmaps)
+                {
+                    bitmap.Dispose();
+                }
+                mockupsBitmaps.Clear();
+                bitmapCropado.Dispose();
+
+                // Registra no histórico
+                await _historyService.RegistrarAmbienteAsync(
+                    usuarioId: usuarioId,
+                    tipoAmbiente: "Floor3",
+                    detalhes: "{}",
+                    quantidadeImagens: caminhos.Count
+                );
+
+                await EnviarEventoSSE("sucesso", new
+                {
+                    mensagem = "Floor #3 gerado com sucesso!",
+                    caminhos = caminhos
+                });
+
+                _logger.LogInformation("=== FIM Floor #3 Progressive ===");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro ao gerar Floor #3");
+                await EnviarEventoSSE("erro", new { mensagem = $"Erro: {ex.Message}" });
+            }
+        }
+
         // ==================== FIM FLOOR ====================
 
         /// <summary>
