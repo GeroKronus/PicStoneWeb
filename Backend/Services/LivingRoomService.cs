@@ -199,13 +199,19 @@ namespace PicStoneFotoAPI.Services
 
                 _logger.LogInformation("Imagem redimensionada: {W}x{H}", tamanhoDoQuadro, novaAltura);
 
-                // PASSO 2: Cria as 4 versões do BookMatch (ORI, FV, FH, 180)
-                using var bitmapORI = new SKBitmap(imagemRedimensionada.Width, imagemRedimensionada.Height);
-                imagemRedimensionada.CopyTo(bitmapORI);
+                // PASSO 1.5: Rotaciona 90° anti-horário (igual Living Room #1)
+                // Isso transforma a imagem cropada (paisagem) em retrato para o painel vertical
+                using var imagemRotacionada = CriarBitmapRotacionado(imagemRedimensionada, SKEncodedOrigin.LeftBottom);
+                _logger.LogInformation("Imagem rotacionada 90°: {W}x{H}", imagemRotacionada.Width, imagemRotacionada.Height);
 
-                using var bitmapFV = _imageManipulation.FlipVertical(imagemRedimensionada);
-                using var bitmapFH = _imageManipulation.FlipHorizontal(imagemRedimensionada);
-                using var bitmap180 = _imageManipulation.Rotate180(imagemRedimensionada);
+                // PASSO 2: Cria as 4 versões do BookMatch (ORI, FV, FH, 180)
+                // Agora aplicadas sobre a imagem já rotacionada
+                using var bitmapORI = new SKBitmap(imagemRotacionada.Width, imagemRotacionada.Height);
+                imagemRotacionada.CopyTo(bitmapORI);
+
+                using var bitmapFV = _imageManipulation.FlipVertical(imagemRotacionada);
+                using var bitmapFH = _imageManipulation.FlipHorizontal(imagemRotacionada);
+                using var bitmap180 = _imageManipulation.Rotate180(imagemRotacionada);
 
                 _logger.LogInformation("BookMatch criado: ORI={W}x{H}, FV={W}x{H}, FH={W}x{H}, 180={W}x{H}",
                     bitmapORI.Width, bitmapORI.Height,
@@ -214,8 +220,9 @@ namespace PicStoneFotoAPI.Services
                     bitmap180.Width, bitmap180.Height);
 
                 // PASSO 3: Monta os 4 mosaicos 2x2 (quadrantes)
-                var larguraMosaico = tamanhoDoQuadro * 2;
-                var alturaMosaico = novaAltura * 2;
+                // Nota: Após rotação, as dimensões foram invertidas (largura vira altura e vice-versa)
+                var larguraMosaico = imagemRotacionada.Width * 2;
+                var alturaMosaico = imagemRotacionada.Height * 2;
 
                 var quadrantes = new List<SKBitmap>();
 
@@ -230,31 +237,35 @@ namespace PicStoneFotoAPI.Services
                     canvasMosaico.Clear(SKColors.White);
 
                     // Desenha o mosaico 2x2 conforme o quadrante
+                    // Após rotação 90°: largura do tile = imagemRotacionada.Width, altura = imagemRotacionada.Height
+                    int tileWidth = imagemRotacionada.Width;
+                    int tileHeight = imagemRotacionada.Height;
+
                     switch (quadrante)
                     {
                         case 1: // Quadrante 1: ORI, FH / FV, 180
                             canvasMosaico.DrawBitmap(bitmapORI, 0, 0);
-                            canvasMosaico.DrawBitmap(bitmapFH, tamanhoDoQuadro, 0);
-                            canvasMosaico.DrawBitmap(bitmapFV, 0, novaAltura);
-                            canvasMosaico.DrawBitmap(bitmap180, tamanhoDoQuadro, novaAltura);
+                            canvasMosaico.DrawBitmap(bitmapFH, tileWidth, 0);
+                            canvasMosaico.DrawBitmap(bitmapFV, 0, tileHeight);
+                            canvasMosaico.DrawBitmap(bitmap180, tileWidth, tileHeight);
                             break;
                         case 2: // Quadrante 2: FH, ORI / 180, FV
                             canvasMosaico.DrawBitmap(bitmapFH, 0, 0);
-                            canvasMosaico.DrawBitmap(bitmapORI, tamanhoDoQuadro, 0);
-                            canvasMosaico.DrawBitmap(bitmap180, 0, novaAltura);
-                            canvasMosaico.DrawBitmap(bitmapFV, tamanhoDoQuadro, novaAltura);
+                            canvasMosaico.DrawBitmap(bitmapORI, tileWidth, 0);
+                            canvasMosaico.DrawBitmap(bitmap180, 0, tileHeight);
+                            canvasMosaico.DrawBitmap(bitmapFV, tileWidth, tileHeight);
                             break;
                         case 3: // Quadrante 3: FV, 180 / ORI, FH
                             canvasMosaico.DrawBitmap(bitmapFV, 0, 0);
-                            canvasMosaico.DrawBitmap(bitmap180, tamanhoDoQuadro, 0);
-                            canvasMosaico.DrawBitmap(bitmapORI, 0, novaAltura);
-                            canvasMosaico.DrawBitmap(bitmapFH, tamanhoDoQuadro, novaAltura);
+                            canvasMosaico.DrawBitmap(bitmap180, tileWidth, 0);
+                            canvasMosaico.DrawBitmap(bitmapORI, 0, tileHeight);
+                            canvasMosaico.DrawBitmap(bitmapFH, tileWidth, tileHeight);
                             break;
                         case 4: // Quadrante 4: 180, FV / FH, ORI
                             canvasMosaico.DrawBitmap(bitmap180, 0, 0);
-                            canvasMosaico.DrawBitmap(bitmapFV, tamanhoDoQuadro, 0);
-                            canvasMosaico.DrawBitmap(bitmapFH, 0, novaAltura);
-                            canvasMosaico.DrawBitmap(bitmapORI, tamanhoDoQuadro, novaAltura);
+                            canvasMosaico.DrawBitmap(bitmapFV, tileWidth, 0);
+                            canvasMosaico.DrawBitmap(bitmapFH, 0, tileHeight);
+                            canvasMosaico.DrawBitmap(bitmapORI, tileWidth, tileHeight);
                             break;
                     }
 
