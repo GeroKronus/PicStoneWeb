@@ -1238,17 +1238,20 @@ body {
 }
 
 .btn-floors {
-    background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
-    color: white;
+    background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%) !important;
+    color: white !important;
     font-size: 18px;
     padding: 14px;
     margin-top: 10px;
     width: 100% !important;
-    display: block;
+    display: flex;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
-.btn-floors:hover {
-    background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%);
+.btn-floors:hover,
+.btn-floors:active {
+    background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%) !important;
     transform: translateY(-2px);
     box-shadow: 0 8px 15px -3px rgba(139, 69, 19, 0.4);
 }
