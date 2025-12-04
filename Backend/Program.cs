@@ -136,6 +136,7 @@ builder.Services.AddScoped<BancadaService>();
 builder.Services.AddScoped<LivingRoomService>();
 builder.Services.AddScoped<StairsService>();
 builder.Services.AddScoped<KitchenService>();
+builder.Services.AddScoped<FloorService>();
 builder.Services.AddScoped<BookMatchService>();
 
 // Service de histórico

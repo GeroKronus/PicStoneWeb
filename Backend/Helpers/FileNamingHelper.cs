@@ -87,6 +87,23 @@ namespace PicStoneFotoAPI.Helpers
         }
 
         /// <summary>
+        /// Gera nome para Floor (sem opção de fundo)
+        /// </summary>
+        public static string GenerateFloorFileName(int floorNumber, int processNumber, int userId)
+        {
+            // Floor gera 4 versões (processos 1-4)
+            string variation = processNumber switch
+            {
+                1 => "normal",
+                2 => "rotate",
+                3 => "flip",
+                4 => "rotate_flip",
+                _ => $"p{processNumber}"
+            };
+            return GenerateMockupFileName($"floor{floorNumber}", variation, userId);
+        }
+
+        /// <summary>
         /// Gera nome para Cavalete Simples
         /// </summary>
         public static string GenerateCavaleteSimpleFileName(string background, int userId)

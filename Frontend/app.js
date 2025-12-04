@@ -158,6 +158,10 @@ const state = {
     kitchenState: {
         selectedType: null      // 'kitchen1'
     },
+    // Estado específico para pisos (floor) - DRY com kitchenState
+    floorState: {
+        selectedType: null      // 'floor1'
+    },
     // Estado para crop overlay na Integração
     cropOverlayState: (() => {
         let _isActive = false;
@@ -279,6 +283,9 @@ const elements = {
     kitchensBtn: document.getElementById('kitchensBtn'),
     kitchenSelectionScreen: document.getElementById('kitchenSelectionScreen'),
     cancelKitchenSelectionBtn: document.getElementById('cancelKitchenSelectionBtn'),
+    floorsBtn: document.getElementById('floorsBtn'),
+    floorSelectionScreen: document.getElementById('floorSelectionScreen'),
+    cancelFloorSelectionBtn: document.getElementById('cancelFloorSelectionBtn'),
     testesBtn: document.getElementById('testesBtn'),
     testesSelectionScreen: document.getElementById('testesSelectionScreen'),
     cancelTestesSelectionBtn: document.getElementById('cancelTestesSelectionBtn'),
@@ -673,6 +680,9 @@ function setupEventListeners() {
     if (elements.kitchensBtn) {
         elements.kitchensBtn.addEventListener('click', startKitchensFlow);
     }
+    if (elements.floorsBtn) {
+        elements.floorsBtn.addEventListener('click', startFloorsFlow);
+    }
     if (elements.testesBtn) {
         elements.testesBtn.addEventListener('click', startTestesFlow);
     }
@@ -690,6 +700,9 @@ function setupEventListeners() {
     }
     if (elements.cancelKitchenSelectionBtn) {
         elements.cancelKitchenSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
+    }
+    if (elements.cancelFloorSelectionBtn) {
+        elements.cancelFloorSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
     }
     if (elements.cancelTestesSelectionBtn) {
         elements.cancelTestesSelectionBtn.addEventListener('click', backToAmbientesWithPhoto);
@@ -798,6 +811,15 @@ function setupEventListeners() {
                     return; // Ignora clique em cards desabilitados
                 }
                 selectKitchenAndGenerate(type);
+            }
+            // Verifica se é um floor (floor1, floor2, etc)
+            if (type.startsWith('floor')) {
+                // Verifica se o card pai está desabilitado
+                const card = preview.closest('.countertop-card');
+                if (card && card.classList.contains('disabled')) {
+                    return; // Ignora clique em cards desabilitados
+                }
+                selectFloorAndGenerate(type);
             }
         }
     });
@@ -1026,6 +1048,12 @@ function handleBackFromResults() {
     } else if (state.livingRoomState.selectedType) {
         // Está no flow de living room: volta para seleção de salas
         showScreen(elements.livingRoomSelectionScreen);
+    } else if (state.kitchenState.selectedType) {
+        // Está no flow de kitchen: volta para seleção de cozinhas
+        showScreen(elements.kitchenSelectionScreen);
+    } else if (state.floorState.selectedType) {
+        // Está no flow de floor: volta para seleção de pisos
+        showScreen(elements.floorSelectionScreen);
     } else if (state.ambienteConfig.tipo === 'cavalete') {
         // Está no flow de cavalete: volta para ambientes com foto
         backToAmbientesWithPhoto();
@@ -5174,6 +5202,144 @@ async function generateKitchenProgressive(numero) {
         stateKey: 'kitchenState',
         selectionScreen: elements.kitchenSelectionScreen,
         buttonText: '🔄 Tentar Outro Kitchen (Mesmo Crop)'
+    });
+}
+
+// ========== FLOOR MOCKUP FLOW ==========
+
+/**
+ * Inicia o flow de Floors - DRY com Kitchens
+ */
+async function startFloorsFlow() {
+    // 🔧 EMERGENCY FIX: Reseta flag travada se usuário voltar ao menu principal
+    state.isGeneratingMockup = false;
+
+    // 🔧 FIX: Limpa estados para evitar interferência entre flows
+    state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null;
+    state.bathroomState.selectedType = null;
+    state.livingRoomState.selectedType = null;
+    state.stairsState.selectedType = null;
+    state.kitchenState.selectedType = null;
+    state.floorState.selectedType = null;
+
+    if (!state.currentPhotoFile) {
+        showMessage('Por favor, selecione uma foto primeiro', 'error');
+        return;
+    }
+
+    // Mostra tela de seleção de floors
+    showScreen(elements.floorSelectionScreen);
+}
+
+/**
+ * Seleciona floor e inicia geração - DRY com Kitchens
+ */
+async function selectFloorAndGenerate(type) {
+    console.log('🎯 [FLOOR] selectFloorAndGenerate chamado com type:', type);
+    console.log('🔍 [DEBUG] state.uploadedImageId:', state.uploadedImageId);
+    console.log('🔍 [DEBUG] state.cropCoordinates:', state.cropCoordinates);
+    console.log('🔍 [DEBUG] state.sharedImageState:', state.sharedImageState);
+    console.log('🔍 [DEBUG] state.currentPhotoFile:', state.currentPhotoFile);
+
+    // ✅ FIX CRÍTICO: Limpa countertopState COMPLETO para não contaminar navegação
+    state.countertopState.selectedType = null;
+    state.countertopState.croppedImage = null;
+    console.log('✅ [FLOOR] Limpou countertopState completo');
+
+    // ✅ FIX: Verifica sharedImageState primeiro (mesma lógica que Countertops)
+    if (!state.sharedImageState?.currentImage && !state.currentPhotoFile) {
+        showMessage('Erro: Imagem não encontrada', 'error');
+        console.error('❌ [FLOOR] Nem sharedImageState nem currentPhotoFile disponíveis');
+        return;
+    }
+
+    // ✅ FIX: Restaura currentPhotoFile se foi perdido (usando sharedImageState)
+    if (!state.currentPhotoFile && state.sharedImageState?.currentImage) {
+        console.log('⚠️ [FLOOR] currentPhotoFile foi perdido, restaurando de sharedImageState...');
+        state.currentPhotoFile = base64ToBlob(state.sharedImageState.currentImage);
+        console.log('✅ [FLOOR] Restaurado com sucesso');
+    }
+
+    // ✨ FIX: Marca que está gerando mockup
+    state.isGeneratingMockup = true;
+
+    try {
+        // Prepara para receber os mockups
+        state.ambienteUrls = [];
+        state.ambienteMode = true;
+
+        // Mostra loading overlay (IGUAL KITCHENS)
+        elements.loadingOverlay.classList.remove('hidden');
+        elements.loadingMessage.textContent = 'Gerando Floor...';
+        elements.loadingSubmessage.textContent = 'Você verá cada versão assim que ficar pronta';
+        elements.progressContainer.classList.remove('hidden');
+        elements.progressBar.style.width = '0%';
+        elements.progressText.textContent = 'Preparando...';
+
+        // Extrai número do tipo (floor1 → 1)
+        const floorNumber = parseInt(type.replace('floor', ''));
+
+        // Salva tipo selecionado no estado (para navegação do botão Voltar)
+        state.floorState.selectedType = type;
+        console.log('✅ [FLOOR] selectedType salvo no estado:', state.floorState.selectedType);
+
+        // Chama geração do floor (usa mesmo padrão progressive)
+        await generateFloorProgressive(floorNumber);
+
+        // ✨ FIX: Reseta flag após geração bem-sucedida
+        state.isGeneratingMockup = false;
+
+    } catch (error) {
+        console.error('Erro ao gerar Floor:', error);
+        state.isGeneratingMockup = false;
+        elements.ambientesGallery.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+        showMessage('Erro ao gerar Floor: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Gera mockup de floor usando progressive rendering - ✅ USA FUNÇÃO GENÉRICA (DRY)
+ */
+async function generateFloorProgressive(numero) {
+    console.log('🎯 [FLOOR PROGRESSIVE] Iniciando geração floor', numero);
+
+    const formData = new FormData();
+
+    // Restaura uploadedImageId se foi perdido (IGUAL Kitchens)
+    if (!state.uploadedImageId && state.sharedImageState?.uploadedImageId) {
+        console.warn('⚠️ [FLOOR] uploadedImageId foi perdido, restaurando de sharedImageState...');
+        state.uploadedImageId = state.sharedImageState.uploadedImageId;
+        console.log(`✅ [FLOOR] uploadedImageId restaurado: ${state.uploadedImageId}`);
+    }
+
+    if (!state.uploadedImageId) {
+        console.error('❌ [CRITICAL] state.uploadedImageId está vazio/null!');
+        showMessage('Erro: ID da imagem não encontrado. Faça upload da imagem novamente.', 'error');
+        return;
+    }
+
+    formData.append('imageId', state.uploadedImageId);
+
+    // Adiciona coordenadas de crop se existirem
+    if (state.cropCoordinates) {
+        console.log('✂️ [FLOOR] Enviando coordenadas de crop:', state.cropCoordinates);
+        formData.append('cropX', state.cropCoordinates.x);
+        formData.append('cropY', state.cropCoordinates.y);
+        formData.append('cropWidth', state.cropCoordinates.width);
+        formData.append('cropHeight', state.cropCoordinates.height);
+    }
+
+    // ✅ DRY: Usa função genérica
+    await generateProgressiveMockup({
+        endpoint: `${API_URL}/api/mockup/floor${numero}/progressive`,
+        formData: formData,
+        tipoMockup: 'Floor',
+        numero: numero,
+        totalItems: 4, // Floor gera 4 versões
+        stateKey: 'floorState',
+        selectionScreen: elements.floorSelectionScreen,
+        buttonText: '🔄 Tentar Outro Floor (Mesmo Crop)'
     });
 }
 

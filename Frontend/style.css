@@ -1237,6 +1237,22 @@ body {
     box-shadow: 0 8px 15px -3px rgba(210, 105, 30, 0.4);
 }
 
+.btn-floors {
+    background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+    color: white;
+    font-size: 18px;
+    padding: 14px;
+    margin-top: 10px;
+    width: 100% !important;
+    display: block;
+}
+
+.btn-floors:hover {
+    background: linear-gradient(135deg, #A0522D 0%, #8B4513 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px -3px rgba(139, 69, 19, 0.4);
+}
+
 .ambiente-config-card {
     background: var(--card-background);
     border-radius: 16px;
@@ -1679,13 +1695,14 @@ body {
     max-width: 1200px;
 }
 
-/* Living Room, Bathroom, Stairs, Kitchen e Testes: grid de 2 colunas (DESKTOP APENAS) - PADRÃO UNIVERSAL */
+/* Living Room, Bathroom, Stairs, Kitchen, Floor e Testes: grid de 2 colunas (DESKTOP APENAS) - PADRÃO UNIVERSAL */
 @media (min-width: 600px) {
     #livingRoomSelectionScreen .countertop-options,
     #livingRoomTestSelectionScreen .countertop-options,
     #bathroomSelectionScreen .countertop-options,
     #stairsSelectionScreen .countertop-options,
     #kitchenSelectionScreen .countertop-options,
+    #floorSelectionScreen .countertop-options,
     #testesSelectionScreen .countertop-options {
         grid-template-columns: repeat(2, 1fr) !important;
         max-width: 600px;
@@ -1693,12 +1710,13 @@ body {
     }
 }
 
-/* Aumenta largura do container para Bathroom, Living Room, Stairs, Kitchen e Testes (DRY - PADRÃO UNIVERSAL) */
+/* Aumenta largura do container para Bathroom, Living Room, Stairs, Kitchen, Floor e Testes (DRY - PADRÃO UNIVERSAL) */
 #bathroomSelectionScreen .container,
 #livingRoomSelectionScreen .container,
 #livingRoomTestSelectionScreen .container,
 #stairsSelectionScreen .container,
 #kitchenSelectionScreen .container,
+#floorSelectionScreen .container,
 #testesSelectionScreen .container {
     max-width: 1200px;
 }
