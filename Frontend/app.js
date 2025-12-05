@@ -5299,7 +5299,9 @@ async function selectFloorAndGenerate(type) {
 }
 
 /**
- * Gera mockup de floor usando progressive rendering - ✅ USA FUNÇÃO GENÉRICA (DRY)
+ * Gera mockup de floor com download progressivo:
+ * - Baixa imagem 1 primeiro e exibe imediatamente
+ * - Baixa imagens 2, 3, 4 em background enquanto usuário vê a primeira
  */
 async function generateFloorProgressive(numero) {
     console.log('🎯 [FLOOR PROGRESSIVE] Iniciando geração floor', numero);
@@ -5330,16 +5332,155 @@ async function generateFloorProgressive(numero) {
         formData.append('cropHeight', state.cropCoordinates.height);
     }
 
-    // ✅ DRY: Usa função genérica
-    await generateProgressiveMockup({
-        endpoint: `${API_URL}/api/mockup/floor${numero}/progressive`,
-        formData: formData,
-        tipoMockup: 'Floor',
-        numero: numero,
-        totalItems: 4, // Floor gera 4 versões
-        stateKey: 'floorState',
-        selectionScreen: elements.floorSelectionScreen,
-        buttonText: '🔄 Tentar Outro Floor (Mesmo Crop)'
+    try {
+        console.log(`📡 [FLOOR] Iniciando fetch...`);
+        const response = await fetch(`${API_URL}/api/mockup/floor${numero}/progressive`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let caminhosPendentes = [];
+        let primeiraImagemExibida = false;
+
+        const progressBar = elements.progressBar;
+        const progressText = elements.progressText;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const jsonStr = line.slice(6);
+                    try {
+                        const event = JSON.parse(jsonStr);
+
+                        if (event.type === 'inicio') {
+                            console.log(`✅ [SSE] Floor ${numero}: ${event.data.mensagem}`);
+                            if (progressText) progressText.textContent = event.data.mensagem || 'Iniciando geração...';
+                        } else if (event.type === 'progresso') {
+                            console.log(`⏳ [SSE] Floor ${numero}: ${event.data.etapa}`);
+                            const percentage = event.data.porcentagem || 25;
+                            if (progressBar) progressBar.style.width = `${percentage}%`;
+                            if (progressText) progressText.textContent = event.data.etapa;
+                        } else if (event.type === 'sucesso') {
+                            console.log(`🎉 [SSE] SUCESSO! Caminhos:`, event.data.caminhos);
+
+                            // Atualiza progresso para 100%
+                            if (progressBar) progressBar.style.width = '100%';
+                            if (progressText) progressText.textContent = 'Carregando primeira imagem...';
+
+                            // Guarda todos os caminhos
+                            caminhosPendentes = event.data.caminhos;
+
+                            // ✨ DOWNLOAD PROGRESSIVO: Exibe primeira imagem imediatamente
+                            if (caminhosPendentes.length > 0) {
+                                const primeiroCaminho = caminhosPendentes[0];
+                                const primeiraUrl = `${API_URL}/uploads/mockups/${primeiroCaminho}`;
+
+                                // Pré-carrega a primeira imagem
+                                const img = new Image();
+                                img.onload = () => {
+                                    console.log('✅ [FLOOR] Primeira imagem carregada!');
+
+                                    // Esconde loading overlay
+                                    elements.loadingOverlay.classList.add('hidden');
+
+                                    // Mostra tela de resultados
+                                    showScreen(elements.ambienteResultScreen);
+                                    elements.ambientesGallery.innerHTML = '';
+                                    state.ambienteUrls = [];
+
+                                    // Adiciona primeira imagem
+                                    state.ambienteUrls.push(primeiraUrl);
+                                    adicionarImagemAGaleria(primeiraUrl, `Floor #${numero} - Versão 1`);
+                                    primeiraImagemExibida = true;
+
+                                    // ✨ Carrega as outras 3 imagens em background
+                                    console.log('🔄 [FLOOR] Carregando imagens restantes em background...');
+                                    carregarImagensRestantesFloor(caminhosPendentes.slice(1), numero);
+                                };
+                                img.onerror = () => {
+                                    console.error('❌ [FLOOR] Erro ao carregar primeira imagem');
+                                    // Fallback: carrega todas de uma vez
+                                    carregarTodasImagensFloor(caminhosPendentes, numero);
+                                };
+                                img.src = primeiraUrl;
+                            }
+
+                            // Configura botão "Gerar Novos"
+                            if (state.floorState?.selectedType) {
+                                elements.newAmbienteBtn.textContent = '🔄 Tentar Outro Floor (Mesmo Crop)';
+                                elements.newAmbienteBtn.onclick = () => {
+                                    state.cropCoordinates = null;
+                                    showScreen(elements.floorSelectionScreen);
+                                };
+                            }
+                        } else if (event.type === 'erro') {
+                            throw new Error(event.data.mensagem);
+                        }
+                    } catch (parseError) {
+                        console.warn('Erro ao parsear evento SSE:', parseError);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Erro ao gerar Floor ${numero}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Carrega imagens restantes do Floor em background (após primeira ser exibida)
+ */
+function carregarImagensRestantesFloor(caminhos, numero) {
+    caminhos.forEach((caminho, index) => {
+        const imageUrl = `${API_URL}/uploads/mockups/${caminho}`;
+        const versao = index + 2; // Versão 2, 3, 4
+
+        // Pré-carrega em background
+        const img = new Image();
+        img.onload = () => {
+            console.log(`✅ [FLOOR] Imagem ${versao} carregada em background`);
+            state.ambienteUrls.push(imageUrl);
+            adicionarImagemAGaleria(imageUrl, `Floor #${numero} - Versão ${versao}`);
+        };
+        img.onerror = () => {
+            console.error(`❌ [FLOOR] Erro ao carregar imagem ${versao}`);
+            // Adiciona mesmo assim com possível reload
+            state.ambienteUrls.push(imageUrl);
+            adicionarImagemAGaleria(imageUrl, `Floor #${numero} - Versão ${versao}`);
+        };
+        img.src = imageUrl;
+    });
+}
+
+/**
+ * Fallback: carrega todas as imagens do Floor de uma vez
+ */
+function carregarTodasImagensFloor(caminhos, numero) {
+    elements.loadingOverlay.classList.add('hidden');
+    showScreen(elements.ambienteResultScreen);
+    elements.ambientesGallery.innerHTML = '';
+    state.ambienteUrls = [];
+
+    caminhos.forEach((caminho, index) => {
+        const imageUrl = `${API_URL}/uploads/mockups/${caminho}`;
+        state.ambienteUrls.push(imageUrl);
+        adicionarImagemAGaleria(imageUrl, `Floor #${numero} - Versão ${index + 1}`);
     });
 }
 
