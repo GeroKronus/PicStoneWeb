@@ -3836,8 +3836,13 @@ async function generateCountertopAmbiente() {
     try {
         console.log('🎬 generateCountertopAmbiente() chamado');
 
-        // Mostra loading overlay global
+        // Mostra loading overlay global com mensagem correta
         elements.loadingOverlay.classList.remove('hidden');
+        elements.loadingMessage.textContent = 'Gerando Bancada...';
+        elements.loadingSubmessage.textContent = 'Você verá cada versão assim que ficar pronta';
+        elements.progressContainer.classList.remove('hidden');
+        elements.progressBar.style.width = '0%';
+        elements.progressText.textContent = 'Preparando...';
 
         const formData = new FormData();
 
