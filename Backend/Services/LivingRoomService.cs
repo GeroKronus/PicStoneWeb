@@ -69,7 +69,9 @@ namespace PicStoneFotoAPI.Services
                     bitmap270D.Width, bitmap270D.Height);
 
                 // PASSO 3: Cria os 4 mosaicos (quadrantes) como no VB.NET
-                var larguraMosaico = (novaAltura * 2) + 1; // +1 para linha divisória opcional
+                // ✅ Efeito rejunte: espaçamento de 2px entre os tiles
+                const int espacamentoRejunte = 2;
+                var larguraMosaico = (novaAltura * 2) + espacamentoRejunte;
                 var alturaMosaico = tamanhoDoQuadro;
 
                 var quadrantes = new List<SKBitmap>();
@@ -79,29 +81,33 @@ namespace PicStoneFotoAPI.Services
                 {
                     _logger.LogInformation("--- Gerando quadrante {Q}/4 ---", quadrante);
 
-                    // Cria mosaico (2 chapas lado a lado)
+                    // Cria mosaico (2 chapas lado a lado) COM rejunte
                     using var mosaico = new SKBitmap(larguraMosaico, alturaMosaico);
                     using var canvas = new SKCanvas(mosaico);
-                    canvas.Clear(SKColors.White);
+                    // ✅ Fundo cinza para simular rejunte
+                    canvas.Clear(new SKColor(180, 180, 180));
+
+                    // Posição da segunda chapa com espaçamento
+                    int posSegundaChapa = novaAltura + espacamentoRejunte;
 
                     // Desenha as 2 chapas lado a lado conforme o quadrante
                     switch (quadrante)
                     {
                         case 1: // 90E + 90D
                             canvas.DrawBitmap(bitmap90E, 0, 0);
-                            canvas.DrawBitmap(bitmap90D, novaAltura + 1, 0);
+                            canvas.DrawBitmap(bitmap90D, posSegundaChapa, 0);
                             break;
                         case 2: // 90D + 90E (invertido)
                             canvas.DrawBitmap(bitmap90D, 0, 0);
-                            canvas.DrawBitmap(bitmap90E, novaAltura + 1, 0);
+                            canvas.DrawBitmap(bitmap90E, posSegundaChapa, 0);
                             break;
                         case 3: // 270E + 270D
                             canvas.DrawBitmap(bitmap270E, 0, 0);
-                            canvas.DrawBitmap(bitmap270D, novaAltura + 1, 0);
+                            canvas.DrawBitmap(bitmap270D, posSegundaChapa, 0);
                             break;
                         case 4: // 270D + 270E (invertido)
                             canvas.DrawBitmap(bitmap270D, 0, 0);
-                            canvas.DrawBitmap(bitmap270E, novaAltura + 1, 0);
+                            canvas.DrawBitmap(bitmap270E, posSegundaChapa, 0);
                             break;
                     }
 
@@ -226,46 +232,56 @@ namespace PicStoneFotoAPI.Services
 
                 var quadrantes = new List<SKBitmap>();
 
+                // ✅ Efeito rejunte: espaçamento de 2px entre os tiles
+                const int espacamentoRejunte = 2;
+
                 // Gera os 4 quadrantes
                 for (int quadrante = 1; quadrante <= 4; quadrante++)
                 {
                     _logger.LogInformation("--- Gerando quadrante {Q}/4 ---", quadrante);
 
-                    // Cria mosaico 2x2
-                    using var mosaico = new SKBitmap(larguraMosaico, alturaMosaico);
-                    using var canvasMosaico = new SKCanvas(mosaico);
-                    canvasMosaico.Clear(SKColors.White);
-
-                    // Desenha o mosaico 2x2 conforme o quadrante
-                    // Após rotação 90°: largura do tile = imagemRotacionada.Width, altura = imagemRotacionada.Height
+                    // Cria mosaico 2x2 COM espaçamento para rejunte
                     int tileWidth = imagemRotacionada.Width;
                     int tileHeight = imagemRotacionada.Height;
+                    int mosaicoLarguraComRejunte = (tileWidth * 2) + espacamentoRejunte;
+                    int mosaicoAlturaComRejunte = (tileHeight * 2) + espacamentoRejunte;
+
+                    using var mosaico = new SKBitmap(mosaicoLarguraComRejunte, mosaicoAlturaComRejunte);
+                    using var canvasMosaico = new SKCanvas(mosaico);
+                    // ✅ Fundo cinza para simular rejunte
+                    canvasMosaico.Clear(new SKColor(180, 180, 180));
+
+                    // Posições com espaçamento de rejunte
+                    int posX0 = 0;
+                    int posX1 = tileWidth + espacamentoRejunte;
+                    int posY0 = 0;
+                    int posY1 = tileHeight + espacamentoRejunte;
 
                     switch (quadrante)
                     {
                         case 1: // Quadrante 1: ORI, FH / FV, 180
-                            canvasMosaico.DrawBitmap(bitmapORI, 0, 0);
-                            canvasMosaico.DrawBitmap(bitmapFH, tileWidth, 0);
-                            canvasMosaico.DrawBitmap(bitmapFV, 0, tileHeight);
-                            canvasMosaico.DrawBitmap(bitmap180, tileWidth, tileHeight);
+                            canvasMosaico.DrawBitmap(bitmapORI, posX0, posY0);
+                            canvasMosaico.DrawBitmap(bitmapFH, posX1, posY0);
+                            canvasMosaico.DrawBitmap(bitmapFV, posX0, posY1);
+                            canvasMosaico.DrawBitmap(bitmap180, posX1, posY1);
                             break;
                         case 2: // Quadrante 2: FH, ORI / 180, FV
-                            canvasMosaico.DrawBitmap(bitmapFH, 0, 0);
-                            canvasMosaico.DrawBitmap(bitmapORI, tileWidth, 0);
-                            canvasMosaico.DrawBitmap(bitmap180, 0, tileHeight);
-                            canvasMosaico.DrawBitmap(bitmapFV, tileWidth, tileHeight);
+                            canvasMosaico.DrawBitmap(bitmapFH, posX0, posY0);
+                            canvasMosaico.DrawBitmap(bitmapORI, posX1, posY0);
+                            canvasMosaico.DrawBitmap(bitmap180, posX0, posY1);
+                            canvasMosaico.DrawBitmap(bitmapFV, posX1, posY1);
                             break;
                         case 3: // Quadrante 3: FV, 180 / ORI, FH
-                            canvasMosaico.DrawBitmap(bitmapFV, 0, 0);
-                            canvasMosaico.DrawBitmap(bitmap180, tileWidth, 0);
-                            canvasMosaico.DrawBitmap(bitmapORI, 0, tileHeight);
-                            canvasMosaico.DrawBitmap(bitmapFH, tileWidth, tileHeight);
+                            canvasMosaico.DrawBitmap(bitmapFV, posX0, posY0);
+                            canvasMosaico.DrawBitmap(bitmap180, posX1, posY0);
+                            canvasMosaico.DrawBitmap(bitmapORI, posX0, posY1);
+                            canvasMosaico.DrawBitmap(bitmapFH, posX1, posY1);
                             break;
                         case 4: // Quadrante 4: 180, FV / FH, ORI
-                            canvasMosaico.DrawBitmap(bitmap180, 0, 0);
-                            canvasMosaico.DrawBitmap(bitmapFV, tileWidth, 0);
-                            canvasMosaico.DrawBitmap(bitmapFH, 0, tileHeight);
-                            canvasMosaico.DrawBitmap(bitmapORI, tileWidth, tileHeight);
+                            canvasMosaico.DrawBitmap(bitmap180, posX0, posY0);
+                            canvasMosaico.DrawBitmap(bitmapFV, posX1, posY0);
+                            canvasMosaico.DrawBitmap(bitmapFH, posX0, posY1);
+                            canvasMosaico.DrawBitmap(bitmapORI, posX1, posY1);
                             break;
                     }
 
