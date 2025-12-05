@@ -109,47 +109,54 @@ namespace PicStoneFotoAPI.Services
 
                     _logger.LogInformation("BookMatch criado: ORI, FLH, 180, FLV");
 
-                    // PASSO 5: Cria mosaico 4x4
-                    int larguraMosaico = tamanhoDoQuadro * 4;
-                    int alturaMosaico = novaAltura * 4;
+                    // PASSO 5: Cria mosaico 4x4 com rejunte (espaçamento entre quadros)
+                    const int espacamentoRejunte = 2;
+                    int larguraMosaico = (tamanhoDoQuadro * 4) + (espacamentoRejunte * 3);
+                    int alturaMosaico = (novaAltura * 4) + (espacamentoRejunte * 3);
 
                     using var mosaico = new SKBitmap(larguraMosaico, alturaMosaico);
                     using var canvasMosaico = new SKCanvas(mosaico);
-                    canvasMosaico.Clear(SKColors.White);
 
-                    _logger.LogInformation("Mosaico 4x4: {W}x{H}", larguraMosaico, alturaMosaico);
+                    // Fundo cinza claro para simular rejunte
+                    canvasMosaico.Clear(new SKColor(180, 180, 180));
 
-                    // Padrão do mosaico 4x4:
+                    _logger.LogInformation("Mosaico 4x4 com rejunte: {W}x{H}, espaçamento: {E}px", larguraMosaico, alturaMosaico, espacamentoRejunte);
+
+                    // Padrão do mosaico 4x4 com espaçamento:
                     // Linha 0: ORI, FLH, ORI, FLH
                     // Linha 1: 180, FLV, 180, FLV
                     // Linha 2: ORI, FLH, ORI, FLH
                     // Linha 3: 180, FLV, 180, FLV
 
+                    // Calcula posições com espaçamento
+                    int[] posX = { 0, tamanhoDoQuadro + espacamentoRejunte, (tamanhoDoQuadro * 2) + (espacamentoRejunte * 2), (tamanhoDoQuadro * 3) + (espacamentoRejunte * 3) };
+                    int[] posY = { 0, novaAltura + espacamentoRejunte, (novaAltura * 2) + (espacamentoRejunte * 2), (novaAltura * 3) + (espacamentoRejunte * 3) };
+
                     // Linha 0
-                    canvasMosaico.DrawBitmap(bitmapORI, 0, 0);
-                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro, 0);
-                    canvasMosaico.DrawBitmap(bitmapORI, tamanhoDoQuadro * 2, 0);
-                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro * 3, 0);
+                    canvasMosaico.DrawBitmap(bitmapORI, posX[0], posY[0]);
+                    canvasMosaico.DrawBitmap(bitmapFLH, posX[1], posY[0]);
+                    canvasMosaico.DrawBitmap(bitmapORI, posX[2], posY[0]);
+                    canvasMosaico.DrawBitmap(bitmapFLH, posX[3], posY[0]);
 
                     // Linha 1
-                    canvasMosaico.DrawBitmap(bitmap180, 0, novaAltura);
-                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro, novaAltura);
-                    canvasMosaico.DrawBitmap(bitmap180, tamanhoDoQuadro * 2, novaAltura);
-                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro * 3, novaAltura);
+                    canvasMosaico.DrawBitmap(bitmap180, posX[0], posY[1]);
+                    canvasMosaico.DrawBitmap(bitmapFLV, posX[1], posY[1]);
+                    canvasMosaico.DrawBitmap(bitmap180, posX[2], posY[1]);
+                    canvasMosaico.DrawBitmap(bitmapFLV, posX[3], posY[1]);
 
                     // Linha 2
-                    canvasMosaico.DrawBitmap(bitmapORI, 0, novaAltura * 2);
-                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro, novaAltura * 2);
-                    canvasMosaico.DrawBitmap(bitmapORI, tamanhoDoQuadro * 2, novaAltura * 2);
-                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro * 3, novaAltura * 2);
+                    canvasMosaico.DrawBitmap(bitmapORI, posX[0], posY[2]);
+                    canvasMosaico.DrawBitmap(bitmapFLH, posX[1], posY[2]);
+                    canvasMosaico.DrawBitmap(bitmapORI, posX[2], posY[2]);
+                    canvasMosaico.DrawBitmap(bitmapFLH, posX[3], posY[2]);
 
                     // Linha 3
-                    canvasMosaico.DrawBitmap(bitmap180, 0, novaAltura * 3);
-                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro, novaAltura * 3);
-                    canvasMosaico.DrawBitmap(bitmap180, tamanhoDoQuadro * 2, novaAltura * 3);
-                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro * 3, novaAltura * 3);
+                    canvasMosaico.DrawBitmap(bitmap180, posX[0], posY[3]);
+                    canvasMosaico.DrawBitmap(bitmapFLV, posX[1], posY[3]);
+                    canvasMosaico.DrawBitmap(bitmap180, posX[2], posY[3]);
+                    canvasMosaico.DrawBitmap(bitmapFLV, posX[3], posY[3]);
 
-                    _logger.LogInformation("Mosaico 4x4 montado");
+                    _logger.LogInformation("Mosaico 4x4 com rejunte montado");
 
                     // PASSO 6: Aplica transformações de perspectiva
                     // Rotate90 -> DistortionInclina -> Rotate90
@@ -291,39 +298,46 @@ namespace PicStoneFotoAPI.Services
                     using var bitmap180 = _imageManipulation.FlipVertical(imagem);
                     using var bitmapFLV = _imageManipulation.Rotate180(imagem);
 
-                    // PASSO 3: Monta o mosaico 4x4 (mesmo padrão do Floor #1)
-                    int mosaicoLargura = tamanhoDoQuadro * 4;
-                    int mosaicoAltura = novaAltura * 4;
+                    // PASSO 3: Monta o mosaico 4x4 com rejunte (mesmo padrão do Floor #1)
+                    const int espacamentoRejunte = 2;
+                    int mosaicoLargura = (tamanhoDoQuadro * 4) + (espacamentoRejunte * 3);
+                    int mosaicoAltura = (novaAltura * 4) + (espacamentoRejunte * 3);
 
                     using var mosaico = new SKBitmap(mosaicoLargura, mosaicoAltura);
                     using var canvasMosaico = new SKCanvas(mosaico);
-                    canvasMosaico.Clear(SKColors.White);
+
+                    // Fundo cinza claro para simular rejunte
+                    canvasMosaico.Clear(new SKColor(180, 180, 180));
+
+                    // Calcula posições com espaçamento
+                    int[] posX = { 0, tamanhoDoQuadro + espacamentoRejunte, (tamanhoDoQuadro * 2) + (espacamentoRejunte * 2), (tamanhoDoQuadro * 3) + (espacamentoRejunte * 3) };
+                    int[] posY = { 0, novaAltura + espacamentoRejunte, (novaAltura * 2) + (espacamentoRejunte * 2), (novaAltura * 3) + (espacamentoRejunte * 3) };
 
                     // Linha 0: ORI, FLH, ORI, FLH
-                    canvasMosaico.DrawBitmap(bitmapORI, 0, 0);
-                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro, 0);
-                    canvasMosaico.DrawBitmap(bitmapORI, tamanhoDoQuadro * 2, 0);
-                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro * 3, 0);
+                    canvasMosaico.DrawBitmap(bitmapORI, posX[0], posY[0]);
+                    canvasMosaico.DrawBitmap(bitmapFLH, posX[1], posY[0]);
+                    canvasMosaico.DrawBitmap(bitmapORI, posX[2], posY[0]);
+                    canvasMosaico.DrawBitmap(bitmapFLH, posX[3], posY[0]);
 
                     // Linha 1: 180, FLV, 180, FLV
-                    canvasMosaico.DrawBitmap(bitmap180, 0, novaAltura);
-                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro, novaAltura);
-                    canvasMosaico.DrawBitmap(bitmap180, tamanhoDoQuadro * 2, novaAltura);
-                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro * 3, novaAltura);
+                    canvasMosaico.DrawBitmap(bitmap180, posX[0], posY[1]);
+                    canvasMosaico.DrawBitmap(bitmapFLV, posX[1], posY[1]);
+                    canvasMosaico.DrawBitmap(bitmap180, posX[2], posY[1]);
+                    canvasMosaico.DrawBitmap(bitmapFLV, posX[3], posY[1]);
 
                     // Linha 2: ORI, FLH, ORI, FLH
-                    canvasMosaico.DrawBitmap(bitmapORI, 0, novaAltura * 2);
-                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro, novaAltura * 2);
-                    canvasMosaico.DrawBitmap(bitmapORI, tamanhoDoQuadro * 2, novaAltura * 2);
-                    canvasMosaico.DrawBitmap(bitmapFLH, tamanhoDoQuadro * 3, novaAltura * 2);
+                    canvasMosaico.DrawBitmap(bitmapORI, posX[0], posY[2]);
+                    canvasMosaico.DrawBitmap(bitmapFLH, posX[1], posY[2]);
+                    canvasMosaico.DrawBitmap(bitmapORI, posX[2], posY[2]);
+                    canvasMosaico.DrawBitmap(bitmapFLH, posX[3], posY[2]);
 
                     // Linha 3: 180, FLV, 180, FLV
-                    canvasMosaico.DrawBitmap(bitmap180, 0, novaAltura * 3);
-                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro, novaAltura * 3);
-                    canvasMosaico.DrawBitmap(bitmap180, tamanhoDoQuadro * 2, novaAltura * 3);
-                    canvasMosaico.DrawBitmap(bitmapFLV, tamanhoDoQuadro * 3, novaAltura * 3);
+                    canvasMosaico.DrawBitmap(bitmap180, posX[0], posY[3]);
+                    canvasMosaico.DrawBitmap(bitmapFLV, posX[1], posY[3]);
+                    canvasMosaico.DrawBitmap(bitmap180, posX[2], posY[3]);
+                    canvasMosaico.DrawBitmap(bitmapFLV, posX[3], posY[3]);
 
-                    _logger.LogInformation("Mosaico 4x4 criado: {W}x{H}", mosaico.Width, mosaico.Height);
+                    _logger.LogInformation("Mosaico 4x4 com rejunte criado: {W}x{H}, espaçamento: {E}px", mosaico.Width, mosaico.Height, espacamentoRejunte);
 
                     // PASSO 4: Rotaciona 90° (Rotate90FlipNone)
                     using var mosaicoRotado1 = RotateBitmap90Clockwise(mosaico);
