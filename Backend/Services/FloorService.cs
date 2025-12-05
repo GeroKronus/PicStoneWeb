@@ -454,21 +454,22 @@ namespace PicStoneFotoAPI.Services
 
                     _logger.LogInformation("BookMatch Floor3 criado: ORI(90), FLH(90X), 180(270X), FLV(270)");
 
-                    // PASSO 3: Cria as 6 filas
-                    int filaLargura = novaAltura * 4;
+                    // PASSO 3: Cria as 6 filas com espaçamento (rejunte)
+                    const int espacamentoRejunte = 2;
+                    int filaLargura = (novaAltura * 4) + (espacamentoRejunte * 3);
                     int filaAltura = tamanhoDoQuadro;
 
                     // Fila 1 e 3 e 5: ORI, FLH, ORI, FLH
-                    using var fila1 = CriarFilaFloor3(bitmapORI, bitmapFLH, novaAltura, tamanhoDoQuadro);
+                    using var fila1 = CriarFilaFloor3(bitmapORI, bitmapFLH, novaAltura, tamanhoDoQuadro, espacamentoRejunte);
                     using var fila3 = fila1.Copy();
                     using var fila5 = fila1.Copy();
 
                     // Fila 2 e 4 e 6: 180, FLV, 180, FLV
-                    using var fila2 = CriarFilaFloor3(bitmap180, bitmapFLV, novaAltura, tamanhoDoQuadro);
+                    using var fila2 = CriarFilaFloor3(bitmap180, bitmapFLV, novaAltura, tamanhoDoQuadro, espacamentoRejunte);
                     using var fila4 = fila2.Copy();
                     using var fila6 = fila2.Copy();
 
-                    _logger.LogInformation("6 filas criadas: {W}x{H}", filaLargura, filaAltura);
+                    _logger.LogInformation("6 filas criadas com rejunte: {W}x{H}, espaçamento: {E}px", filaLargura, filaAltura, espacamentoRejunte);
 
                     // PASSO 4: Aplica transformações em cada fila (DistortionInclina + Skew2)
                     // Fila1: DistortionInclina(2200, 1017, 350, 2200, 0) + Skew2(0, 562)
@@ -569,20 +570,30 @@ namespace PicStoneFotoAPI.Services
 
         /// <summary>
         /// Cria uma fila para Floor #3 com padrão: img1, img2, img1, img2
+        /// Inclui espaçamento (rejunte) entre os quadros
         /// </summary>
-        private SKBitmap CriarFilaFloor3(SKBitmap img1, SKBitmap img2, int novaAltura, int tamanhoDoQuadro)
+        private SKBitmap CriarFilaFloor3(SKBitmap img1, SKBitmap img2, int novaAltura, int tamanhoDoQuadro, int espacamento = 2)
         {
-            int filaLargura = novaAltura * 4;
+            // Largura total: 4 quadros + 3 espaços entre eles
+            int filaLargura = (novaAltura * 4) + (espacamento * 3);
             int filaAltura = tamanhoDoQuadro;
 
             var fila = new SKBitmap(filaLargura, filaAltura);
             using var canvas = new SKCanvas(fila);
-            canvas.Clear(SKColors.White);
 
-            canvas.DrawBitmap(img1, 0, 0);
-            canvas.DrawBitmap(img2, novaAltura, 0);
-            canvas.DrawBitmap(img1, novaAltura * 2, 0);
-            canvas.DrawBitmap(img2, novaAltura * 3, 0);
+            // Fundo cinza claro para o rejunte
+            canvas.Clear(new SKColor(180, 180, 180));
+
+            // Posiciona os quadros com espaçamento
+            int pos0 = 0;
+            int pos1 = novaAltura + espacamento;
+            int pos2 = (novaAltura * 2) + (espacamento * 2);
+            int pos3 = (novaAltura * 3) + (espacamento * 3);
+
+            canvas.DrawBitmap(img1, pos0, 0);
+            canvas.DrawBitmap(img2, pos1, 0);
+            canvas.DrawBitmap(img1, pos2, 0);
+            canvas.DrawBitmap(img2, pos3, 0);
 
             return fila;
         }
