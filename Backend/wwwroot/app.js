@@ -3423,10 +3423,16 @@ function abrirCropParaAmbiente() {
     // Ativa modo ambiente
     state.ambienteMode = true;
 
-    // CRITICAL FIX: Reset countertop state to prevent incorrect routing
+    // ✅ FIX: Limpa TODOS os estados de outros flows para não contaminar navegação do Voltar
     state.countertopState.croppedImage = null;
     state.countertopState.selectedType = null;
     state.countertopState.flip = false;
+    state.floorState.selectedType = null;
+    state.stairsState.selectedType = null;
+    state.kitchenState.selectedType = null;
+    state.livingRoomState.selectedType = null;
+    state.bathroomState.selectedType = null;
+    console.log('✅ [FRAME] Limpou todos os estados de outros flows');
 
     // ✨ FIX: Marca que está gerando mockup
     state.isGeneratingMockup = true;
