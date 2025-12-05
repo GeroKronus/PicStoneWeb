@@ -2709,9 +2709,10 @@ namespace PicStoneFotoAPI.Controllers
 
                     var nomeArquivo = FileNamingHelper.GenerateFloorFileName(1, versao, usuarioId);
 
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockupsBitmaps[i], nomeArquivo);
+                    // Usa WebP para melhor compressão em Floors (imagens grandes)
+                    var caminhoComTimestamp = SalvarMockupWebP(mockupsBitmaps[i], nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Versão {V} salva: {Path}", versao, nomeArquivo);
+                    _logger.LogInformation("Versão {V} salva em WebP: {Path}", versao, nomeArquivo);
                 }
 
                 // Limpa bitmaps
@@ -2848,9 +2849,10 @@ namespace PicStoneFotoAPI.Controllers
 
                     var nomeArquivo = FileNamingHelper.GenerateFloorFileName(2, versao, usuarioId);
 
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockupsBitmaps[i], nomeArquivo);
+                    // Usa WebP para melhor compressão em Floors (imagens grandes)
+                    var caminhoComTimestamp = SalvarMockupWebP(mockupsBitmaps[i], nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Versão {V} salva: {Path}", versao, nomeArquivo);
+                    _logger.LogInformation("Versão {V} salva em WebP: {Path}", versao, nomeArquivo);
                 }
 
                 // Limpa bitmaps
@@ -2987,9 +2989,10 @@ namespace PicStoneFotoAPI.Controllers
 
                     var nomeArquivo = FileNamingHelper.GenerateFloorFileName(3, versao, usuarioId);
 
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockupsBitmaps[i], nomeArquivo);
+                    // Usa WebP para melhor compressão em Floors (imagens grandes)
+                    var caminhoComTimestamp = SalvarMockupWebP(mockupsBitmaps[i], nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Versão {V} salva: {Path}", versao, nomeArquivo);
+                    _logger.LogInformation("Versão {V} salva em WebP: {Path}", versao, nomeArquivo);
                 }
 
                 // Limpa bitmaps
@@ -3068,6 +3071,45 @@ namespace PicStoneFotoAPI.Controllers
 
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var nomeComTimestamp = $"{nomeArquivo}?v={timestamp}";
+
+            return prefixoUrl != null
+                ? $"{prefixoUrl}/{nomeComTimestamp}"
+                : nomeComTimestamp;
+        }
+
+        /// <summary>
+        /// Salva mockup em formato WebP para melhor compressão (usado em Floors)
+        /// </summary>
+        private string SalvarMockupWebP(SKBitmap bitmap, string nomeArquivo, string? prefixoUrl = null)
+        {
+            // Garante extensão .webp
+            var nomeWebP = Path.ChangeExtension(nomeArquivo, ".webp");
+            var caminhoCompleto = Path.Combine(_uploadsPath, nomeWebP);
+
+            // Deleta arquivo antigo se existir
+            if (System.IO.File.Exists(caminhoCompleto))
+            {
+                try
+                {
+                    System.IO.File.Delete(caminhoCompleto);
+                    _logger.LogInformation("Arquivo WebP antigo deletado: {Path}", caminhoCompleto);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Não foi possível deletar arquivo WebP antigo: {Path}", caminhoCompleto);
+                }
+            }
+
+            using var image = SKImage.FromBitmap(bitmap);
+            // WebP com qualidade 85 oferece boa compressão mantendo qualidade visual
+            using var data = image.Encode(SKEncodedImageFormat.Webp, 85);
+            using var outputStream = System.IO.File.OpenWrite(caminhoCompleto);
+            data.SaveTo(outputStream);
+
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var nomeComTimestamp = $"{nomeWebP}?v={timestamp}";
+
+            _logger.LogInformation("Mockup salvo em WebP: {Path}, tamanho: {Size} bytes", nomeWebP, data.Size);
 
             return prefixoUrl != null
                 ? $"{prefixoUrl}/{nomeComTimestamp}"
