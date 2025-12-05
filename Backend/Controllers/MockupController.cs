@@ -3080,9 +3080,29 @@ namespace PicStoneFotoAPI.Controllers
 
         /// <summary>
         /// Salva mockup em formato WebP para melhor compressão (usado em Floors)
+        /// ✅ OTIMIZAÇÃO: Redimensiona imagens maiores que 1600px (WhatsApp comprime para ~1280px)
         /// </summary>
         private string SalvarMockupWebP(SKBitmap bitmap, string nomeArquivo, string? prefixoUrl = null)
         {
+            // ✅ OTIMIZAÇÃO: Redimensiona imagens maiores que 1600px
+            const int MAX_DIMENSION = 1600;
+            SKBitmap bitmapParaSalvar = bitmap;
+            bool precisaDisposar = false;
+
+            int maiorDimensao = Math.Max(bitmap.Width, bitmap.Height);
+            if (maiorDimensao > MAX_DIMENSION)
+            {
+                float escala = (float)MAX_DIMENSION / maiorDimensao;
+                int novaLargura = (int)(bitmap.Width * escala);
+                int novaAltura = (int)(bitmap.Height * escala);
+
+                bitmapParaSalvar = bitmap.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
+                precisaDisposar = true;
+
+                _logger.LogInformation("Imagem redimensionada de {W1}x{H1} para {W2}x{H2} (max {Max}px)",
+                    bitmap.Width, bitmap.Height, novaLargura, novaAltura, MAX_DIMENSION);
+            }
+
             // Garante extensão .webp
             var nomeWebP = Path.ChangeExtension(nomeArquivo, ".webp");
             var caminhoCompleto = Path.Combine(_uploadsPath, nomeWebP);
@@ -3101,11 +3121,17 @@ namespace PicStoneFotoAPI.Controllers
                 }
             }
 
-            using var image = SKImage.FromBitmap(bitmap);
+            using var image = SKImage.FromBitmap(bitmapParaSalvar);
             // WebP com qualidade 85 oferece boa compressão mantendo qualidade visual
             using var data = image.Encode(SKEncodedImageFormat.Webp, 85);
             using var outputStream = System.IO.File.OpenWrite(caminhoCompleto);
             data.SaveTo(outputStream);
+
+            // Limpa bitmap redimensionado se foi criado
+            if (precisaDisposar)
+            {
+                bitmapParaSalvar.Dispose();
+            }
 
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var nomeComTimestamp = $"{nomeWebP}?v={timestamp}";

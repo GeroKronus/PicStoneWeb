@@ -1702,9 +1702,10 @@ function handleFileSelect(e) {
 }
 
 // ========== FUNÇÃO ÚNICA DE REDIMENSIONAMENTO (DRY) ==========
+// ✅ OTIMIZAÇÃO: Reduzido de 2000px para 1400px (WhatsApp comprime para ~1280px)
 function redimensionarImagem(img, fileName) {
     return new Promise((resolve) => {
-        const maxWidth = 2000;
+        const maxWidth = 1400; // Otimizado para compartilhamento WhatsApp
         let targetWidth, targetHeight;
 
         if (img.width > maxWidth) {
@@ -1724,7 +1725,7 @@ function redimensionarImagem(img, fileName) {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-        const qualidadeJPEG = 0.75;
+        const qualidadeJPEG = 0.80; // Aumentado de 0.75 para compensar redução de tamanho
         canvas.toBlob((blob) => {
             const file = new File([blob], fileName, {
                 type: 'image/jpeg',

@@ -161,12 +161,39 @@ namespace PicStoneFotoAPI.Services
             var nomeArquivo = usuarioId.HasValue
                 ? FileNamingHelper.GenerateCavaleteSimpleFileName(fundo, usuarioId.Value)
                 : $"mockup_simples_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
+            // ✅ Muda extensão para .webp
+            nomeArquivo = Path.ChangeExtension(nomeArquivo, ".webp");
             var caminhoFinal = Path.Combine(_uploadPath, nomeArquivo);
 
             using var image = surface.Snapshot();
-            using var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-            using var outputStream = File.OpenWrite(caminhoFinal);
-            data.SaveTo(outputStream);
+
+            // ✅ OTIMIZAÇÃO: Redimensiona se maior que 1600px (WhatsApp comprime para ~1280px)
+            const int MAX_DIMENSION = 1600;
+            SKData data;
+            if (Math.Max(larguraCanvas, alturaCanvas) > MAX_DIMENSION)
+            {
+                float escala = (float)MAX_DIMENSION / Math.Max(larguraCanvas, alturaCanvas);
+                int novaLargura = (int)(larguraCanvas * escala);
+                int novaAltura = (int)(alturaCanvas * escala);
+
+                using var bitmap = SKBitmap.FromImage(image);
+                using var bitmapReduzido = bitmap.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
+                using var imageReduzida = SKImage.FromBitmap(bitmapReduzido);
+                data = imageReduzida.Encode(SKEncodedImageFormat.Webp, 85);
+
+                _logger.LogInformation("Cavalete simples redimensionado de {W1}x{H1} para {W2}x{H2}",
+                    larguraCanvas, alturaCanvas, novaLargura, novaAltura);
+            }
+            else
+            {
+                data = image.Encode(SKEncodedImageFormat.Webp, 85);
+            }
+
+            using (data)
+            using (var outputStream = File.OpenWrite(caminhoFinal))
+            {
+                data.SaveTo(outputStream);
+            }
 
             _logger.LogInformation("Cavalete simples gerado: {Caminho}", caminhoFinal);
             return nomeArquivo;
@@ -253,12 +280,39 @@ namespace PicStoneFotoAPI.Services
             var nomeArquivo = usuarioId.HasValue
                 ? FileNamingHelper.GenerateCavaleteDuploFileName(sufixo, fundo, usuarioId.Value)
                 : $"mockup_duplo_{sufixo}_{fundo}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.jpg";
+            // ✅ Muda extensão para .webp
+            nomeArquivo = Path.ChangeExtension(nomeArquivo, ".webp");
             var caminhoFinal = Path.Combine(_uploadPath, nomeArquivo);
 
             using var image = surface.Snapshot();
-            using var data = image.Encode(SKEncodedImageFormat.Jpeg, 95);
-            using var outputStream = File.OpenWrite(caminhoFinal);
-            data.SaveTo(outputStream);
+
+            // ✅ OTIMIZAÇÃO: Redimensiona se maior que 1600px (WhatsApp comprime para ~1280px)
+            const int MAX_DIMENSION = 1600;
+            SKData data;
+            if (Math.Max(larguraCanvas, alturaCanvas) > MAX_DIMENSION)
+            {
+                float escala = (float)MAX_DIMENSION / Math.Max(larguraCanvas, alturaCanvas);
+                int novaLargura = (int)(larguraCanvas * escala);
+                int novaAltura = (int)(alturaCanvas * escala);
+
+                using var bitmap = SKBitmap.FromImage(image);
+                using var bitmapReduzido = bitmap.Resize(new SKImageInfo(novaLargura, novaAltura), SKFilterQuality.High);
+                using var imageReduzida = SKImage.FromBitmap(bitmapReduzido);
+                data = imageReduzida.Encode(SKEncodedImageFormat.Webp, 85);
+
+                _logger.LogInformation("Cavalete duplo redimensionado de {W1}x{H1} para {W2}x{H2}",
+                    larguraCanvas, alturaCanvas, novaLargura, novaAltura);
+            }
+            else
+            {
+                data = image.Encode(SKEncodedImageFormat.Webp, 85);
+            }
+
+            using (data)
+            using (var outputStream = File.OpenWrite(caminhoFinal))
+            {
+                data.SaveTo(outputStream);
+            }
 
             _logger.LogInformation("Cavalete duplo {Tipo} gerado: {Caminho}", sufixo, caminhoFinal);
             return nomeArquivo;
