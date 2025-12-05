@@ -1034,9 +1034,14 @@ function showLoginScreen() {
 /**
  * Gerencia o botão "Voltar" da tela de resultados
  * DRY: Verifica o flow atual e volta para tela correta
+ * ✅ FIX: Cavalete deve ser verificado PRIMEIRO pois outros estados podem estar setados de usos anteriores
  */
 function handleBackFromResults() {
-    if (state.countertopState.croppedImage) {
+    // ✅ FIX: Cavalete primeiro - ambienteConfig.tipo é setado especificamente para cavalete
+    if (state.ambienteConfig.tipo === 'cavalete') {
+        // Está no flow de cavalete: volta para ambientes com foto
+        backToAmbientesWithPhoto();
+    } else if (state.countertopState.selectedType) {
         // Está no flow de countertop: volta para seleção de bancadas
         showScreen(elements.countertopSelectionScreen);
     } else if (state.bathroomState.selectedType) {
@@ -1054,9 +1059,6 @@ function handleBackFromResults() {
     } else if (state.floorState.selectedType) {
         // Está no flow de floor: volta para seleção de pisos
         showScreen(elements.floorSelectionScreen);
-    } else if (state.ambienteConfig.tipo === 'cavalete') {
-        // Está no flow de cavalete: volta para ambientes com foto
-        backToAmbientesWithPhoto();
     } else {
         // Flow normal: volta para tela principal
         showMainScreen();
