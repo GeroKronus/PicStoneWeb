@@ -4683,6 +4683,11 @@ async function startBathroomsFlow() {
  * 🎯 FUNÇÃO GENÉRICA para gerar mockups progressivos (Living Room, Stairs, etc)
  * ✅ DRY: Elimina duplicação entre generateLivingRoomProgressive e generateStairsProgressive
  */
+/**
+ * Função genérica para gerar mockups com download progressivo
+ * - Primeira imagem é baixada e exibida imediatamente
+ * - Demais imagens carregam em background
+ */
 async function generateProgressiveMockup(config) {
     const {
         endpoint,           // Ex: `${API_URL}/api/mockup/livingroom1/progressive`
@@ -4745,42 +4750,53 @@ async function generateProgressiveMockup(config) {
 
                             // Atualiza progresso para 100%
                             if (progressBar) progressBar.style.width = '100%';
-                            if (progressText) progressText.textContent = `${event.data.caminhos.length} de ${event.data.caminhos.length} prontos`;
+                            if (progressText) progressText.textContent = 'Carregando primeira imagem...';
 
-                            // Pequeno delay para mostrar 100% antes de limpar
-                            setTimeout(() => {
-                                // Esconde loading overlay
-                                elements.loadingOverlay.classList.add('hidden');
+                            const caminhos = event.data.caminhos;
 
-                                // Mostra tela de resultados
-                                showScreen(elements.ambienteResultScreen);
-                                elements.ambientesGallery.innerHTML = '';
+                            // ✨ DOWNLOAD PROGRESSIVO: Exibe primeira imagem imediatamente
+                            if (caminhos.length > 0) {
+                                const primeiroCaminho = caminhos[0];
+                                const primeiraUrl = `${API_URL}/uploads/mockups/${primeiroCaminho}`;
 
-                                // Adiciona imagens à galeria
-                                event.data.caminhos.forEach((caminho, index) => {
-                                    console.log(`📸 [DEBUG] Adicionando imagem ${index + 1}/${event.data.caminhos.length}: ${caminho}`);
-                                    const imageUrl = `${API_URL}/uploads/mockups/${caminho}`;
-                                    state.ambienteUrls.push(imageUrl);
-                                    adicionarImagemAGaleria(imageUrl, `${tipoMockup} #${numero}`);
-                                });
-                            }, 500); // 500ms delay para mostrar progresso completo
+                                // Pré-carrega a primeira imagem
+                                const img = new Image();
+                                img.onload = () => {
+                                    console.log(`✅ [${tipoMockup}] Primeira imagem carregada!`);
 
-                            console.log(`✅ [DEBUG] Total de imagens adicionadas: ${event.data.caminhos.length}`);
+                                    // Esconde loading overlay
+                                    elements.loadingOverlay.classList.add('hidden');
+
+                                    // Mostra tela de resultados
+                                    showScreen(elements.ambienteResultScreen);
+                                    elements.ambientesGallery.innerHTML = '';
+                                    state.ambienteUrls = [];
+
+                                    // Adiciona primeira imagem
+                                    state.ambienteUrls.push(primeiraUrl);
+                                    adicionarImagemAGaleria(primeiraUrl, `${tipoMockup} #${numero} - 1`);
+
+                                    // ✨ Carrega as outras imagens em background
+                                    if (caminhos.length > 1) {
+                                        console.log(`🔄 [${tipoMockup}] Carregando ${caminhos.length - 1} imagens restantes em background...`);
+                                        carregarImagensRestantes(caminhos.slice(1), tipoMockup, numero);
+                                    }
+                                };
+                                img.onerror = () => {
+                                    console.error(`❌ [${tipoMockup}] Erro ao carregar primeira imagem`);
+                                    // Fallback: carrega todas de uma vez
+                                    carregarTodasImagens(caminhos, tipoMockup, numero);
+                                };
+                                img.src = primeiraUrl;
+                            }
 
                             // Configura botão "Gerar Novos"
-                            console.log(`🔍 [${tipoMockup.toUpperCase()}] Configurando botão Gerar Novos`);
-                            console.log(`  ${stateKey}.selectedType:`, state[stateKey]?.selectedType);
-
                             if (state[stateKey]?.selectedType) {
-                                console.log(`✅ [${tipoMockup.toUpperCase()}] Configurando botão`);
                                 elements.newAmbienteBtn.textContent = buttonText;
                                 elements.newAmbienteBtn.onclick = () => {
-                                    console.log(`🎯 [${tipoMockup.toUpperCase()}] Clicou em Gerar Novos`);
                                     state.cropCoordinates = null;
                                     showScreen(selectionScreen);
                                 };
-                            } else {
-                                console.warn(`⚠️ [${tipoMockup.toUpperCase()}] selectedType está undefined!`);
                             }
                         } else if (event.type === 'erro') {
                             throw new Error(event.data.mensagem);
@@ -4795,6 +4811,47 @@ async function generateProgressiveMockup(config) {
         console.error(`Erro ao gerar ${tipoMockup} ${numero}:`, error);
         throw error;
     }
+}
+
+/**
+ * Carrega imagens restantes em background (usada por generateProgressiveMockup)
+ */
+function carregarImagensRestantes(caminhos, tipoMockup, numero) {
+    caminhos.forEach((caminho, index) => {
+        const imageUrl = `${API_URL}/uploads/mockups/${caminho}`;
+        const versao = index + 2;
+
+        // Pré-carrega em background
+        const img = new Image();
+        img.onload = () => {
+            console.log(`✅ [${tipoMockup}] Imagem ${versao} carregada em background`);
+            state.ambienteUrls.push(imageUrl);
+            adicionarImagemAGaleria(imageUrl, `${tipoMockup} #${numero} - ${versao}`);
+        };
+        img.onerror = () => {
+            console.error(`❌ [${tipoMockup}] Erro ao carregar imagem ${versao}`);
+            // Adiciona mesmo assim
+            state.ambienteUrls.push(imageUrl);
+            adicionarImagemAGaleria(imageUrl, `${tipoMockup} #${numero} - ${versao}`);
+        };
+        img.src = imageUrl;
+    });
+}
+
+/**
+ * Fallback: carrega todas as imagens de uma vez
+ */
+function carregarTodasImagens(caminhos, tipoMockup, numero) {
+    elements.loadingOverlay.classList.add('hidden');
+    showScreen(elements.ambienteResultScreen);
+    elements.ambientesGallery.innerHTML = '';
+    state.ambienteUrls = [];
+
+    caminhos.forEach((caminho, index) => {
+        const imageUrl = `${API_URL}/uploads/mockups/${caminho}`;
+        state.ambienteUrls.push(imageUrl);
+        adicionarImagemAGaleria(imageUrl, `${tipoMockup} #${numero} - ${index + 1}`);
+    });
 }
 
 // ========== LIVING ROOMS MOCKUP FLOW ==========

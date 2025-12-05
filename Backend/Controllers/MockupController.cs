@@ -1046,11 +1046,11 @@ namespace PicStoneFotoAPI.Controllers
                     var sufixo = i == 0 ? "normal" : "rotacionado";
                     var nomeArquivo = FileNamingHelper.GenerateBancadaFileName(1, sufixo, usuarioId);
 
-                    // Salva com cache-busting timestamp
-                    var caminhoUrl = SalvarMockupComCacheBusting(mockups[i], nomeArquivo, "/uploads/mockups");
+                    // Salva em WebP para melhor compressão
+                    var caminhoUrl = SalvarMockupWebP(mockups[i], nomeArquivo, "/uploads/mockups");
                     caminhos.Add(caminhoUrl);
 
-                    _logger.LogInformation($"Mockup Bancada1 salvo: {nomeArquivo}");
+                    _logger.LogInformation($"Mockup Bancada1 salvo em WebP: {nomeArquivo}");
 
                     // Envia evento de mockup completo
                     await EnviarEventoSSE("mockup", new
@@ -1253,11 +1253,11 @@ namespace PicStoneFotoAPI.Controllers
                     var sufixo = i == 0 ? "normal" : "rotacionado";
                     var nomeArquivo = FileNamingHelper.GenerateNichoFileName(1, sufixo, usuarioId);
 
-                    // Salva com cache-busting timestamp
-                    var caminhoUrl = SalvarMockupComCacheBusting(mockups[i], nomeArquivo, "/uploads/mockups");
+                    // Salva em WebP para melhor compressão
+                    var caminhoUrl = SalvarMockupWebP(mockups[i], nomeArquivo, "/uploads/mockups");
                     caminhos.Add(caminhoUrl);
 
-                    _logger.LogInformation("Mockup Nicho1 salvo: {Caminho}", nomeArquivo);
+                    _logger.LogInformation("Mockup Nicho1 salvo em WebP: {Caminho}", nomeArquivo);
 
                     // Envia evento de mockup completo
                     await EnviarEventoSSE("mockup", new
@@ -1421,11 +1421,11 @@ namespace PicStoneFotoAPI.Controllers
                     var sufixo = i == 0 ? "normal" : $"variacao{i}";
                     var nomeArquivo = FileNamingHelper.GenerateBancadaFileName(numeroBancada, sufixo, usuarioId);
 
-                    // Salva com cache-busting timestamp
-                    var caminhoUrl = SalvarMockupComCacheBusting(mockups[i], nomeArquivo, "/uploads/mockups");
+                    // Salva em WebP para melhor compressão
+                    var caminhoUrl = SalvarMockupWebP(mockups[i], nomeArquivo, "/uploads/mockups");
                     caminhos.Add(caminhoUrl);
 
-                    _logger.LogInformation($"Mockup Bancada{numeroBancada} salvo: {nomeArquivo}");
+                    _logger.LogInformation($"Mockup Bancada{numeroBancada} salvo em WebP: {nomeArquivo}");
 
                     // Envia evento de mockup completo
                     await EnviarEventoSSE("mockup", new
@@ -1647,10 +1647,10 @@ namespace PicStoneFotoAPI.Controllers
                     // PASSO 5: Salva o quadrante final com cache-busting
                     var nomeArquivo = FileNamingHelper.GenerateBathroomFileName(numeroBathroom, quadrante, fundo, usuarioId);
 
-                    // Salva com cache-busting timestamp (sem prefixo de URL)
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(canvasBase, nomeArquivo);
+                    // Salva em WebP para melhor compressão
+                    var caminhoComTimestamp = SalvarMockupWebP(canvasBase, nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Quadrante {Q} salvo: {Path}", quadrante, nomeArquivo);
+                    _logger.LogInformation("Quadrante {Q} salvo em WebP: {Path}", quadrante, nomeArquivo);
                 }
 
                 await EnviarEventoSSE("sucesso", new {
@@ -1791,10 +1791,10 @@ namespace PicStoneFotoAPI.Controllers
 
                     var nomeArquivo = FileNamingHelper.GenerateLivingRoomFileName(1, quadrante, fundo, usuarioId);
 
-                    // Salva com cache-busting timestamp (sem prefixo de URL)
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(quadrantesBitmaps[i], nomeArquivo);
+                    // Salva em WebP para melhor compressão
+                    var caminhoComTimestamp = SalvarMockupWebP(quadrantesBitmaps[i], nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Quadrante {Q} salvo: {Path}", quadrante, nomeArquivo);
+                    _logger.LogInformation("Quadrante {Q} salvo em WebP: {Path}", quadrante, nomeArquivo);
                 }
 
                 // Limpa bitmaps agora que foram salvos
@@ -1923,10 +1923,10 @@ namespace PicStoneFotoAPI.Controllers
 
                     var nomeArquivo = FileNamingHelper.GenerateLivingRoomFileName(2, quadrante, fundo, usuarioId);
 
-                    // Salva com cache-busting timestamp (sem prefixo de URL)
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(quadrantesBitmaps[i], nomeArquivo);
+                    // Salva em WebP para melhor compressão
+                    var caminhoComTimestamp = SalvarMockupWebP(quadrantesBitmaps[i], nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Quadrante {Q} salvo: {Path}", quadrante, nomeArquivo);
+                    _logger.LogInformation("Quadrante {Q} salvo em WebP: {Path}", quadrante, nomeArquivo);
                 }
 
                 // Limpa bitmaps agora que foram salvos
@@ -2053,10 +2053,10 @@ namespace PicStoneFotoAPI.Controllers
                     var sufixo = versao == 1 ? "normal" : "rotate";
                     var nomeArquivo = FileNamingHelper.GenerateStairsFileName(1, sufixo, fundo, usuarioId);
 
-                    // Salva com cache-busting timestamp (sem prefixo de URL)
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockup, nomeArquivo);
+                    // Salva em WebP para melhor compressão
+                    var caminhoComTimestamp = SalvarMockupWebP(mockup, nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Stairs versão {V} salvo: {Path}", versao, nomeArquivo);
+                    _logger.LogInformation("Stairs versão {V} salvo em WebP: {Path}", versao, nomeArquivo);
 
                     mockup.Dispose();
                 }
@@ -2176,10 +2176,10 @@ namespace PicStoneFotoAPI.Controllers
                     var sufixo = versao == 1 ? "normal" : "rotate";
                     var nomeArquivo = FileNamingHelper.GenerateStairsFileName(2, sufixo, fundo, usuarioId);
 
-                    // Salva com cache-busting timestamp (sem prefixo de URL)
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockup, nomeArquivo);
+                    // Salva em WebP para melhor compressão
+                    var caminhoComTimestamp = SalvarMockupWebP(mockup, nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Stairs versão {V} salvo: {Path}", versao, nomeArquivo);
+                    _logger.LogInformation("Stairs versão {V} salvo em WebP: {Path}", versao, nomeArquivo);
 
                     mockup.Dispose();
                 }
@@ -2300,10 +2300,10 @@ namespace PicStoneFotoAPI.Controllers
                     var sufixo = versao == 1 ? "normal" : "rotate";
                     var nomeArquivo = FileNamingHelper.GenerateStairsFileName(3, sufixo, fundo, usuarioId);
 
-                    // Salva com cache-busting timestamp (sem prefixo de URL)
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockup, nomeArquivo);
+                    // Salva em WebP para melhor compressão
+                    var caminhoComTimestamp = SalvarMockupWebP(mockup, nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Stairs versão {V} salvo: {Path}", versao, nomeArquivo);
+                    _logger.LogInformation("Stairs versão {V} salvo em WebP: {Path}", versao, nomeArquivo);
 
                     mockup.Dispose();
                 }
@@ -2424,10 +2424,10 @@ namespace PicStoneFotoAPI.Controllers
                     var sufixo = versao == 1 ? "normal" : "rotate";
                     var nomeArquivo = FileNamingHelper.GenerateStairsFileName(4, sufixo, fundo, usuarioId);
 
-                    // Salva com cache-busting timestamp (sem prefixo de URL)
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockup, nomeArquivo);
+                    // Salva em WebP para melhor compressão
+                    var caminhoComTimestamp = SalvarMockupWebP(mockup, nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Stairs versão {V} salvo: {Path}", versao, nomeArquivo);
+                    _logger.LogInformation("Stairs versão {V} salvo em WebP: {Path}", versao, nomeArquivo);
 
                     mockup.Dispose();
                 }
@@ -2566,9 +2566,10 @@ namespace PicStoneFotoAPI.Controllers
                     var sufixo = versao == 1 ? "normal" : "rotate";
                     var nomeArquivo = FileNamingHelper.GenerateKitchenFileName(1, sufixo, fundo, usuarioId);
 
-                    var caminhoComTimestamp = SalvarMockupComCacheBusting(mockupsBitmaps[i], nomeArquivo);
+                    // Salva em WebP para melhor compressão
+                    var caminhoComTimestamp = SalvarMockupWebP(mockupsBitmaps[i], nomeArquivo);
                     caminhos.Add(caminhoComTimestamp);
-                    _logger.LogInformation("Versão {V} salva: {Path}", versao, nomeArquivo);
+                    _logger.LogInformation("Versão {V} salva em WebP: {Path}", versao, nomeArquivo);
                 }
 
                 // Limpa bitmaps
