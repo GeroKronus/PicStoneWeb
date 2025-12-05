@@ -4940,6 +4940,7 @@ async function selectLivingRoomAndGenerate(type) {
     } catch (error) {
         console.error('Erro ao gerar Living Room:', error);
         state.isGeneratingMockup = false;
+        elements.loadingOverlay.classList.add('hidden'); // ✅ FIX: Esconde loading em caso de erro
         elements.ambientesGallery.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
         showMessage('Erro ao gerar Living Room: ' + error.message, 'error');
     }
@@ -5075,6 +5076,7 @@ async function selectStairsAndGenerate(type) {
     } catch (error) {
         console.error('Erro ao gerar Stairs:', error);
         state.isGeneratingMockup = false;
+        elements.loadingOverlay.classList.add('hidden'); // ✅ FIX: Esconde loading em caso de erro
         elements.ambientesGallery.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
         showMessage('Erro ao gerar Stairs: ' + error.message, 'error');
     }
@@ -5211,6 +5213,7 @@ async function selectKitchenAndGenerate(type) {
     } catch (error) {
         console.error('Erro ao gerar Kitchen:', error);
         state.isGeneratingMockup = false;
+        elements.loadingOverlay.classList.add('hidden'); // ✅ FIX: Esconde loading em caso de erro
         elements.ambientesGallery.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
         showMessage('Erro ao gerar Kitchen: ' + error.message, 'error');
     }
@@ -5350,6 +5353,7 @@ async function selectFloorAndGenerate(type) {
     } catch (error) {
         console.error('Erro ao gerar Floor:', error);
         state.isGeneratingMockup = false;
+        elements.loadingOverlay.classList.add('hidden'); // ✅ FIX: Esconde loading em caso de erro
         elements.ambientesGallery.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
         showMessage('Erro ao gerar Floor: ' + error.message, 'error');
     }
@@ -5581,47 +5585,64 @@ async function selectTesteAndGenerate(type) {
         return;
     }
 
-    if (state.isGeneratingMockup) {
-        console.log('⚠️ [TESTES] Geração já em andamento, ignorando nova solicitação');
-        return;
+    // ✅ FIX: Marca que está gerando mockup ANTES de verificar
+    state.isGeneratingMockup = true;
+
+    try {
+        // Salva tipo selecionado
+        state.testesState.selectedType = type;
+
+        // ✅ FIX: Mostra loading overlay (igual outras funções)
+        elements.loadingOverlay.classList.remove('hidden');
+        elements.loadingMessage.textContent = 'Gerando Teste...';
+        elements.loadingSubmessage.textContent = 'Você verá cada versão assim que ficar pronta';
+        elements.progressContainer.classList.remove('hidden');
+        elements.progressBar.style.width = '0%';
+        elements.progressText.textContent = 'Preparando...';
+
+        // Prepara FormData
+        const formData = new FormData();
+
+        // 1. Envia imagem
+        if (state.currentPhotoFile) {
+            formData.append('foto', state.currentPhotoFile);
+        } else {
+            showMessage('Erro: arquivo de foto não encontrado', 'error');
+            return;
+        }
+
+        // 2. Envia crop (se houver)
+        if (state.cropCoordinates) {
+            formData.append('cropX', state.cropCoordinates.x);
+            formData.append('cropY', state.cropCoordinates.y);
+            formData.append('cropWidth', state.cropCoordinates.width);
+            formData.append('cropHeight', state.cropCoordinates.height);
+        }
+
+        // Extrai número do tipo (teste1 -> 1)
+        const numero = type.replace('teste', '');
+
+        // Gera mockup progressivo
+        await generateProgressiveMockup({
+            endpoint: `${API_URL}/api/mockup/teste${numero}/progressive`,
+            formData: formData,
+            tipoMockup: 'Teste',
+            numero: numero,
+            totalItems: 1, // Testes geram 1 versão por padrão
+            stateKey: 'testesState',
+            selectionScreen: elements.testesSelectionScreen,
+            buttonText: '🔄 Tentar Outro Teste (Mesmo Crop)'
+        });
+
+        // ✅ FIX: Reseta flag após geração bem-sucedida
+        state.isGeneratingMockup = false;
+
+    } catch (error) {
+        console.error('Erro ao gerar Teste:', error);
+        state.isGeneratingMockup = false;
+        elements.loadingOverlay.classList.add('hidden');
+        showMessage('Erro ao gerar Teste: ' + error.message, 'error');
     }
-
-    // Salva tipo selecionado
-    state.testesState.selectedType = type;
-
-    // Prepara FormData
-    const formData = new FormData();
-
-    // 1. Envia imagem
-    if (state.currentPhotoFile) {
-        formData.append('foto', state.currentPhotoFile);
-    } else {
-        showMessage('Erro: arquivo de foto não encontrado', 'error');
-        return;
-    }
-
-    // 2. Envia crop (se houver)
-    if (state.cropCoordinates) {
-        formData.append('cropX', state.cropCoordinates.x);
-        formData.append('cropY', state.cropCoordinates.y);
-        formData.append('cropWidth', state.cropCoordinates.width);
-        formData.append('cropHeight', state.cropCoordinates.height);
-    }
-
-    // Extrai número do tipo (teste1 -> 1)
-    const numero = type.replace('teste', '');
-
-    // Gera mockup progressivo
-    await generateProgressiveMockup({
-        endpoint: `${API_URL}/api/mockup/teste${numero}/progressive`,
-        formData: formData,
-        tipoMockup: 'Teste',
-        numero: numero,
-        totalItems: 1, // Testes geram 1 versão por padrão
-        stateKey: 'testesState',
-        selectionScreen: elements.testesSelectionScreen,
-        buttonText: '🔄 Tentar Outro Teste (Mesmo Crop)'
-    });
 }
 
 /**
@@ -5664,6 +5685,7 @@ async function selectBathroomAndGenerate(type) {
 
     } catch (error) {
         console.error('Erro ao gerar bathroom:', error);
+        elements.loadingOverlay.classList.add('hidden'); // ✅ FIX: Esconde loading em caso de erro
         showAmbienteMessage('Erro ao gerar bathroom: ' + error.message, 'error');
     } finally {
         // ✨ FIX: Libera flag de geração para permitir novas gerações
@@ -5844,6 +5866,7 @@ async function selectLivingRoomTestAndGenerate(type) {
 
     } catch (error) {
         console.error('Erro ao gerar living room teste:', error);
+        elements.loadingOverlay.classList.add('hidden'); // ✅ FIX: Esconde loading em caso de erro
         showAmbienteMessage('Erro ao gerar living room teste: ' + error.message, 'error');
     } finally {
         // ✨ FIX: Libera flag de geração para permitir novas gerações
